@@ -1,0 +1,24 @@
+# permissions for end users to edit integrationjobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: integrationjob-editor-role
+rules:
+- apiGroups:
+  - cicd.tmax.io
+  resources:
+  - integrationjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cicd.tmax.io
+  resources:
+  - integrationjobs/status
+  verbs:
+  - get

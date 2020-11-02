@@ -1,0 +1,14 @@
+domain: tmax.io
+layout: go.kubebuilder.io/v2
+projectName: cicd-operator
+repo: github.com/tmax-cloud/cicd-operator
+resources:
+- group: cicd
+  kind: IntegrationConfig
+  version: v1
+- group: cicd
+  kind: IntegrationJob
+  version: v1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}
