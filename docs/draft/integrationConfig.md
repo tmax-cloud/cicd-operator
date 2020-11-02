@@ -1,4 +1,4 @@
-# `IntegrationJob` Spec
+# `IntegrationConfig` Spec
 
 ## Available Fields
 ```yaml
