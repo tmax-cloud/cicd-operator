@@ -1,5 +1,7 @@
 # Environmental Variables
 
+Following variables are set to the job containers.
+
 |Key|Description|
 |:-----------------:|---|
 |`CI`               | Always set to true |
