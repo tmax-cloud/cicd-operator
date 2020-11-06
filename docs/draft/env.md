@@ -15,3 +15,5 @@ Following variables are set to the job containers.
 |`CI_REF`           | The branch or tag ref which triggered the job |
 |`CI_HEAD_REF`      | Only set for forked repository |
 |`CI_BASE_REF`      | Only set for forked repository |
+|`CI_SERVER_URL`    | Server URL. e.g., https://github.com |
+|`CI_API_URL`       | API URL. e.g., https://api.github.com |
