@@ -11,9 +11,9 @@ Following variables are set to the job containers.
 |`CI_EVENT_TYPE`    | The type of webhook event |
 |`CI_EVENT_PATH`    | The path of the file with webhook body |
 |`CI_WORKSPACE`     | Working directory, where the repository is cloned |
-|`CI_SHA`           | The commit SHA which triggered the job |
-|`CI_REF`           | The branch or tag ref which triggered the job |
-|`CI_HEAD_REF`      | Only set for forked repository |
-|`CI_BASE_REF`      | Only set for forked repository |
+|`CI_HEAD_SHA`      | The commit SHA which triggered the job |
+|`CI_HEAD_REF`      | The branch or tag ref which triggered the job |
+|`CI_BASE_SHA`      | Only set for forked repository / pull request |
+|`CI_BASE_REF`      | Only set for forked repository / pull request |
 |`CI_SERVER_URL`    | Server URL. e.g., https://github.com |
 |`CI_API_URL`       | API URL. e.g., https://api.github.com |
