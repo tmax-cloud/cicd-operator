@@ -82,6 +82,19 @@ spec:
     - <Same as preSubmit>
   merge: // TODO
 status:
+  conditions:
+  - type: Ready
+    status: [True|False]
+    reason: <>
+    message: <>
+  - type: TokenValid
+    status: [True|False]
+    reason: <>
+    message: <>
+  - type: WebhookRegistered
+    status: [True|False]
+    reason: <>
+    message: <>
 ```
 
 ## Sample YAML
