@@ -1,0 +1,48 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - cicd.tmax.io
+  resources:
+  - integrationconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cicd.tmax.io
+  resources:
+  - integrationconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - cicd.tmax.io
+  resources:
+  - integrationjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cicd.tmax.io
+  resources:
+  - integrationjobs/status
+  verbs:
+  - get
+  - patch
+  - update
