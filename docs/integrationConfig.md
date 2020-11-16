@@ -9,7 +9,7 @@ metadata:
 spec:
   git:
     type: [github|gitlab|gitea|bitbucket]
-    url: <Git URL>
+    repository: <org>/<repo> (e.g., tmax-cloud/cicd-operator)
     apiUrl: <API server URL>
     token:
       value: <Token value>
