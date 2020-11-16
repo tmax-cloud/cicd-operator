@@ -14,8 +14,7 @@ spec:
   jobs:
   - <Same with IntegrationConfig spec.jobs.[preSubmit|postSubmit]>
   refs:
-    org: <e.g., tamx-cloud>
-    repo: <e.g., cicd-operator>
+    repository: <e.g., tamx-cloud>/<e.g., cicd-operator>
     link: <e.g., https://github.com/tmax-cloud/cicd-operator>
     base:
       ref: <e.g., master>
@@ -61,8 +60,7 @@ spec:
     command:
     - golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
   refs:
-    org: tamx-cloud
-    repo: cicd-operator
+    repository: tamx-cloud/cicd-operator
     link: https://github.com/tmax-cloud/cicd-operator
     base:
       ref: master
