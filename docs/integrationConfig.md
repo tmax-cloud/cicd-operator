@@ -108,7 +108,7 @@ metadata:
 spec:
   git:
     type: github 
-    url: https://github.com/tmax-cloud/cicd-operator
+    repository: tmax-cloud/cicd-operator
     token:
       valueFrom:
         secretKeyRef:
