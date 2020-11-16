@@ -10,6 +10,7 @@ spec:
   git:
     type: [github|gitlab|gitea|bitbucket]
     url: <Git URL>
+    apiUrl: <API server URL>
     token:
       value: <Token value>
       valueFrom:
