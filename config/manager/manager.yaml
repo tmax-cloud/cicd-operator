@@ -3,13 +3,40 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-  name: system
+  name: cicd-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cicd-webhook
+  namespace: cicd-system
+spec:
+  selector:
+    control-plane: controller-manager
+  ports:
+  - port: 24335
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cicd-webhook
+  namespace: cicd-system
+spec:
+  rules:
+  - host: waiting.for.loadbalancer
+    http:
+      paths:
+      - backend:
+          service:
+            name: cicd-webhook
+            port:
+              number: 24335
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller-manager
-  namespace: system
+  namespace: cicd-system
   labels:
     control-plane: controller-manager
 spec:
@@ -27,7 +54,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: controller:latest
+        image: tmaxcloudck/cicd-operator:latest
         name: manager
         resources:
           limits:

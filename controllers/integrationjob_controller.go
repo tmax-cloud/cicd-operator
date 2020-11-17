@@ -41,7 +41,8 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	_ = context.Background()
 	_ = r.Log.WithValues("integrationjob", req.NamespacedName)
 
-	// your logic here
+	// TODO - Enqueue the job to PipelineRun scheduler
+	// TODO - watch PipelineRun related to the IntegrationJob and report the status to the remote git repo.s
 
 	return ctrl.Result{}, nil
 }

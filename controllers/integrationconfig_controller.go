@@ -41,7 +41,7 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	_ = context.Background()
 	_ = r.Log.WithValues("integrationconfig", req.NamespacedName)
 
-	// your logic here
+	// TODO - Register webhook to the remote git repository (e.g., GitHub/GitLab, ...)
 
 	return ctrl.Result{}, nil
 }
