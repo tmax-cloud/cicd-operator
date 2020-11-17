@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/pkg/webhook"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,6 +53,10 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+
+	flag.StringVar(&configs.ExternalHostName, "external-hostname", "", "External hostname for webhook server (default is ingress hostname)")
+	flag.IntVar(&configs.MaxPipelineRun, "max-pipeline-run", 5, "Max number of pipelineruns that can run simultaneously")
+
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -84,6 +90,10 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	// Create and start webhook server
+	server := webhook.New(mgr.GetClient())
+	go server.Start()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
