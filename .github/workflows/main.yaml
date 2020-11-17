@@ -29,9 +29,9 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
-      - uses: golangci/golangci-lint-action@v1
+      - uses: golangci/golangci-lint-action@v2.2.1
         with:
-          version: v1.27
+          version: v1.29
           args: -v -E gofmt --timeout 1h0m0s
   deploy-release:
     if: startsWith(github.ref, 'refs/tags/v')
