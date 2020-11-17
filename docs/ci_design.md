@@ -29,15 +29,6 @@ FYI. CI/CD operator implementation should consist of **only one webhook server**
 *Further: Should have a work queue of `IntegrationJob`s, instead of creating `PipelineRun` instantly.*
 7. `IntegrationJobController` watches the `PipelineRun` and whenever tasks end, it reports to GitHub repository by setting commit status, using git client module.
 
-## Procedure 3. Push (PullRequest Merged)
-1. Repository owner merges the pull request.  
-*Further: Auto merge should be enabled, like `tide` in Prow*
-2. The `push` event for the base branch is delivered to a webhook server.
-3. Webhook body (GitHub specific body) is converted to a generic webhook body structure.
-4. Webhook calls `Integrator` plugin, which is registered for the `push` event.  
-5. `Integrator` plugin creates an `IntegrationJob`, referring to the `IntegrationConfig`'s `.spec.jobs.postSubmit` field.
-6. Rest is same with `pull_request` event handling.
-
 ## Procedure 2. PullRequest - Comment
 1. For an open pull request, a developer comments `/test <job name>`.  
 (e.g., the test should be re-run because the base branch is updated.)
@@ -45,6 +36,15 @@ FYI. CI/CD operator implementation should consist of **only one webhook server**
 3. Webhook body (GitHub specific body) is converted to a generic webhook body structure.
 4. Webhook calls `ChatOps` plugin, which is registered for the `issue_comment` event.
 5. `ChatOps` calls `Integrator` to create `IntegrationJob`.
+6. Rest is same with `pull_request` event handling.
+
+## Procedure 3. Push (PullRequest Merged)
+1. Repository owner merges the pull request.  
+*Further: Auto merge should be enabled, like `tide` in Prow*
+2. The `push` event for the base branch is delivered to a webhook server.
+3. Webhook body (GitHub specific body) is converted to a generic webhook body structure.
+4. Webhook calls `Integrator` plugin, which is registered for the `push` event.  
+5. `Integrator` plugin creates an `IntegrationJob`, referring to the `IntegrationConfig`'s `.spec.jobs.postSubmit` field.
 6. Rest is same with `pull_request` event handling.
 
 ## Important Facts
