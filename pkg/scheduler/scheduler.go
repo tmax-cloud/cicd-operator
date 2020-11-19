@@ -29,11 +29,8 @@ type Scheduler struct {
 }
 
 func (s Scheduler) start() {
-	for {
-		select {
-		case <-s.caller:
-			s.fifo()
-		}
+	for range s.caller {
+		s.fifo()
 	}
 }
 
