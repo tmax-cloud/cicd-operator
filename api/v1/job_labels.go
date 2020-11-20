@@ -7,5 +7,4 @@ const (
 	JobLabelId          = JobLabelPrefix + "integration-id"
 	JobLabelRepository  = JobLabelPrefix + "repository"
 	JobLabelPullRequest = JobLabelPrefix + "pull-request"
-	JobLabelStatus      = JobLabelPrefix + "status"
 )

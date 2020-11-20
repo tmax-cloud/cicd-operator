@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -9,10 +10,11 @@ import (
 
 var log = logf.Log.WithName("job-scheduler")
 
-func New(c client.Client) *Scheduler {
+func New(c client.Client, s *runtime.Scheme) *Scheduler {
 	log.Info("New scheduler")
 	sch := &Scheduler{
 		k8sClient: c,
+		scheme:    s,
 		caller:    make(chan int, 1),
 	}
 	go sch.start()
@@ -21,6 +23,7 @@ func New(c client.Client) *Scheduler {
 
 type Scheduler struct {
 	k8sClient client.Client
+	scheme    *runtime.Scheme
 
 	// Buffered channel with capacity 1
 	// Since scheduler lists resources by itself, the actual scheduling logic should be executed only once even when
