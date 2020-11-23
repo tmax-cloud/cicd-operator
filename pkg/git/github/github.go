@@ -14,11 +14,12 @@ type Client struct {
 
 func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
 	// TODO
-	var eventType = header.Get("X-Github-Event")
+	var eventType = git.EventType(header.Get("X-Github-Event"))
 	var webhook git.Webhook
-	if eventType == "pull_request" {
+	var err error
+	if eventType == git.EventTypePullRequest {
 		var data PullRequestWebhook
-		err := json.Unmarshal(jsonString, &data)
+		err = json.Unmarshal(jsonString, &data)
 		if err == nil {
 			sender := git.Sender{Name: data.Sender.ID, Link: data.Sender.Link}
 			base := git.Base{Ref: data.PullRequest.Base.Ref, Sha: data.PullRequest.Base.Sha}
@@ -27,9 +28,9 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 			pullRequest := git.PullRequest{ID: data.PullRequest.ID, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
 			webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, PullRequest: &pullRequest}
 		}
-	} else if eventType == "push" {
+	} else if eventType == git.EventTypePush {
 		var data PushWebhook
-		err := json.Unmarshal(jsonString, &data)
+		err = json.Unmarshal(jsonString, &data)
 		if err == nil {
 			repo := git.Repository{Name: data.Repo.Name, Owner: data.Repo.Owner.ID, URL: data.Repo.Htmlurl, Private: data.Repo.Private}
 			var sha string
@@ -42,7 +43,7 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 			webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, Push: &push}
 		}
 	}
-	return webhook, nil
+	return webhook, err
 }
 
 func (c *Client) RegisterWebhook(gitConfig *cicdv1.GitConfig, url string) error {
