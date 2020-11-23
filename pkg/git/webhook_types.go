@@ -46,7 +46,6 @@ type Sender struct {
 
 type Base struct {
 	Ref string
-	Sha string
 }
 
 type Head struct {

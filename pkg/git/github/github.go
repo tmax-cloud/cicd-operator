@@ -25,7 +25,7 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 			return git.Webhook{}, err
 		}
 		sender := git.Sender{Name: data.Sender.ID, Link: data.Sender.Link}
-		base := git.Base{Ref: data.PullRequest.Base.Ref, Sha: data.PullRequest.Base.Sha}
+		base := git.Base{Ref: data.PullRequest.Base.Ref}
 		head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
 		repo := git.Repository{Name: data.Repo.Name, Owner: data.Repo.Owner.ID, URL: data.Repo.Htmlurl, Private: data.Repo.Private}
 		pullRequest := git.PullRequest{ID: data.PullRequest.ID, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
