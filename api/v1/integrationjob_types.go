@@ -79,6 +79,9 @@ type IntegrationJobStatus struct {
 	// State is a current state of the IntegrationJob
 	State IntegrationJobState `json:"state"`
 
+	// CompletionTime is a time when the job is completed
+	CompletionTime *metav1.Time `json:"completionTime"`
+
 	// TaskStatus
 	// TODO
 }
@@ -116,4 +119,10 @@ type IntegrationJobList struct {
 
 func init() {
 	SchemeBuilder.Register(&IntegrationJob{}, &IntegrationJobList{})
+}
+
+func (s *IntegrationJobStatus) SetDefaults() error {
+	// TODO
+	s.State = IntegrationJobStatePending
+	return nil
 }

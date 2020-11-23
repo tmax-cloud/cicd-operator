@@ -12,6 +12,11 @@ func Generate(_ *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	return &tektonv1beta1.PipelineRun{}, nil
 }
 
+func ReflectStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.IntegrationJob) error {
+	// TODO
+	return nil
+}
+
 func Name(j *cicdv1.IntegrationJob) string {
-	return j.Name // TODO - should we add some prefix/suffix...?
+	return j.Name // TODO - should we add postfix or something? Job:PipelineRun=1:1...
 }
