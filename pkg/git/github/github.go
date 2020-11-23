@@ -2,6 +2,7 @@ package github
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -46,6 +47,8 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 		push := git.Push{Pusher: data.Pusher.Name, Ref: data.Ref, Sha: sha}
 		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, Push: &push}
 
+	} else {
+		return webhook, fmt.Errorf("event %s is not supported", eventType)
 	}
 	return webhook, nil
 }
