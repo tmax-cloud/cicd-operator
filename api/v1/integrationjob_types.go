@@ -87,6 +87,7 @@ type IntegrationJobState string
 
 const (
 	IntegrationJobStatePending   = IntegrationJobState("pending")
+	IntegrationJobStateScheduled = IntegrationJobState("scheduled")
 	IntegrationJobStateRunning   = IntegrationJobState("running")
 	IntegrationJobStateCompleted = IntegrationJobState("completed")
 	IntegrationJobStateFailed    = IntegrationJobState("failed")
