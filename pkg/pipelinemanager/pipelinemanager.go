@@ -11,3 +11,7 @@ func Generate(_ *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	// TODO
 	return &tektonv1beta1.PipelineRun{}, nil
 }
+
+func Name(j *cicdv1.IntegrationJob) string {
+	return j.Name // TODO - should we add some prefix/suffix...?
+}

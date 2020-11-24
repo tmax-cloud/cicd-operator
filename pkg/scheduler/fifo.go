@@ -2,21 +2,20 @@ package scheduler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/pkg/pipelinemanager"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
 )
 
 // fifo is a FIFO scheduler
 func (s Scheduler) fifo() {
-	log.Info("fifo")
+	// List all IntegrationJobs
 	jobList := &cicdv1.IntegrationJobList{}
 	if err := s.k8sClient.List(context.TODO(), jobList); err != nil {
 		log.Error(err, "")
@@ -26,13 +25,19 @@ func (s Scheduler) fifo() {
 	// Get running jobs first
 	runningJobs := filter(jobList.Items, cicdv1.IntegrationJobStateRunning)
 
-	// Get scheduled jobs
-	scheduledJobs := filter(jobList.Items, cicdv1.IntegrationJobStateScheduled)
+	availableCnt := configs.MaxPipelineRun - len(runningJobs)
 
-	// If the number of running jobs and scheduled jobs(PipelineRun is created, but IntegrationJob status is not updated
-	// yet) is greater or equals to the max pipeline run, no scheduling is allowed
-	activeCnt := len(runningJobs) + len(scheduledJobs)
-	availableCnt := configs.MaxPipelineRun - activeCnt
+	// Check if running jobs are actually running (has pipelineRun, pipelineRun is running)
+	for _, j := range runningJobs {
+		pr := &tektonv1beta1.PipelineRun{}
+		err := s.k8sClient.Get(context.TODO(), types.NamespacedName{Name: pipelinemanager.Name(&j), Namespace: j.Namespace}, pr)
+		// If PipelineRun is not found or is already completed, is not actually running
+		if (err != nil && errors.IsNotFound(err)) || (err == nil && pr.Status.CompletionTime != nil) {
+			availableCnt++
+		}
+	}
+
+	// If the number of running jobs is greater or equals to the max pipeline run, no scheduling is allowed
 	if availableCnt <= 0 {
 		log.Info("Max number of PipelineRuns already exist")
 		return
@@ -50,7 +55,6 @@ func (s Scheduler) fifo() {
 			break
 		}
 
-		log.Info(fmt.Sprintf("%s / %s / %s", j.Name, j.Namespace, j.CreationTimestamp))
 		// Generate and create PipelineRun
 		pr, err := pipelinemanager.Generate(&j)
 		if err != nil {
@@ -78,24 +82,10 @@ func (s Scheduler) fifo() {
 			continue
 		}
 
+		log.Info(fmt.Sprintf("Scheduled %s / %s / %s", j.Name, j.Namespace, j.CreationTimestamp))
 		// Create PipelineRun only when there is no Pipeline exists
 		if err := s.k8sClient.Create(context.TODO(), pr); err != nil {
 			// TODO - update IntegrationJob status - reason: cannot create PipelineRun
-			log.Error(err, "")
-			continue
-		}
-
-		// After creating the PipelineRun, update IntegrationJob as scheduled
-		statePatch, err := json.Marshal(map[string]interface{}{
-			"status": map[string]interface{}{
-				"state": cicdv1.IntegrationJobStateScheduled,
-			},
-		})
-		if err != nil {
-			log.Error(err, "")
-			continue
-		}
-		if err := s.k8sClient.Status().Patch(context.TODO(), &j, client.RawPatch(types.MergePatchType, statePatch)); err != nil {
 			log.Error(err, "")
 			continue
 		}
@@ -127,5 +117,13 @@ func (j jobListFifo) Swap(x, y int) {
 }
 
 func (j jobListFifo) Less(x, y int) bool {
-	return j[x].CreationTimestamp.Time.Before(j[y].CreationTimestamp.Time)
+	xTime := j[x].CreationTimestamp.Time
+	yTime := j[y].CreationTimestamp.Time
+	// Secondary order is alphanumerical
+	if xTime.Equal(yTime) {
+		return j[x].Namespace+"-"+j[x].Name < j[y].Namespace+"-"+j[y].Name
+	} else {
+		// Primary order is time-based
+		return xTime.Before(yTime)
+	}
 }
