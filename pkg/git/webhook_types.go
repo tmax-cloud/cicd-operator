@@ -18,10 +18,37 @@ type Webhook struct {
 }
 
 type Push struct {
+	Pusher string
+	Ref    string
+	Sha    string
 }
 
 type PullRequest struct {
+	ID     int
+	Title  string
+	Sender Sender
+	URL    string
+	Base   Base
+	Head   Head
 }
 
 type Repository struct {
+	Name    string
+	Owner   string
+	URL     string
+	Private bool
+}
+
+type Sender struct {
+	Name string
+	Link string
+}
+
+type Base struct {
+	Ref string
+}
+
+type Head struct {
+	Ref string
+	Sha string
 }
