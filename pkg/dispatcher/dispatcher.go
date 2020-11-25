@@ -17,17 +17,17 @@ type Dispatcher struct {
 func (d Dispatcher) Handle(webhook git.Webhook, config *cicdv1.IntegrationConfig) error {
 	switch webhook.EventType {
 	case git.EventTypePullRequest:
-		return handlePullRequest(webhook, config)
+		return d.handlePullRequest(webhook, config)
 	case git.EventTypePush:
-		return handlePush(webhook, config)
+		return d.handlePush(webhook, config)
 	}
 	return fmt.Errorf("dispatcher cannot handle event %s", webhook.EventType)
 }
 
-func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig) error {
+func (d Dispatcher) handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig) error {
 	return nil // TODO
 }
 
-func handlePush(webhook git.Webhook, config *cicdv1.IntegrationConfig) error {
+func (d Dispatcher) handlePush(webhook git.Webhook, config *cicdv1.IntegrationConfig) error {
 	return nil // TODO
 }
