@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
+	"github.com/tmax-cloud/cicd-operator/pkg/git/gitlab"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/types"
 	"net/http"
@@ -50,9 +53,30 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO - convert webhook body to common webhook structure
-	// TODO - create IntegrationJob using the webhook structure
+	var gitCli git.Client
+	switch config.Spec.Git.Type {
+	case cicdv1.GitTypeGitHub:
+		gitCli = &github.Client{}
+	case cicdv1.GitTypeGitLab:
+		gitCli = &gitlab.Client{}
+	default:
+		_ = utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("git type of IntegrationConfig %s/%s is invalid", ns, configName))
+		return
+	}
 
-	fmt.Println(r.Header.Get("X-GitHub-Event"))
-	fmt.Println(string(body))
+	// Convert webhook
+	wh, err := gitCli.ParseWebhook(r.Header, body)
+	if err != nil {
+		_ = utils.RespondError(w, http.StatusInternalServerError, "cannot parse webhook body")
+		log.Error(err, "")
+		return
+	}
+
+	// Call plugin functions
+	plugins := GetPlugins(wh.EventType)
+	for _, p := range plugins {
+		if err := p.Handle(wh, config); err != nil {
+			log.Error(err, "")
+		}
+	}
 }
