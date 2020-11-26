@@ -4,6 +4,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 )
 
 // Scheduler schedules PipelineRun for IntegrationJob
@@ -34,6 +35,8 @@ type Scheduler struct {
 func (s Scheduler) start() {
 	for range s.caller {
 		s.fifo()
+		// Set minimum time gap between scheduling logic
+		time.Sleep(3 * time.Second)
 	}
 }
 
