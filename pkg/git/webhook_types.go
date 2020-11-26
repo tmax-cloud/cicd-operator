@@ -3,8 +3,11 @@ package git
 type EventType string
 
 const (
-	EventTypePullRequest = EventType("pull_request")
-	EventTypePush        = EventType("push")
+	GitHubEventTypePullRequest  = EventType("pull_request")
+	GitHubEventTypePush         = EventType("push")
+	GitLabEventTypePush         = EventType("Push Hook")
+	GitLabEventTypeMergeRequest = EventType("Merge Request Hook")
+	GitLabEventTypeTagPush      = EventType("Tag Push Hook")
 )
 
 // Webhook is a common structure for git webhooks
@@ -33,15 +36,12 @@ type PullRequest struct {
 }
 
 type Repository struct {
-	Name    string
-	Owner   string
-	URL     string
-	Private bool
+	Name string
+	URL  string
 }
 
 type Sender struct {
 	Name string
-	Link string
 }
 
 type Base struct {
