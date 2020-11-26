@@ -43,8 +43,9 @@ metadata:
   labels:
     cicd.tmax.io/integration-config: sample-config 
     cicd.tmax.io/integration-type: presubmit
-    cicd.tmax.io/pull-request: 32
     cicd.tmax.io/integration-id: fudsfh389s234fasdf323df3fxf5df
+    cicd.tmax.io/repository: tmax-cloud/cicd-operator
+    cicd.tmax.io/pull-request: 32
 spec:
   configRef:
     name: sample-config

@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/pkg/webhook"
 	"os"
@@ -43,6 +44,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(cicdv1.AddToScheme(scheme))
+	utilruntime.Must(tektonv1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
