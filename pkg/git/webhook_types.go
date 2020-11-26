@@ -36,23 +36,12 @@ type PullRequest struct {
 }
 
 type Repository struct {
-<<<<<<< HEAD
 	Name string
 	URL  string
-=======
-	Name    string
-	Owner   string
-	URL     string
-	Private bool
->>>>>>> 21401d5ca1a5ec607545a8ab68a2e18f82364be2
 }
 
 type Sender struct {
 	Name string
-<<<<<<< HEAD
-=======
-	Link string
->>>>>>> 21401d5ca1a5ec607545a8ab68a2e18f82364be2
 }
 
 type Base struct {
