@@ -58,12 +58,12 @@ type IntegrationJobRefs struct {
 
 type IntegrationJobRefsBase struct {
 	Ref  string `json:"ref"`
-	Sha  string `json:"sha"`
 	Link string `json:"link"`
 }
 
 type IntegrationJobRefsPull struct {
 	Id     int                          `json:"id"`
+	Ref    string                       `json:"ref"`
 	Sha    string                       `json:"sha"`
 	Link   string                       `json:"link"`
 	Author IntegrationJobRefsPullAuthor `json:"author"`
@@ -71,7 +71,6 @@ type IntegrationJobRefsPull struct {
 
 type IntegrationJobRefsPullAuthor struct {
 	Name string `json:"name"`
-	Link string `json:"link"`
 }
 
 // IntegrationJobStatus defines the observed state of IntegrationJob
@@ -79,8 +78,11 @@ type IntegrationJobStatus struct {
 	// State is a current state of the IntegrationJob
 	State IntegrationJobState `json:"state"`
 
+	// StartTime is actual time the task started
+	StartTime *metav1.Time `json:"startTime,omitempty"`
+
 	// CompletionTime is a time when the job is completed
-	CompletionTime *metav1.Time `json:"completionTime"`
+	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
 
 	// TaskStatus
 	// TODO
@@ -123,6 +125,8 @@ func init() {
 
 func (s *IntegrationJobStatus) SetDefaults() error {
 	// TODO
-	s.State = IntegrationJobStatePending
+	if s.State == "" {
+		s.State = IntegrationJobStatePending
+	}
 	return nil
 }

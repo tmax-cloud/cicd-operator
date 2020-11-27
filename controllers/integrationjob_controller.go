@@ -49,8 +49,7 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	// Get IntegrationJob
 	instance := &cicdv1.IntegrationJob{}
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
-	if err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -58,16 +57,9 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, err
 	}
 
-	// Set default values for IntegrationJob.status
-	if err := instance.Status.SetDefaults(); err != nil {
-		log.Error(err, "")
-		return ctrl.Result{}, err
-	}
-
 	// Get PipelineRun
 	pr := &tektonv1beta1.PipelineRun{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: pipelinemanager.Name(instance), Namespace: instance.Namespace}, pr)
-	if err != nil {
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: pipelinemanager.Name(instance), Namespace: instance.Namespace}, pr); err != nil {
 		if !errors.IsNotFound(err) {
 			log.Error(err, "")
 			return ctrl.Result{}, err
@@ -79,16 +71,20 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// Decide if PipelineRun scheduling is needed
 	doSchedule := needSchedule(instance, pr)
 
-	// Check PipelineRun's status and update IntegrationJob's status, only if the PipelineRun exists
-	if pr != nil {
-		if err := pipelinemanager.ReflectStatus(pr, instance); err != nil {
-			log.Error(err, "")
-			return ctrl.Result{}, err
-		}
+	// Set default values for IntegrationJob.status
+	if err := instance.Status.SetDefaults(); err != nil {
+		log.Error(err, "")
+		return ctrl.Result{}, err
+	}
+
+	// Check PipelineRun's status and update IntegrationJob's status
+	if err := pipelinemanager.ReflectStatus(pr, instance); err != nil {
+		log.Error(err, "")
+		return ctrl.Result{}, err
 	}
 
 	// Update IntegrationJob
-	if err := r.Client.Update(context.Background(), instance); err != nil {
+	if err := r.Client.Status().Update(context.Background(), instance); err != nil {
 		log.Error(err, "")
 		return ctrl.Result{}, err
 	}
@@ -106,7 +102,12 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 // Should be called before the IntegrationJob's status is reflected from the PipelineRun
 func needSchedule(instance *cicdv1.IntegrationJob, pr *tektonv1beta1.PipelineRun) bool {
 	// If default state is not set, IntegrationJob is created just now -> Schedule PipelineRun
-	if instance.Status.State == "" {
+	if instance.Status.State == "" || instance.Status.State == cicdv1.IntegrationJobStatePending {
+		return true
+	}
+
+	// If PR is nil but IntegrationJob's status is running, schedule needed
+	if pr == nil && instance.Status.State == cicdv1.IntegrationJobStateRunning {
 		return true
 	}
 

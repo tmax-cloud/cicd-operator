@@ -22,7 +22,7 @@ type Job struct {
 	When *JobWhen `json:"when,omitempty"`
 
 	// After configures which jobs should be executed before this job runs
-	After []string `json:"after"`
+	After []string `json:"after,omitempty"`
 
 	// Approval
 	// TODO
@@ -36,22 +36,22 @@ type TektonTask struct {
 	TaskRef JobTaskRef `json:"taskRef"`
 
 	// Params are input params for the task
-	Params []tektonv1beta1.Param `json:"params"`
+	Params []tektonv1beta1.Param `json:"params,omitempty"`
 
 	// Resources are input/output resources for the task
 	Resources *tektonv1beta1.TaskRunResources `json:"resources,omitempty"`
 
 	// Workspaces are workspaces for the task
-	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces"`
+	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
 }
 
 type JobTaskRef struct {
 	// Name for local Tasks
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 
 	// Catalog is a name of the task @ tekton catalog github repo. (e.g., s2i@0.2)
 	// FYI: https://github.com/tektoncd/catalog
-	Catalog string `json:"catalog"`
+	Catalog string `json:"catalog,omitempty"`
 }
 
 type JobWhen struct {
