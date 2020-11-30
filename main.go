@@ -20,6 +20,8 @@ import (
 	"flag"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/webhook"
 	"os"
 
@@ -95,6 +97,10 @@ func main() {
 
 	// Create and start webhook server
 	server := webhook.New(mgr.GetClient())
+
+	// Add plugins for webhook
+	webhook.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
+
 	go server.Start()
 
 	setupLog.Info("starting manager")
