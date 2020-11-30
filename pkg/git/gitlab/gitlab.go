@@ -14,11 +14,17 @@ type Client struct {
 
 func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
 	// TODO
-
-	var eventType = git.EventType(header.Get("X-Gitlab-Event"))
+	var eventType git.EventType
 	var webhook git.Webhook
 	var err error
-	if eventType == git.GitLabEventTypeMergeRequest {
+	eventFromHeader := header.Get("X-Gitlab-Event")
+	if eventFromHeader == "Merge Request Hook" {
+		eventType = git.EventTypePullRequest
+	} else if eventFromHeader == "Push Hook" || eventFromHeader == "Tag Push Hook" {
+		eventType = git.EventTypePush
+	}
+
+	if eventType == git.EventTypePullRequest {
 		var data MergeRequestWebhook
 
 		if err = json.Unmarshal(jsonString, &data); err != nil {
@@ -31,7 +37,7 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 		pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
 		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, PullRequest: &pullRequest}
 
-	} else if eventType == git.GitLabEventTypePush || eventType == git.GitLabEventTypeTagPush {
+	} else if eventType == git.EventTypePush {
 		var data PushWebhook
 
 		if err = json.Unmarshal(jsonString, &data); err != nil {

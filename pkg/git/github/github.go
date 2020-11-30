@@ -18,7 +18,7 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 	var eventType = git.EventType(header.Get("X-Github-Event"))
 	var webhook git.Webhook
 	var err error
-	if eventType == git.GitHubEventTypePullRequest {
+	if eventType == git.EventTypePullRequest {
 		var data PullRequestWebhook
 
 		if err = json.Unmarshal(jsonString, &data); err != nil {
@@ -31,7 +31,7 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 		pullRequest := git.PullRequest{ID: data.PullRequest.ID, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
 		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, PullRequest: &pullRequest}
 
-	} else if eventType == git.GitHubEventTypePush {
+	} else if eventType == git.EventTypePush {
 		var data PushWebhook
 
 		if err = json.Unmarshal(jsonString, &data); err != nil {
