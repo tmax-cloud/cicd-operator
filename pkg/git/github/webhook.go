@@ -37,8 +37,7 @@ type Repo struct {
 }
 
 type Sender struct {
-	ID   string `json:"login"`
-	Link string `json:"html_url"`
+	ID string `json:"login"`
 }
 
 type Head struct {
@@ -48,5 +47,4 @@ type Head struct {
 
 type Base struct {
 	Ref string `json:"ref"`
-	Sha string `json:"sha"`
 }

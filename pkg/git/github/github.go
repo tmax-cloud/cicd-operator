@@ -24,10 +24,10 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 		if err = json.Unmarshal(jsonString, &data); err != nil {
 			return git.Webhook{}, err
 		}
-		sender := git.Sender{Name: data.Sender.ID, Link: data.Sender.Link}
+		sender := git.Sender{Name: data.Sender.ID}
 		base := git.Base{Ref: data.PullRequest.Base.Ref}
 		head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
-		repo := git.Repository{Name: data.Repo.Name, Owner: data.Repo.Owner.ID, URL: data.Repo.Htmlurl, Private: data.Repo.Private}
+		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
 		pullRequest := git.PullRequest{ID: data.PullRequest.ID, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
 		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, PullRequest: &pullRequest}
 
@@ -37,7 +37,7 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 		if err = json.Unmarshal(jsonString, &data); err != nil {
 			return git.Webhook{}, err
 		}
-		repo := git.Repository{Name: data.Repo.Name, Owner: data.Repo.Owner.ID, URL: data.Repo.Htmlurl, Private: data.Repo.Private}
+		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
 		var sha string
 		if strings.Contains(data.Ref, "refs/tags") {
 			sha = data.Sha4Tag

@@ -33,15 +33,12 @@ type PullRequest struct {
 }
 
 type Repository struct {
-	Name    string
-	Owner   string
-	URL     string
-	Private bool
+	Name string
+	URL  string
 }
 
 type Sender struct {
 	Name string
-	Link string
 }
 
 type Base struct {
