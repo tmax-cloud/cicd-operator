@@ -6,8 +6,8 @@ Scheduler is a module that schedules (actually creates) `PipelineRun`s for corre
 - FIFO & Max number of running `PipelineRun` restriction
 
 ## When it is called
-- (To-Be) When `IntegrationJob` is created
-- (To-Be) When `PipelineRun` is completed (whether or not there is an error)
+- When `IntegrationJob` is created
+- When `PipelineRun` is completed (whether or not there is an error)
 
 ## How it works
 Procedure of the scheduler is as below.
