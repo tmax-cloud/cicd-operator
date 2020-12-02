@@ -7,6 +7,7 @@ import (
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Client struct {
@@ -53,7 +54,7 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 	return webhook, nil
 }
 
-func (c *Client) RegisterWebhook(gitConfig *cicdv1.GitConfig, url string) error {
+func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client *client.Client) error {
 	// TODO
 	return nil
 }
