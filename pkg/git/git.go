@@ -1,13 +1,15 @@
 package git
 
 import (
-	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"net/http"
+
+	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Client interface {
 	// Webhooks
-	RegisterWebhook(gitConfig *cicdv1.GitConfig, url string) error
+	RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, c *client.Client) error
 	ParseWebhook(http.Header, []byte) (Webhook, error)
 
 	// Commit Status

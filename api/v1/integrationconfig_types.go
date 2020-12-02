@@ -19,6 +19,7 @@ package v1
 import (
 	"context"
 	"fmt"
+
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,6 +51,7 @@ type IntegrationConfigJobs struct {
 type IntegrationConfigStatus struct {
 	// Conditions of IntegrationConfig
 	Conditions status.Conditions `json:"conditions"`
+	Secrets    string            `json:"secrets"`
 }
 
 // +kubebuilder:object:root=true
