@@ -64,10 +64,11 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 
 	registrationBody.Name = "web"
 	registrationBody.Active = true
-	registrationBody.Events = []string{"pull", "pull_request"}
+	registrationBody.Events = []string{"*"}
 	registrationConfig.Url = integrationConfig.Spec.Git.GetServerAddress()
 	registrationConfig.ContentType = "json"
 	registrationConfig.InsecureSsl = "0"
+	registrationConfig.Secret = integrationConfig.Status.Secrets
 
 	registrationBody.Config = registrationConfig
 	jsonBytes, _ := json.Marshal(registrationBody)

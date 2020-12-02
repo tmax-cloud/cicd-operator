@@ -60,4 +60,5 @@ type RegistrationWebhookBodyConfig struct {
 	Url         string `json:"url"`
 	ContentType string `json:"content_type"`
 	InsecureSsl string `json:"insecure_ssl"`
+	Secret      string `json:"secret"`
 }
