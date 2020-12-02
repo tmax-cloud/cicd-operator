@@ -69,6 +69,7 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	registrationConfig.ContentType = "json"
 	registrationConfig.InsecureSsl = "0"
 
+	registrationBody.Config = registrationConfig
 	jsonBytes, _ := json.Marshal(registrationBody)
 
 	req, _ := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
