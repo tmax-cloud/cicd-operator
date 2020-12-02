@@ -52,7 +52,7 @@ type Base struct {
 type RegistrationWebhookBody struct {
 	Name   string                        `json:"name"`
 	Active bool                          `json:"active"`
-	Events []string                      `json:"events`
+	Events []string                      `json:"events"`
 	Config RegistrationWebhookBodyConfig `json:"config"`
 }
 

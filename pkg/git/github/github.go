@@ -76,7 +76,7 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	req.Header.Add("Authorization", "token "+token)
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		fmt.Errorf("%s\n", "requesting for webhook registration has failed")
+		fmt.Println("requesting for webhook registration has failed")
 	}
 	resp.Body.Close()
 
