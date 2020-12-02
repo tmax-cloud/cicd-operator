@@ -18,7 +18,6 @@ spec:
     link: <e.g., https://github.com/tmax-cloud/cicd-operator>
     base:
       ref: <e.g., master>
-      sha: <SHA of base repo.>
       link: <Link of base repo.>
     pull:
       id: <Pull request ID>
@@ -26,7 +25,6 @@ spec:
       link: <Link of the pull request>
       author: 
         name: <Author name>
-        link: <Author link>
 status:
   state: [pending | running | completed | failed]
   taskStatus:
@@ -65,7 +63,6 @@ spec:
     link: https://github.com/tmax-cloud/cicd-operator
     base:
       ref: master
-      sha: 9d9a5bf747c6f7327ad420458e8bfb8bbe340b43
       link: https://github.com/tmax-cloud/cicd-operator
     pull:
       id: 32
@@ -73,7 +70,6 @@ spec:
       link: https://github.com/tmax-cloud/cicd-operator/pull/32
       author: 
         name: cqbqdd11519
-        link: https://github.com/cqbqdd11519
 status:
   state: running
   taskStatus:

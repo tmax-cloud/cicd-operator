@@ -20,6 +20,9 @@ import (
 	"flag"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
 	"github.com/tmax-cloud/cicd-operator/pkg/webhook"
 	"os"
 
@@ -84,9 +87,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.IntegrationJobReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("IntegrationJob"),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("controllers").WithName("IntegrationJob"),
+		Scheme:    mgr.GetScheme(),
+		Scheduler: scheduler.New(mgr.GetClient(), mgr.GetScheme()),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IntegrationJob")
 		os.Exit(1)
@@ -95,6 +99,10 @@ func main() {
 
 	// Create and start webhook server
 	server := webhook.New(mgr.GetClient())
+
+	// Add plugins for webhook
+	webhook.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
+
 	go server.Start()
 
 	setupLog.Info("starting manager")

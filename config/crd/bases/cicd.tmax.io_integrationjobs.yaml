@@ -1263,9 +1263,6 @@ spec:
                             name:
                               description: Name for local Tasks
                               type: string
-                          required:
-                          - catalog
-                          - name
                           type: object
                         workspaces:
                           description: Workspaces are workspaces for the task
@@ -1698,9 +1695,7 @@ spec:
                             type: object
                           type: array
                       required:
-                      - params
                       - taskRef
-                      - workspaces
                       type: object
                     terminationMessagePath:
                       description: 'Optional: Path at which the file to which the
@@ -1827,7 +1822,6 @@ spec:
                         be configured in the container image. Cannot be updated.
                       type: string
                   required:
-                  - after
                   - name
                   type: object
                 type: array
@@ -1843,12 +1837,9 @@ spec:
                         type: string
                       ref:
                         type: string
-                      sha:
-                        type: string
                     required:
                     - link
                     - ref
-                    - sha
                     type: object
                   link:
                     description: Link is a full url of the repository
@@ -1858,17 +1849,16 @@ spec:
                     properties:
                       author:
                         properties:
-                          link:
-                            type: string
                           name:
                             type: string
                         required:
-                        - link
                         - name
                         type: object
                       id:
                         type: integer
                       link:
+                        type: string
+                      ref:
                         type: string
                       sha:
                         type: string
@@ -1876,6 +1866,7 @@ spec:
                     - author
                     - id
                     - link
+                    - ref
                     - sha
                     type: object
                   repository:
@@ -1897,6 +1888,14 @@ spec:
           status:
             description: IntegrationJobStatus defines the observed state of IntegrationJob
             properties:
+              completionTime:
+                description: CompletionTime is a time when the job is completed
+                format: date-time
+                type: string
+              startTime:
+                description: StartTime is actual time the task started
+                format: date-time
+                type: string
               state:
                 description: State is a current state of the IntegrationJob
                 type: string
