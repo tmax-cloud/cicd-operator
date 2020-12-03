@@ -68,9 +68,6 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	// Decide if PipelineRun scheduling is needed
-	doSchedule := needSchedule(instance, pr)
-
 	// Set default values for IntegrationJob.status
 	if err := instance.Status.SetDefaults(); err != nil {
 		log.Error(err, "")
@@ -89,35 +86,10 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	// Schedule PipelineRun
-	if doSchedule {
-		r.Scheduler.Schedule()
-	}
+	// Notify state change to scheduler
+	r.Scheduler.Notify(instance)
 
 	return ctrl.Result{}, nil
-}
-
-// needSchedule decides if scheduler.Schedule should be called or not
-// It refers to the current status of IntegrationJob and PipelineRun
-// Should be called before the IntegrationJob's status is reflected from the PipelineRun
-func needSchedule(instance *cicdv1.IntegrationJob, pr *tektonv1beta1.PipelineRun) bool {
-	// If default state is not set, IntegrationJob is created just now -> Schedule PipelineRun
-	if instance.Status.State == "" || instance.Status.State == cicdv1.IntegrationJobStatePending {
-		return true
-	}
-
-	// If PR is nil but IntegrationJob's status is running, schedule needed
-	if pr == nil && instance.Status.State == cicdv1.IntegrationJobStateRunning {
-		return true
-	}
-
-	// If PipelineRun exists and the status is completed, but the status is different from IntegrationJob status, PipelineRun exited just now
-	// -> Schedule PipelineRun
-	if pr != nil && pr.Status.CompletionTime != nil && instance.Status.CompletionTime == nil {
-		return true
-	}
-
-	return false
 }
 
 func (r *IntegrationJobReconciler) SetupWithManager(mgr ctrl.Manager) error {

@@ -3,6 +3,7 @@ module github.com/tmax-cloud/cicd-operator
 go 1.13
 
 require (
+	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/go-logr/logr v0.1.0
 	github.com/gorilla/mux v1.7.4
 	github.com/onsi/ginkgo v1.12.1
