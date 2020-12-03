@@ -755,6 +755,9 @@ spec:
                             https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                           type: object
                       type: object
+                    script:
+                      description: Script will override command of container
+                      type: string
                     securityContext:
                       description: 'Security options the pod should run with. More
                         info: https://kubernetes.io/docs/concepts/policy/security-context/
@@ -1823,6 +1826,7 @@ spec:
                       type: string
                   required:
                   - name
+                  - script
                   type: object
                 type: array
               refs:
