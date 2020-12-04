@@ -12,11 +12,24 @@ type GitConfig struct {
 	Repository string `json:"repository"`
 
 	// ApiUrl for api server (e.g., https://api.github.com for github type),
-	// for the case where the git repository is self-hosted
+	// for the case where the git repository is self-hosted (should contain specific protocol otherwise webhook server returns error)
 	ApiUrl string `json:"apiUrl,omitempty"`
 
 	// Token
 	Token GitToken `json:"token"`
+}
+
+// Returns ApiUrl for api server
+func (config *GitConfig) GetApiUrl() string {
+	if config.ApiUrl == "" {
+		return "https://api.github.com"
+	}
+	return config.ApiUrl
+}
+
+// Returns Server address which webhook events will be received
+func (config *GitConfig) GetServerAddress() string {
+	return ""
 }
 
 type GitToken struct {

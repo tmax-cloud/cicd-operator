@@ -48,3 +48,17 @@ type Head struct {
 type Base struct {
 	Ref string `json:"ref"`
 }
+
+type RegistrationWebhookBody struct {
+	Name   string                        `json:"name"`
+	Active bool                          `json:"active"`
+	Events []string                      `json:"events"`
+	Config RegistrationWebhookBodyConfig `json:"config"`
+}
+
+type RegistrationWebhookBodyConfig struct {
+	Url         string `json:"url"`
+	ContentType string `json:"content_type"`
+	InsecureSsl string `json:"insecure_ssl"`
+	Secret      string `json:"secret"`
+}

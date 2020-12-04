@@ -1,6 +1,7 @@
 package github
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Client struct {
@@ -53,8 +55,33 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 	return webhook, nil
 }
 
-func (c *Client) RegisterWebhook(gitConfig *cicdv1.GitConfig, url string) error {
+func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client *client.Client) error {
 	// TODO
+	var registrationBody RegistrationWebhookBody
+	var registrationConfig RegistrationWebhookBodyConfig
+	var apiUrl string = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
+	var httpClient = &http.Client{}
+
+	registrationBody.Name = "web"
+	registrationBody.Active = true
+	registrationBody.Events = []string{"*"}
+	registrationConfig.Url = integrationConfig.Spec.Git.GetServerAddress()
+	registrationConfig.ContentType = "json"
+	registrationConfig.InsecureSsl = "0"
+	registrationConfig.Secret = integrationConfig.Status.Secrets
+
+	registrationBody.Config = registrationConfig
+	jsonBytes, _ := json.Marshal(registrationBody)
+
+	req, _ := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
+	token, _ := integrationConfig.GetToken(*client)
+	req.Header.Add("Authorization", "token "+token)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		fmt.Println("requesting for webhook registration has failed")
+	}
+	resp.Body.Close()
+
 	return nil
 }
 

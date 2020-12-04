@@ -42,6 +42,8 @@ spec:
                   apiUrl:
                     description: ApiUrl for api server (e.g., https://api.github.com
                       for github type), for the case where the git repository is self-hosted
+                      (should contain specific protocol otherwise webhook server returns
+                      error)
                     type: string
                   repository:
                     description: Repository name of git repository (in <org>/<repo>
@@ -3799,8 +3801,11 @@ spec:
                   - type
                   type: object
                 type: array
+              secrets:
+                type: string
             required:
             - conditions
+            - secrets
             type: object
         type: object
     served: true
