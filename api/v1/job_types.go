@@ -55,12 +55,12 @@ type JobTaskRef struct {
 }
 
 type JobWhen struct {
-	Branch     []string `json:"branch"`
-	SkipBranch []string `json:"skipBranch"`
+	Branch     []string `json:"branch,omitempty"`
+	SkipBranch []string `json:"skipBranch,omitempty"`
 
-	Tag     []string `json:"tag"`
-	SkipTag []string `json:"skipTag"`
+	Tag     []string `json:"tag,omitempty"`
+	SkipTag []string `json:"skipTag,omitempty"`
 
-	Ref     []string `json:"ref"`
-	SkipRef []string `json:"skipRef"`
+	Ref     []string `json:"ref,omitempty"`
+	SkipRef []string `json:"skipRef,omitempty"`
 }

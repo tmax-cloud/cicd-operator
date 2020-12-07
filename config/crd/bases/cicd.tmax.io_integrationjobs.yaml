@@ -1808,13 +1808,6 @@ spec:
                           items:
                             type: string
                           type: array
-                      required:
-                      - branch
-                      - ref
-                      - skipBranch
-                      - skipRef
-                      - skipTag
-                      - tag
                       type: object
                     workingDir:
                       description: Container's working directory. If not specified,
