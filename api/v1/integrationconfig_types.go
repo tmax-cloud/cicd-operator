@@ -101,3 +101,11 @@ func (i *IntegrationConfig) GetToken(c client.Client) (string, error) {
 	}
 	return string(token), nil
 }
+
+func GetServiceAccountName(configName string) string {
+	return fmt.Sprintf("%s-sa", configName)
+}
+
+func GetSecretName(configName string) string {
+	return configName
+}

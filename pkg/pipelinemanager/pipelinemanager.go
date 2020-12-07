@@ -41,6 +41,7 @@ func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 			Labels:    generateLabel(job),
 		},
 		Spec: tektonv1beta1.PipelineRunSpec{
+			ServiceAccountName: cicdv1.GetServiceAccountName(job.Spec.ConfigRef.Name),
 			PipelineSpec: &tektonv1beta1.PipelineSpec{
 				Tasks: tasks,
 			},
