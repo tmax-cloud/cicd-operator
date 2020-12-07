@@ -36,7 +36,7 @@ func (config *GitConfig) GetServerAddress() string {
 
 type GitToken struct {
 	// Value is un-encrypted plain string of git token, not recommended
-	Value string `json:"value"`
+	Value string `json:"value,omitempty"`
 
 	// ValueFrom refers secret. Recommended
 	ValueFrom *GitTokenFrom `json:"valueFrom,omitempty"`

@@ -28,7 +28,7 @@ type PushWebhook struct {
 
 // Repo structure for webhook event
 type Repo struct {
-	Name    string `json:"name"`
+	Name    string `json:"full_name"`
 	Htmlurl string `json:"html_url"`
 	Owner   struct {
 		ID string `json:"login"`

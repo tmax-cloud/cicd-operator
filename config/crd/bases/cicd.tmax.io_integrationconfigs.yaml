@@ -82,8 +82,6 @@ spec:
                         required:
                         - secretKeyRef
                         type: object
-                    required:
-                    - value
                     type: object
                   type:
                     description: Type for git remote server
@@ -1908,13 +1906,6 @@ spec:
                               items:
                                 type: string
                               type: array
-                          required:
-                          - branch
-                          - ref
-                          - skipBranch
-                          - skipRef
-                          - skipTag
-                          - tag
                           type: object
                         workingDir:
                           description: Container's working directory. If not specified,
@@ -3733,13 +3724,6 @@ spec:
                               items:
                                 type: string
                               type: array
-                          required:
-                          - branch
-                          - ref
-                          - skipBranch
-                          - skipRef
-                          - skipTag
-                          - tag
                           type: object
                         workingDir:
                           description: Container's working directory. If not specified,
