@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -16,7 +17,6 @@ type Client struct {
 }
 
 func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
-	// TODO
 	var eventType = git.EventType(header.Get("X-Github-Event"))
 	var webhook git.Webhook
 	var err error
@@ -56,7 +56,6 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 }
 
 func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client *client.Client) error {
-	// TODO
 	var registrationBody RegistrationWebhookBody
 	var registrationConfig RegistrationWebhookBodyConfig
 	var apiUrl string = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
@@ -65,22 +64,42 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	registrationBody.Name = "web"
 	registrationBody.Active = true
 	registrationBody.Events = []string{"*"}
-	registrationConfig.Url = integrationConfig.Spec.Git.GetServerAddress()
+	registrationConfig.Url = url
 	registrationConfig.ContentType = "json"
 	registrationConfig.InsecureSsl = "0"
 	registrationConfig.Secret = integrationConfig.Status.Secrets
 
 	registrationBody.Config = registrationConfig
-	jsonBytes, _ := json.Marshal(registrationBody)
+	jsonBytes, err := json.Marshal(registrationBody)
+	if err != nil {
+		return err
+	}
 
-	req, _ := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
-	token, _ := integrationConfig.GetToken(*client)
+	req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return err
+	}
+	token, err := integrationConfig.GetToken(*client)
+	if err != nil {
+		return err
+	}
 	req.Header.Add("Authorization", "token "+token)
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		fmt.Println("requesting for webhook registration has failed")
+		return err
 	}
-	resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("error setting webhook, code %d, msg %s", resp.StatusCode, string(body))
+	}
+
+	if err := resp.Body.Close(); err != nil {
+		return err
+	}
 
 	return nil
 }
