@@ -1,9 +1,11 @@
 package gitlab
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -54,8 +56,40 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 	return webhook, nil
 }
 
-func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client *client.Client) error {
+func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Url string, client *client.Client) error {
 	// TODO
+	var registrationBody RegistrationWebhookBody
+	EncodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
+	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
+	var httpClient = &http.Client{}
+
+	//enable hooks from every events
+	registrationBody.ConfidentialIssueEvents = true
+	registrationBody.ConfidentialNoteEvents = true
+	registrationBody.DeploymentEvents = true
+	registrationBody.IssueEvents = true
+	registrationBody.JobEvents = true
+	registrationBody.MergeRequestEvents = true
+	registrationBody.PipeLineEvents = true
+	registrationBody.PushEvents = true
+	registrationBody.TagPushEvents = true
+	registrationBody.WikiPageEvents = true
+	registrationBody.URL = integrationConfig.Spec.Git.GetServerAddress()
+	registrationBody.ID = EncodedRepoPath
+
+	jsonBytes, _ := json.Marshal(registrationBody)
+
+	req, _ := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonBytes))
+	token, _ := integrationConfig.GetToken(*client)
+
+	req.Header.Add("PRIVATE-TOKEN", token)
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		fmt.Println("requesting for webhook registration has failed")
+	}
+	resp.Body.Close()
+
 	return nil
 }
 
