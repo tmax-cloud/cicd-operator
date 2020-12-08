@@ -24,12 +24,11 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
 	"github.com/tmax-cloud/cicd-operator/pkg/webhook"
-	"os"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -96,6 +95,13 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	// Check for ingress first
+	setupLog.Info("Waiting for ingress to be ready")
+	if err := controllers.WaitIngressReady(); err != nil {
+		setupLog.Error(err, "error while waiting ingress ready")
+		os.Exit(1)
+	}
 
 	// Create and start webhook server
 	server := webhook.New(mgr.GetClient())
