@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -79,16 +80,35 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 
 	jsonBytes, _ := json.Marshal(registrationBody)
 
-	req, _ := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonBytes))
-	token, _ := integrationConfig.GetToken(*client)
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return err
+	}
+
+	token, err := integrationConfig.GetToken(*client)
+
+	if err != nil {
+		return err
+	}
 
 	req.Header.Add("PRIVATE-TOKEN", token)
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		fmt.Println("requesting for webhook registration has failed")
+		return err
 	}
-	resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("error setting webhook, code %d, msg %s", resp.StatusCode, string(body))
+	}
+	if err := resp.Body.Close(); err != nil {
+		return err
+	}
 
 	return nil
 }
