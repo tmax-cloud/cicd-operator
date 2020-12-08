@@ -15,6 +15,9 @@ const (
 type Job struct {
 	corev1.Container `json:",inline"`
 
+	// Script will override command of container
+	Script string `json:"script"`
+
 	// TektonTask is for referring local Tasks or the Tasks registered in tekton catalog github repo.
 	TektonTask *TektonTask `json:"tektonTask,omitempty"`
 
