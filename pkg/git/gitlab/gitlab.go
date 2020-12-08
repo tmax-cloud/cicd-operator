@@ -75,7 +75,7 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 	registrationBody.PushEvents = true
 	registrationBody.TagPushEvents = true
 	registrationBody.WikiPageEvents = true
-	registrationBody.URL = integrationConfig.Spec.Git.GetServerAddress()
+	registrationBody.URL = Url
 	registrationBody.ID = EncodedRepoPath
 
 	jsonBytes, _ := json.Marshal(registrationBody)
