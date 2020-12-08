@@ -21,8 +21,10 @@ type GitConfig struct {
 
 // Returns ApiUrl for api server
 func (config *GitConfig) GetApiUrl() string {
-	if config.ApiUrl == "" {
+	if config.Type == GitTypeGitHub && config.ApiUrl == "" {
 		return "https://api.github.com"
+	} else if config.Type == GitTypeGitLab && config.ApiUrl == "" {
+		return "https://gitlab.com"
 	}
 	return config.ApiUrl
 }

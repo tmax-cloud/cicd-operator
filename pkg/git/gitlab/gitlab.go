@@ -1,9 +1,12 @@
 package gitlab
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -54,8 +57,59 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhoo
 	return webhook, nil
 }
 
-func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client *client.Client) error {
+func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Url string, client *client.Client) error {
 	// TODO
+	var registrationBody RegistrationWebhookBody
+	EncodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
+	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
+	var httpClient = &http.Client{}
+
+	//enable hooks from every events
+	registrationBody.ConfidentialIssueEvents = true
+	registrationBody.ConfidentialNoteEvents = true
+	registrationBody.DeploymentEvents = true
+	registrationBody.IssueEvents = true
+	registrationBody.JobEvents = true
+	registrationBody.MergeRequestEvents = true
+	registrationBody.PipeLineEvents = true
+	registrationBody.PushEvents = true
+	registrationBody.TagPushEvents = true
+	registrationBody.WikiPageEvents = true
+	registrationBody.URL = Url
+	registrationBody.ID = EncodedRepoPath
+
+	jsonBytes, _ := json.Marshal(registrationBody)
+
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return err
+	}
+
+	token, err := integrationConfig.GetToken(*client)
+
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("PRIVATE-TOKEN", token)
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("error setting webhook, code %d, msg %s", resp.StatusCode, string(body))
+	}
+	if err := resp.Body.Close(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
