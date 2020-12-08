@@ -3,6 +3,8 @@ package pipelinemanager
 import (
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/utils"
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
@@ -101,26 +103,104 @@ func generateLabel(j *cicdv1.IntegrationJob) map[string]string {
 	return label
 }
 
-func ReflectStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.IntegrationJob) error {
+func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error {
 	// If PR is nil but IntegrationJob's status is running, set as error
 	// Also, schedule next pipelineRun
-	if pr == nil && j.Status.State == cicdv1.IntegrationJobStateRunning {
-		j.Status.State = cicdv1.IntegrationJobStateFailed
+	if pr == nil && job.Status.State == cicdv1.IntegrationJobStateRunning {
+		job.Status.State = cicdv1.IntegrationJobStateFailed
+	}
+
+	// Initialize status.jobs
+	stateChanged := make([]bool, len(job.Spec.Jobs))
+	reset := len(job.Status.Jobs) != 0 && len(job.Status.Jobs) != len(job.Spec.Jobs)
+	if reset {
+		job.Status.Jobs = nil
+	}
+	for i, j := range job.Spec.Jobs {
+		if reset {
+			job.Status.Jobs = append(job.Status.Jobs, cicdv1.JobStatus{
+				Name:  j.Name,
+				State: git.CommitStatusStatePending,
+			})
+		}
+		stateChanged[i] = reset
 	}
 
 	// If PR exists, default state is running
 	if pr != nil {
-		j.Status.State = cicdv1.IntegrationJobStateRunning
+		job.Status.State = cicdv1.IntegrationJobStateRunning
 
-		// TODO - temporary!
-		if pr.Status.CompletionTime != nil {
-			j.Status.State = cicdv1.IntegrationJobStateCompleted
+		job.Status.StartTime = pr.CreationTimestamp.DeepCopy()
+		job.Status.CompletionTime = pr.Status.CompletionTime.DeepCopy()
+
+		if job.Status.CompletionTime != nil && len(pr.Status.Conditions) == 1 {
+			switch tektonv1beta1.PipelineRunReason(pr.Status.Conditions[0].Reason) {
+			case tektonv1beta1.PipelineRunReasonSuccessful, tektonv1beta1.PipelineRunReasonCompleted:
+				job.Status.State = cicdv1.IntegrationJobStateCompleted
+			case tektonv1beta1.PipelineRunReasonFailed, tektonv1beta1.PipelineRunReasonCancelled, tektonv1beta1.PipelineRunReasonTimedOut:
+				job.Status.State = cicdv1.IntegrationJobStateFailed
+			}
+		}
+
+		// Reflect status of each task(job)
+		// Be sure job.Status.Jobs[i] is set sequentially
+		for i, j := range job.Spec.Jobs {
+			var jStatus *tektonv1beta1.TaskRunStatus
+			for _, runStatus := range pr.Status.TaskRuns {
+				if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
+					jStatus = runStatus.Status
+					break
+				}
+			}
+
+			// Only update if taskRun's status exists
+			if jStatus != nil && len(jStatus.Conditions) > 0 {
+				startTime := jStatus.StartTime.DeepCopy()
+				completionTime := jStatus.CompletionTime.DeepCopy()
+				message := jStatus.Conditions[0].Message
+
+				state := git.CommitStatusStatePending
+				switch tektonv1beta1.TaskRunReason(jStatus.Conditions[0].Reason) {
+				case tektonv1beta1.TaskRunReasonSuccessful:
+					state = git.CommitStatusStateSuccess
+				case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
+					state = git.CommitStatusStateFailure
+				}
+
+				// If something is changed, commit status should be posted
+				stateChanged[i] = job.Status.Jobs[i].State != state ||
+					job.Status.Jobs[i].Message != message ||
+					job.Status.Jobs[i].StartTime != startTime ||
+					job.Status.Jobs[i].CompletionTime != completionTime
+
+				job.Status.Jobs[i].PodName = jStatus.PodName
+				job.Status.Jobs[i].State = state
+				job.Status.Jobs[i].Message = message
+				job.Status.Jobs[i].StartTime = startTime
+				job.Status.Jobs[i].CompletionTime = completionTime
+
+				for _, s := range jStatus.Steps {
+					stepStatus := s.DeepCopy()
+					job.Status.Jobs[i].Containers = append(job.Status.Jobs[i].Containers, *stepStatus)
+				}
+			}
 		}
 	}
 
-	// TODO - copy PipelineRun's status to IntegrationJob
+	// Set remote git's commit status for each job
+	gitCli, err := utils.GetGitCli(cfg)
+	if err != nil {
+		return err
+	}
 
-	// TODO - Set remote git's commit status for each job
+	// If state is changed, update git commit status
+	for i, j := range job.Status.Jobs {
+		if stateChanged[i] {
+			if err := gitCli.SetCommitStatus(&cfg.Spec.Git, j.Name, j.State, j.Message, job.GetReportServerAddress(j.Name)); err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }

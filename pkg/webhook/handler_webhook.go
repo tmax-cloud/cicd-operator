@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/gitlab"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/types"
 	"net/http"
@@ -53,14 +50,9 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var gitCli git.Client
-	switch config.Spec.Git.Type {
-	case cicdv1.GitTypeGitHub:
-		gitCli = &github.Client{}
-	case cicdv1.GitTypeGitLab:
-		gitCli = &gitlab.Client{}
-	default:
-		_ = utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("git type of IntegrationConfig %s/%s is invalid", ns, configName))
+	gitCli, err := utils.GetGitCli(config)
+	if err != nil {
+		_ = utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 

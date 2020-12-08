@@ -2,7 +2,9 @@ package v1
 
 import (
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type JobType string
@@ -66,4 +68,30 @@ type JobWhen struct {
 
 	Ref     []string `json:"ref,omitempty"`
 	SkipRef []string `json:"skipRef,omitempty"`
+}
+
+// JobStatus is a current status for each job
+type JobStatus struct {
+	// Name is a job name
+	Name string `json:"name"`
+
+	// StartTime is a timestamp when the job is started
+	StartTime *metav1.Time `json:"startTime,omitempty"`
+
+	// CompletionTime is a timestamp when the job is started
+	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
+
+	// State is current state of this job
+	// It is actually a conversion of tekton task run's Status.Conditions[0].Reason
+	State git.CommitStatusState `json:"state"`
+
+	// Message is current state description for this job
+	// It is actually tekton task run's Status.Conditions[0].Message
+	Message string `json:"message"`
+
+	// PodName is a name of pod where the job is running
+	PodName string `json:"podName,omitempty"`
+
+	// Containers is status list for each step in the job
+	Containers []tektonv1beta1.StepState `json:"containers,omitempty"`
 }
