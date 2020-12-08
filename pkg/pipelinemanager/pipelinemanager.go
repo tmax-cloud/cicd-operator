@@ -120,7 +120,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 		if reset {
 			job.Status.Jobs = append(job.Status.Jobs, cicdv1.JobStatus{
 				Name:  j.Name,
-				State: git.CommitStatusStatePending,
+				State: cicdv1.CommitStatusStatePending,
 			})
 		}
 		stateChanged[i] = reset
@@ -159,12 +159,12 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 				completionTime := jStatus.CompletionTime.DeepCopy()
 				message := jStatus.Conditions[0].Message
 
-				state := git.CommitStatusStatePending
+				state := cicdv1.CommitStatusStatePending
 				switch tektonv1beta1.TaskRunReason(jStatus.Conditions[0].Reason) {
 				case tektonv1beta1.TaskRunReasonSuccessful:
-					state = git.CommitStatusStateSuccess
+					state = cicdv1.CommitStatusStateSuccess
 				case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
-					state = git.CommitStatusStateFailure
+					state = cicdv1.CommitStatusStateFailure
 				}
 
 				// If something is changed, commit status should be posted
@@ -196,7 +196,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 	// If state is changed, update git commit status
 	for i, j := range job.Status.Jobs {
 		if stateChanged[i] {
-			if err := gitCli.SetCommitStatus(&cfg.Spec.Git, j.Name, j.State, j.Message, job.GetReportServerAddress(j.Name)); err != nil {
+			if err := gitCli.SetCommitStatus(&cfg.Spec.Git, j.Name, git.CommitStatusState(j.State), j.Message, job.GetReportServerAddress(j.Name)); err != nil {
 				return err
 			}
 		}

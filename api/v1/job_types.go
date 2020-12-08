@@ -2,7 +2,6 @@ package v1
 
 import (
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -83,7 +82,7 @@ type JobStatus struct {
 
 	// State is current state of this job
 	// It is actually a conversion of tekton task run's Status.Conditions[0].Reason
-	State git.CommitStatusState `json:"state"`
+	State CommitStatusState `json:"state"`
 
 	// Message is current state description for this job
 	// It is actually tekton task run's Status.Conditions[0].Message
@@ -95,3 +94,12 @@ type JobStatus struct {
 	// Containers is status list for each step in the job
 	Containers []tektonv1beta1.StepState `json:"containers,omitempty"`
 }
+
+type CommitStatusState string
+
+const (
+	CommitStatusStateSuccess = CommitStatusState("success")
+	CommitStatusStateFailure = CommitStatusState("failure")
+	CommitStatusStateError   = CommitStatusState("error")
+	CommitStatusStatePending = CommitStatusState("pending")
+)
