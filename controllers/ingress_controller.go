@@ -25,6 +25,9 @@ func WaitIngressReady() error {
 	watcher, err := ingCli.Watch(metav1.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(core.ObjectNameField, "cicd-webhook").String(),
 	})
+	if err != nil {
+		return err
+	}
 
 	for result := range watcher.ResultChan() {
 		ing, ok := result.Object.(*networkingv1beta1.Ingress)
