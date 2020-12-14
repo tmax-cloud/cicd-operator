@@ -113,12 +113,18 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 	return nil
 }
 
-func (c *Client) SetCommitStatus(gitConfig *cicdv1.GitConfig, sha string, context string, state git.CommitStatusState, token, description, targetUrl string) error {
+func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client *client.Client) error {
 	// TODO
 	var commitStatusBody CommitStatusBody
 	var httpClient = &http.Client{}
-	var urlEncodePath = url.QueryEscape(gitConfig.Repository)
-	apiUrl := gitConfig.GetApiUrl() + "/api/v4/projects/" + urlEncodePath + "/statuses/" + sha
+	var urlEncodePath = url.QueryEscape(integrationConfig.Spec.Git.Repository)
+	var sha string
+	if integrationJob.Spec.Refs.Pull == nil {
+		sha = integrationJob.Spec.Refs.Base.Sha
+	} else {
+		sha = integrationJob.Spec.Refs.Pull.Sha
+	}
+	apiUrl := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + urlEncodePath + "/statuses/" + sha
 	commitStatusBody.State = string(state)
 	commitStatusBody.TargetURL = targetUrl
 	commitStatusBody.Description = description
@@ -132,6 +138,11 @@ func (c *Client) SetCommitStatus(gitConfig *cicdv1.GitConfig, sha string, contex
 	req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
 	if err != nil {
 		return nil
+	}
+
+	token, err := integrationConfig.GetToken(*client)
+	if err != nil {
+		return err
 	}
 	req.Header.Add("PRIVATE-TOKEN", token)
 	req.Header.Add("Content-Type", "application/json")

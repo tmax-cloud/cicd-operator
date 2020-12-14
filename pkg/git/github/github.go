@@ -104,11 +104,18 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	return nil
 }
 
-func (c *Client) SetCommitStatus(gitConfig *cicdv1.GitConfig, context string, state git.CommitStatusState, token, description, targetUrl string) error {
+func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client *client.Client) error {
 
 	var commitStatusBody CommitStatusBody
 	var httpClient = &http.Client{}
-	apiUrl := gitConfig.GetApiUrl() + "/repos/" + gitConfig.Repository + "/statuses/" + sha
+	var sha string
+	if integrationJob.Spec.Refs.Pull == nil {
+		sha = integrationJob.Spec.Refs.Base.Sha
+	} else {
+		sha = integrationJob.Spec.Refs.Pull.Sha
+	}
+	apiUrl := integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationJob.Spec.Refs.Repository + "/statuses/" + sha
+
 	commitStatusBody.State = string(state)
 	commitStatusBody.TargetURL = targetUrl
 	commitStatusBody.Description = description
@@ -123,6 +130,12 @@ func (c *Client) SetCommitStatus(gitConfig *cicdv1.GitConfig, context string, st
 	if err != nil {
 		return nil
 	}
+
+	token, err := integrationConfig.GetToken(*client)
+	if err != nil {
+		return err
+	}
+
 	req.Header.Add("Authorization", "token "+token)
 	req.Header.Add("Accept", "application/vnd.github.v3+json")
 

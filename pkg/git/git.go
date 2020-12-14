@@ -13,7 +13,7 @@ type Client interface {
 	ParseWebhook(http.Header, []byte) (Webhook, error)
 
 	// Commit Status
-	SetCommitStatus(gitConfig *cicdv1.GitConfig, context string, state CommitStatusState, token, description, targetUrl string) error
+	SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state CommitStatusState, description, targetUrl string, c *client.Client) error
 }
 
 type CommitStatusState string
