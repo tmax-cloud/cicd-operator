@@ -113,7 +113,44 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 	return nil
 }
 
-func (c *Client) SetCommitStatus(gitConfig *cicdv1.GitConfig, context string, state git.CommitStatusState, description, targetUrl string) error {
+func (c *Client) SetCommitStatus(gitConfig *cicdv1.GitConfig, sha string, context string, state git.CommitStatusState, token, description, targetUrl string) error {
 	// TODO
+	var commitStatusBody CommitStatusBody
+	var httpClient = &http.Client{}
+	var urlEncodePath = url.QueryEscape(gitConfig.Repository)
+	apiUrl := gitConfig.GetApiUrl() + "/api/v4/projects/" + urlEncodePath + "/statuses/" + sha
+	commitStatusBody.State = string(state)
+	commitStatusBody.TargetURL = targetUrl
+	commitStatusBody.Description = description
+	commitStatusBody.Context = context
+
+	jsonBytes, err := json.Marshal(commitStatusBody)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return nil
+	}
+	req.Header.Add("PRIVATE-TOKEN", token)
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("error setting commit status, code %d, msg %s", resp.StatusCode, string(body))
+	}
+	if err := resp.Body.Close(); err != nil {
+		return err
+	}
 	return nil
 }

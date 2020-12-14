@@ -62,3 +62,10 @@ type RegistrationWebhookBodyConfig struct {
 	InsecureSsl string `json:"insecure_ssl"`
 	Secret      string `json:"secret"`
 }
+
+type CommitStatusBody struct {
+	State       string `json:"state"`
+	TargetURL   string `json:"target_url"`
+	Description string `json:"description"`
+	Context     string `json:"context"`
+}

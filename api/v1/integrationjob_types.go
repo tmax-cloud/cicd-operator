@@ -59,6 +59,7 @@ type IntegrationJobRefs struct {
 type IntegrationJobRefsBase struct {
 	Ref  string `json:"ref"`
 	Link string `json:"link"`
+	Sha  string `json:"sha"`
 }
 
 type IntegrationJobRefsPull struct {
