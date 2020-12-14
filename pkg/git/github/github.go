@@ -16,6 +16,13 @@ import (
 type Client struct {
 }
 
+type CommitStatusBody struct {
+	State       string `json:"state"`
+	TargetURL   string `json:"target_url"`
+	Description string `json:"description"`
+	Context     string `json:"context"`
+}
+
 func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
 	var eventType = git.EventType(header.Get("X-Github-Event"))
 	var webhook git.Webhook

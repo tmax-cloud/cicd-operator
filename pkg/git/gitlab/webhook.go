@@ -54,10 +54,3 @@ type RegistrationWebhookBody struct {
 	WikiPageEvents          bool   `json:"wiki_page_events"`
 	URL                     string `json:"url"`
 }
-
-type CommitStatusBody struct {
-	State       string `json:"state"`
-	TargetURL   string `json:"target_url"`
-	Description string `json:"description"`
-	Context     string `json:"context"`
-}
