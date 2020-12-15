@@ -16,21 +16,19 @@ spec:
   ports:
   - port: 24335
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   name: cicd-webhook
   namespace: cicd-system
 spec:
   rules:
-  - host: waiting.for.loadbalancer
-    http:
-      paths:
-      - backend:
-          service:
-            name: cicd-webhook
-            port:
-              number: 24335
+    - host: waiting.for.loadbalancer
+      http:
+        paths:
+          - backend:
+              serviceName: cicd-webhook
+              servicePort: 24335
 ---
 apiVersion: apps/v1
 kind: Deployment
