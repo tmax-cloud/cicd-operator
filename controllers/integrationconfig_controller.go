@@ -277,6 +277,9 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 		}
 	}
 
+	// If not set, set one
+	sa.Secrets = append(sa.Secrets, corev1.ObjectReference{Name: cicdv1.GetSecretName(instance.Name)})
+
 	if err := controllerutil.SetControllerReference(instance, sa, r.Scheme); err != nil {
 		return err
 	}
