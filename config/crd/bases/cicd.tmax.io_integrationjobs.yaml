@@ -13,10 +13,25 @@ spec:
     kind: IntegrationJob
     listKind: IntegrationJobList
     plural: integrationjobs
+    shortNames:
+    - ij
     singular: integrationjob
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - description: Current status of IntegrationJob
+      jsonPath: .status.state
+      name: State
+      type: string
+    - description: Started time
+      jsonPath: .status.startTime
+      name: Started
+      type: date
+    - description: Ended time
+      jsonPath: .status.completionTime
+      name: Ended
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: IntegrationJob is the Schema for the integrationjobs API

@@ -104,6 +104,10 @@ const (
 // +kubebuilder:subresource:status
 
 // IntegrationJob is the Schema for the integrationjobs API
+// +kubebuilder:resource:shortName="ij"
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="Current status of IntegrationJob"
+// +kubebuilder:printcolumn:name="Started",type="date",JSONPath=".status.startTime",description="Started time"
+// +kubebuilder:printcolumn:name="Ended",type="date",JSONPath=".status.completionTime",description="Ended time"
 type IntegrationJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
