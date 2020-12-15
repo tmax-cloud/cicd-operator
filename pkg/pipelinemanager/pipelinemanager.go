@@ -112,18 +112,18 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 
 	// Initialize status.jobs
 	stateChanged := make([]bool, len(job.Spec.Jobs))
-	reset := len(job.Status.Jobs) != 0 && len(job.Status.Jobs) != len(job.Spec.Jobs)
+	reset := len(job.Status.Jobs) != len(job.Spec.Jobs)
 	if reset {
 		job.Status.Jobs = nil
 	}
-	for i, j := range job.Spec.Jobs {
+	for _, j := range job.Spec.Jobs {
 		if reset {
 			job.Status.Jobs = append(job.Status.Jobs, cicdv1.JobStatus{
 				Name:  j.Name,
 				State: cicdv1.CommitStatusStatePending,
 			})
 		}
-		stateChanged[i] = reset
+		stateChanged = append(stateChanged, reset)
 	}
 
 	// If PR exists, default state is running
@@ -179,6 +179,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 				job.Status.Jobs[i].StartTime = startTime
 				job.Status.Jobs[i].CompletionTime = completionTime
 
+				job.Status.Jobs[i].Containers = nil
 				for _, s := range jStatus.Steps {
 					stepStatus := s.DeepCopy()
 					job.Status.Jobs[i].Containers = append(job.Status.Jobs[i].Containers, *stepStatus)

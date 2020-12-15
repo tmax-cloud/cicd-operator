@@ -1889,6 +1889,111 @@ spec:
                 description: CompletionTime is a time when the job is completed
                 format: date-time
                 type: string
+              jobs:
+                description: Jobs are status list for each Job in the IntegrationJob
+                items:
+                  description: JobStatus is a current status for each job
+                  properties:
+                    completionTime:
+                      description: CompletionTime is a timestamp when the job is started
+                      format: date-time
+                      type: string
+                    containers:
+                      description: Containers is status list for each step in the
+                        job
+                      items:
+                        description: StepState reports the results of running a step
+                          in a Task.
+                        properties:
+                          container:
+                            type: string
+                          imageID:
+                            type: string
+                          name:
+                            type: string
+                          running:
+                            description: Details about a running container
+                            properties:
+                              startedAt:
+                                description: Time at which the container was last
+                                  (re-)started
+                                format: date-time
+                                type: string
+                            type: object
+                          terminated:
+                            description: Details about a terminated container
+                            properties:
+                              containerID:
+                                description: Container's ID in the format 'docker://<container_id>'
+                                type: string
+                              exitCode:
+                                description: Exit status from the last termination
+                                  of the container
+                                format: int32
+                                type: integer
+                              finishedAt:
+                                description: Time at which the container last terminated
+                                format: date-time
+                                type: string
+                              message:
+                                description: Message regarding the last termination
+                                  of the container
+                                type: string
+                              reason:
+                                description: (brief) reason from the last termination
+                                  of the container
+                                type: string
+                              signal:
+                                description: Signal from the last termination of the
+                                  container
+                                format: int32
+                                type: integer
+                              startedAt:
+                                description: Time at which previous execution of the
+                                  container started
+                                format: date-time
+                                type: string
+                            required:
+                            - exitCode
+                            type: object
+                          waiting:
+                            description: Details about a waiting container
+                            properties:
+                              message:
+                                description: Message regarding why the container is
+                                  not yet running.
+                                type: string
+                              reason:
+                                description: (brief) reason the container is not yet
+                                  running.
+                                type: string
+                            type: object
+                        type: object
+                      type: array
+                    message:
+                      description: Message is current state description for this job
+                        It is actually tekton task run's Status.Conditions[0].Message
+                      type: string
+                    name:
+                      description: Name is a job name
+                      type: string
+                    podName:
+                      description: PodName is a name of pod where the job is running
+                      type: string
+                    startTime:
+                      description: StartTime is a timestamp when the job is started
+                      format: date-time
+                      type: string
+                    state:
+                      description: State is current state of this job It is actually
+                        a conversion of tekton task run's Status.Conditions[0].Reason
+                      type: string
+                  required:
+                  - message
+                  - name
+                  - state
+                  type: object
+                type: array
               startTime:
                 description: StartTime is actual time the task started
                 format: date-time
