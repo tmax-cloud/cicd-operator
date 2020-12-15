@@ -1,6 +1,18 @@
 package v1
 
-import corev1 "k8s.io/api/core/v1"
+import (
+	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	"net/url"
+)
+
+const (
+	GithubDefaultApiUrl = "https://api.github.com"
+	GithubDefaultHost   = "https://github.com"
+
+	GitlabDefaultApiUrl = "https://gitlab.com"
+	GitlabDefaultHost   = "https://gitlab.com"
+)
 
 type GitConfig struct {
 	// Type for git remote server
@@ -19,19 +31,28 @@ type GitConfig struct {
 	Token GitToken `json:"token"`
 }
 
+// Get Git host
+func (config *GitConfig) GetGitHost() (string, error) {
+	gitUrl := config.GetApiUrl()
+	if gitUrl == GithubDefaultApiUrl {
+		gitUrl = GithubDefaultHost
+	}
+	gitU, err := url.Parse(gitUrl)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s://%s", gitU.Scheme, gitU.Host), nil
+}
+
 // Returns ApiUrl for api server
 func (config *GitConfig) GetApiUrl() string {
 	if config.Type == GitTypeGitHub && config.ApiUrl == "" {
-		return "https://api.github.com"
+		return GithubDefaultApiUrl
 	} else if config.Type == GitTypeGitLab && config.ApiUrl == "" {
-		return "https://gitlab.com"
+		return GitlabDefaultApiUrl
 	}
 	return config.ApiUrl
-}
-
-// Returns Server address which webhook events will be received
-func (config *GitConfig) GetServerAddress() string {
-	return ""
 }
 
 type GitToken struct {

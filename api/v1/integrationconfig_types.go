@@ -19,6 +19,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -111,3 +112,13 @@ func GetServiceAccountName(configName string) string {
 func GetSecretName(configName string) string {
 	return configName
 }
+
+// Returns Server address which webhook events will be received
+func (i *IntegrationConfig) GetWebhookServerAddress() string {
+	return fmt.Sprintf("http://%s/webhook/%s/%s", configs.ExternalHostName, i.Namespace, i.Name)
+}
+
+const (
+	IntegrationConfigConditionWebhookRegistered = status.ConditionType("webhook-registered")
+	IntegrationConfigConditionReady             = status.ConditionType("ready")
+)
