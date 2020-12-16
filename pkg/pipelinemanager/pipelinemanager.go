@@ -6,6 +6,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
 )
@@ -103,7 +104,7 @@ func generateLabel(j *cicdv1.IntegrationJob) map[string]string {
 	return label
 }
 
-func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error {
+func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig, client client.Client) error {
 	// If PR is nil but IntegrationJob's status is running, set as error
 	// Also, schedule next pipelineRun
 	if pr == nil && job.Status.State == cicdv1.IntegrationJobStateRunning {
@@ -197,7 +198,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 	// If state is changed, update git commit status
 	for i, j := range job.Status.Jobs {
 		if stateChanged[i] {
-			if err := gitCli.SetCommitStatus(&cfg.Spec.Git, j.Name, git.CommitStatusState(j.State), j.Message, job.GetReportServerAddress(j.Name)); err != nil {
+			if err := gitCli.SetCommitStatus(job, cfg, j.Name, git.CommitStatusState(j.State), j.Message, job.GetReportServerAddress(j.Name), &client); err != nil {
 				return err
 			}
 		}

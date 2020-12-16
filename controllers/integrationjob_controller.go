@@ -82,7 +82,7 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Check PipelineRun's status and update IntegrationJob's status
-	if err := pipelinemanager.ReflectStatus(pr, instance, config); err != nil {
+	if err := pipelinemanager.ReflectStatus(pr, instance, config, r.Client); err != nil {
 		log.Error(err, "")
 		return ctrl.Result{}, err
 	}
