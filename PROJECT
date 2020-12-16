@@ -9,6 +9,9 @@ resources:
 - group: cicd
   kind: IntegrationJob
   version: v1
+- group: cicd
+  kind: Approval
+  version: v1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

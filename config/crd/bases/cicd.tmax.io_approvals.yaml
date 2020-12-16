@@ -1,0 +1,92 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: approvals.cicd.tmax.io
+spec:
+  group: cicd.tmax.io
+  names:
+    kind: Approval
+    listKind: ApprovalList
+    plural: approvals
+    singular: approval
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Current status of Approval
+      jsonPath: .status.result
+      name: Status
+      type: string
+    - description: Created time
+      jsonPath: .metadata.creationTimestamp
+      name: Created
+      type: date
+    - description: Decided time
+      jsonPath: .status.decisionTime
+      name: Decided
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: Approval is the Schema for the approvals API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ApprovalSpec defines the desired state of Approval
+            properties:
+              podName:
+                description: PodName represents the name of the pod to be approved
+                  to proceed
+                type: string
+              users:
+                description: Users are the list of the users who are requested to
+                  approve the Approval
+                items:
+                  type: string
+                type: array
+            required:
+            - podName
+            - users
+            type: object
+          status:
+            description: ApprovalStatus defines the observed state of Approval
+            properties:
+              decisionTime:
+                description: Decision time of Approval
+                format: date-time
+                type: string
+              reason:
+                description: Decision message
+                type: string
+              result:
+                description: Decision result of Approval
+                type: string
+            required:
+            - result
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
