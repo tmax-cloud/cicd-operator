@@ -81,7 +81,7 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get template
 	templateStr, err := h.getTemplateString()
 	if err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("cannot get report template"))
+		_ = utils.RespondError(w, http.StatusBadRequest, "cannot get report template")
 		log.Info("Cannot get report template")
 		return
 	}
@@ -89,14 +89,14 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.New("")
 	tmpl, err = tmpl.Parse(templateStr)
 	if err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("cannot parse report template"))
+		_ = utils.RespondError(w, http.StatusBadRequest, "cannot parse report template")
 		log.Info("Cannot parse report template")
 		return
 	}
 
 	// Publish report
 	if err := tmpl.Execute(w, report{JobName: jobName, JobJobName: jobJobName, JobStatus: jobStatus, Log: podLog}); err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("cannot execute report template"))
+		_ = utils.RespondError(w, http.StatusBadRequest, "cannot execute report template")
 		log.Info("Cannot execute report template")
 		return
 	}

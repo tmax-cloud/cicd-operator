@@ -26,7 +26,6 @@ var log = logf.Log.WithName("server")
 
 type Server struct {
 	k8sClient client.Client
-	config    *rest.Config
 	router    *mux.Router
 }
 
