@@ -112,7 +112,7 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 }
 
 func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client *client.Client) error {
-	defer resp.Body.Close()
+
 	var commitStatusBody CommitStatusBody
 	var httpClient = &http.Client{}
 	var sha string
@@ -150,7 +150,7 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 	if err != nil {
 		return err
 	}
-
+	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
