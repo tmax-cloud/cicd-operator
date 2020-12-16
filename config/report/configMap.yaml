@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: report-template
+  namespace: cicd-system
+data:
+  template: |
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.2.1/build/styles/default.min.css">
+        <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.2.1/build/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+        <title>Job Descriptions</title>
+      </head>
+      <body>
+        <div class="container">
+          <h2>{{.JobName}} #{{.JobJobName}}</h2>
+          <hr/>
+          <h3>Job Status</h3>
+          <table class="table">
+            <tbody>
+              <tr>
+                <td>Pod Name</td>
+                <td>{{.JobStatus.PodName}}</td>
+              </tr>
+              <tr>
+                <td>Job Status</td>
+                <td>{{.JobStatus.State}}</td>
+              </tr>
+              <tr>
+                <td>Message</td>
+                <td>{{.JobStatus.Message}}</td>
+              </tr>
+              <tr>
+                <td>Start Time</td>
+                <td>{{.JobStatus.StartTime}}</td>
+              </tr>
+              <tr>
+                <td>Completion Time</td>
+                <td>{{.JobStatus.CompletionTime}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <hr/>
+          <h3>Logs</h3>
+          <pre>
+            <code class="hljs bash">
+    {{.Log}}
+            </code>
+          </pre>
+        </div>
+      </body>
+    </html>

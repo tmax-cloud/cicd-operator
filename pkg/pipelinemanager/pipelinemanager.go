@@ -171,8 +171,8 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 				// If something is changed, commit status should be posted
 				stateChanged[i] = job.Status.Jobs[i].State != state ||
 					job.Status.Jobs[i].Message != message ||
-					job.Status.Jobs[i].StartTime != startTime ||
-					job.Status.Jobs[i].CompletionTime != completionTime
+					!job.Status.Jobs[i].StartTime.Equal(startTime) ||
+					!job.Status.Jobs[i].CompletionTime.Equal(completionTime)
 
 				job.Status.Jobs[i].PodName = jStatus.PodName
 				job.Status.Jobs[i].State = state
