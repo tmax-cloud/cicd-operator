@@ -124,7 +124,7 @@ func (h *reportHandler) getPodLogs(podName, namespace string) (string, error) {
 
 func (h *reportHandler) getPodLog(podName, namespace, container string) (string, error) {
 	podReq := h.clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{Container: container})
-	podLogs, err := podReq.Stream()
+	podLogs, err := podReq.Stream(context.Background())
 	if err != nil {
 		return "", err
 	}
