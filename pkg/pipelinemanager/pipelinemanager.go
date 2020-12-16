@@ -61,7 +61,8 @@ func generateTask(j cicdv1.Job) (*tektonv1beta1.PipelineTask, error) {
 		return nil, err
 	}
 
-	task.TaskSpec = &tektonv1beta1.TaskSpec{Steps: steps}
+	task.TaskSpec = &tektonv1beta1.EmbeddedTask{}
+	task.TaskSpec.Steps = steps
 
 	// After
 	task.RunAfter = append(task.RunAfter, j.After...)
