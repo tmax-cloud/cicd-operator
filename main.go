@@ -23,7 +23,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
-	"github.com/tmax-cloud/cicd-operator/pkg/webhook"
+	"github.com/tmax-cloud/cicd-operator/pkg/server"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -104,12 +104,12 @@ func main() {
 	}
 
 	// Create and start webhook server
-	server := webhook.New(mgr.GetClient())
+	srv := server.New(mgr.GetClient(), mgr.GetConfig())
 
 	// Add plugins for webhook
-	webhook.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
+	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
 
-	go server.Start()
+	go srv.Start()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

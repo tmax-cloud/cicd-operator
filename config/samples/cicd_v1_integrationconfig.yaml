@@ -1,7 +1,0 @@
-apiVersion: cicd.tmax.io/v1
-kind: IntegrationConfig
-metadata:
-  name: integrationconfig-sample
-spec:
-  # Add fields here
-  foo: bar

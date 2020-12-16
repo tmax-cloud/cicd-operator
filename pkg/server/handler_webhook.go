@@ -1,4 +1,4 @@
-package webhook
+package server
 
 import (
 	"context"
@@ -11,11 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
-)
-
-const (
-	paramKeyNamespace  = "namespace"
-	paramKeyConfigName = "configName"
 )
 
 var webhookPath = fmt.Sprintf("/webhook/{%s}/{%s}", paramKeyNamespace, paramKeyConfigName)

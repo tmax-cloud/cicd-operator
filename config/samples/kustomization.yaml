@@ -1,5 +1,0 @@
-## Append samples you want in your CSV to this file as resources ##
-resources:
-- cicd_v1_integrationconfig.yaml
-- cicd_v1_integrationjob.yaml
-# +kubebuilder:scaffold:manifestskustomizesamples
