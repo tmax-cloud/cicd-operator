@@ -59,6 +59,7 @@ type IntegrationConfigStatus struct {
 // +kubebuilder:subresource:status
 
 // IntegrationConfig is the Schema for the integrationconfigs API
+// +kubebuilder:resource:shortName="ic"
 type IntegrationConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

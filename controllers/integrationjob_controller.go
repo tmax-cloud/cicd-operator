@@ -57,6 +57,13 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, err
 	}
 
+	// Get parent IntegrationConfig
+	config := &cicdv1.IntegrationConfig{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: instance.Spec.ConfigRef.Name, Namespace: instance.Namespace}, config); err != nil {
+		log.Error(err, "")
+		return ctrl.Result{}, err
+	}
+
 	// Get PipelineRun
 	pr := &tektonv1beta1.PipelineRun{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: pipelinemanager.Name(instance), Namespace: instance.Namespace}, pr); err != nil {
@@ -75,7 +82,7 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Check PipelineRun's status and update IntegrationJob's status
-	if err := pipelinemanager.ReflectStatus(pr, instance); err != nil {
+	if err := pipelinemanager.ReflectStatus(pr, instance, config); err != nil {
 		log.Error(err, "")
 		return ctrl.Result{}, err
 	}
