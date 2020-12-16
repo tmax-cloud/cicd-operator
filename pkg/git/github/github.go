@@ -16,6 +16,13 @@ import (
 type Client struct {
 }
 
+type CommitStatusBody struct {
+	State       string `json:"state"`
+	TargetURL   string `json:"target_url"`
+	Description string `json:"description"`
+	Context     string `json:"context"`
+}
+
 func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
 	var eventType = git.EventType(header.Get("X-Github-Event"))
 	var webhook git.Webhook
@@ -104,7 +111,54 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	return nil
 }
 
-func (c *Client) SetCommitStatus(gitConfig *cicdv1.GitConfig, context string, state git.CommitStatusState, description, targetUrl string) error {
-	// TODO
+func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client *client.Client) error {
+
+	var commitStatusBody CommitStatusBody
+	var httpClient = &http.Client{}
+	var sha string
+	if integrationJob.Spec.Refs.Pull == nil {
+		sha = integrationJob.Spec.Refs.Base.Sha
+	} else {
+		sha = integrationJob.Spec.Refs.Pull.Sha
+	}
+	apiUrl := integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationJob.Spec.Refs.Repository + "/statuses/" + sha
+
+	commitStatusBody.State = string(state)
+	commitStatusBody.TargetURL = targetUrl
+	commitStatusBody.Description = description
+	commitStatusBody.Context = context
+
+	jsonBytes, err := json.Marshal(commitStatusBody)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return nil
+	}
+
+	token, err := integrationConfig.GetToken(*client)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Authorization", "token "+token)
+	req.Header.Add("Accept", "application/vnd.github.v3+json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("error setting commit status, code %d, msg %s", resp.StatusCode, string(body))
+	}
+
 	return nil
 }

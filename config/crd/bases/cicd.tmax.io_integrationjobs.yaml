@@ -1834,9 +1834,12 @@ spec:
                         type: string
                       ref:
                         type: string
+                      sha:
+                        type: string
                     required:
                     - link
                     - ref
+                    - sha
                     type: object
                   link:
                     description: Link is a full url of the repository
