@@ -1,4 +1,4 @@
-package webhook
+package server
 
 import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"

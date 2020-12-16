@@ -23,13 +23,12 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
-	"github.com/tmax-cloud/cicd-operator/pkg/webhook"
-	"os"
-
+	"github.com/tmax-cloud/cicd-operator/pkg/server"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -97,13 +96,20 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
+	// Check for ingress first
+	setupLog.Info("Waiting for ingress to be ready")
+	if err := controllers.WaitIngressReady(); err != nil {
+		setupLog.Error(err, "error while waiting ingress ready")
+		os.Exit(1)
+	}
+
 	// Create and start webhook server
-	server := webhook.New(mgr.GetClient())
+	srv := server.New(mgr.GetClient(), mgr.GetConfig())
 
 	// Add plugins for webhook
-	webhook.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
+	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
 
-	go server.Start()
+	go srv.Start()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

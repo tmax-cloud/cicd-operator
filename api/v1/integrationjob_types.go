@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -85,8 +87,8 @@ type IntegrationJobStatus struct {
 	// CompletionTime is a time when the job is completed
 	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
 
-	// TaskStatus
-	// TODO
+	// Jobs are status list for each Job in the IntegrationJob
+	Jobs []JobStatus `json:"jobs,omitempty"`
 }
 
 type IntegrationJobState string
@@ -103,6 +105,10 @@ const (
 // +kubebuilder:subresource:status
 
 // IntegrationJob is the Schema for the integrationjobs API
+// +kubebuilder:resource:shortName="ij"
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="Current status of IntegrationJob"
+// +kubebuilder:printcolumn:name="Started",type="date",JSONPath=".status.startTime",description="Started time"
+// +kubebuilder:printcolumn:name="Ended",type="date",JSONPath=".status.completionTime",description="Ended time"
 type IntegrationJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -125,9 +131,13 @@ func init() {
 }
 
 func (s *IntegrationJobStatus) SetDefaults() error {
-	// TODO
 	if s.State == "" {
 		s.State = IntegrationJobStatePending
 	}
 	return nil
+}
+
+// Returns Server address for reports (IntegrationJob details)
+func (i *IntegrationJob) GetReportServerAddress(jobName string) string {
+	return fmt.Sprintf("http://%s/report/%s/%s/%s", configs.ExternalHostName, i.Namespace, i.Name, jobName)
 }

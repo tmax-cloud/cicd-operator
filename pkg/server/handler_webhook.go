@@ -1,24 +1,16 @@
-package webhook
+package server
 
 import (
 	"context"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/gitlab"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
-)
-
-const (
-	paramKeyNamespace  = "namespace"
-	paramKeyConfigName = "configName"
 )
 
 var webhookPath = fmt.Sprintf("/webhook/{%s}/{%s}", paramKeyNamespace, paramKeyConfigName)
@@ -53,14 +45,9 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var gitCli git.Client
-	switch config.Spec.Git.Type {
-	case cicdv1.GitTypeGitHub:
-		gitCli = &github.Client{}
-	case cicdv1.GitTypeGitLab:
-		gitCli = &gitlab.Client{}
-	default:
-		_ = utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("git type of IntegrationConfig %s/%s is invalid", ns, configName))
+	gitCli, err := utils.GetGitCli(config)
+	if err != nil {
+		_ = utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
