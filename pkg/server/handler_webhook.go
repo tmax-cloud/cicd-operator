@@ -3,11 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	"io/ioutil"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -52,7 +53,7 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert webhook
-	wh, err := gitCli.ParseWebhook(r.Header, body)
+	wh, err := gitCli.ParseWebhook(config, r.Header, body)
 	if err != nil {
 		_ = utils.RespondError(w, http.StatusInternalServerError, "cannot parse webhook body")
 		log.Error(err, "")
