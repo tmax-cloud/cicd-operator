@@ -10,7 +10,7 @@ import (
 type Client interface {
 	// Webhooks
 	RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, c *client.Client) error
-	ParseWebhook(http.Header, []byte) (Webhook, error)
+	ParseWebhook(*cicdv1.IntegrationConfig, http.Header, []byte) (Webhook, error)
 
 	// Commit Status
 	SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state CommitStatusState, description, targetUrl string, c *client.Client) error
