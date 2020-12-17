@@ -19,13 +19,13 @@ const (
 	DefaultWorkingDir = "/tekton/home/integ-source"
 )
 
-func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
+func Generate(job *cicdv1.IntegrationJob, c client.Client) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
 
 	// Generate Tasks
 	var tasks []tektonv1beta1.PipelineTask
 	for _, j := range job.Spec.Jobs {
-		taskSpec, err := generateTask(j)
+		taskSpec, err := generateTask(job, j, job.Namespace, c)
 		if err != nil {
 			return nil, err
 		}
@@ -52,17 +52,24 @@ func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	}, nil
 }
 
-func generateTask(j cicdv1.Job) (*tektonv1beta1.PipelineTask, error) {
+func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job, ns string, c client.Client) (*tektonv1beta1.PipelineTask, error) {
 	task := &tektonv1beta1.PipelineTask{Name: j.Name}
 
-	// Steps
-	steps, err := generateSteps(j)
-	if err != nil {
-		return nil, err
-	}
+	// Handle Approval
+	if j.Approval != nil {
+		if err := generateApprovalRunTask(job, j, ns, c, task); err != nil {
+			return nil, err
+		}
+	} else {
+		// Steps
+		steps, err := generateSteps(j)
+		if err != nil {
+			return nil, err
+		}
 
-	task.TaskSpec = &tektonv1beta1.EmbeddedTask{}
-	task.TaskSpec.Steps = steps
+		task.TaskSpec = &tektonv1beta1.EmbeddedTask{}
+		task.TaskSpec.Steps = steps
+	}
 
 	// After
 	task.RunAfter = append(task.RunAfter, j.After...)
@@ -70,10 +77,19 @@ func generateTask(j cicdv1.Job) (*tektonv1beta1.PipelineTask, error) {
 	return task, nil
 }
 
+func generateCustomTaskRef(kind string) *tektonv1beta1.TaskRef {
+	return &tektonv1beta1.TaskRef{
+		APIVersion: cicdv1.CustomTaskApiVersion,
+		Kind:       tektonv1beta1.TaskKind(kind),
+	}
+}
+
 func generateSteps(j cicdv1.Job) ([]tektonv1beta1.Step, error) {
 	var steps []tektonv1beta1.Step
 
-	steps = append(steps, gitCheckout())
+	if j.GitCheckout {
+		steps = append(steps, gitCheckout())
+	}
 
 	step := tektonv1beta1.Step{}
 	step.Container = j.Container

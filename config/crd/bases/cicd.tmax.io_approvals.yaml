@@ -49,6 +49,19 @@ spec:
           spec:
             description: ApprovalSpec defines the desired state of Approval
             properties:
+              integrationJob:
+                description: IntegrationJob is a related IntegrationJob name (maybe
+                  a grand-parent of Approval)
+                type: string
+              jobName:
+                description: JobName is a name of actual job in IntegrationJob
+                type: string
+              link:
+                description: Link is a description link approvers may refer to
+                type: string
+              message:
+                description: Message is a message from requester
+                type: string
               pipelineRun:
                 description: PipelineRun points the actual pipeline run object which
                   created this Approval
@@ -58,6 +71,10 @@ spec:
                   to proceed Deprecated: not used from HyperCloud5, only for the backward
                   compatibility with HyperCloud4'
                 type: string
+              sender:
+                description: Sender is a requester (probably be pull-request author
+                  or pusher)
+                type: string
               users:
                 description: Users are the list of the users who are requested to
                   approve the Approval
@@ -66,12 +83,14 @@ spec:
                 type: array
             required:
             - pipelineRun
-            - podName
             - users
             type: object
           status:
             description: ApprovalStatus defines the observed state of Approval
             properties:
+              approver:
+                description: Approver is a user who actually approved
+                type: string
               decisionTime:
                 description: Decision time of Approval
                 format: date-time
@@ -83,6 +102,7 @@ spec:
                 description: Decision result of Approval
                 type: string
             required:
+            - approver
             - result
             type: object
         type: object

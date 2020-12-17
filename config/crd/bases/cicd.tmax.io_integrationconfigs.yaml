@@ -110,6 +110,35 @@ spec:
                           items:
                             type: string
                           type: array
+                        approval:
+                          description: Approval
+                          properties:
+                            approvers:
+                              description: Approvers is a list of approvers, in a
+                                form of <User name>=<Email> (Email is optional) e.g.,
+                                admin-tmax.co.kr e.g., admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+                              items:
+                                type: string
+                              type: array
+                            approversConfigMap:
+                              description: ApproversConfigMap is a configMap Name
+                                containing approvers list should exist in configMap's
+                                'approvers' key, as comma(,) separated list e.g.,
+                                admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr,test-tmax.co.kr=kyunghoon_min@tmax.co.kr
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            requestMessage:
+                              description: RequestMessage is a message to be sent
+                                to approvers by email
+                              type: string
+                          required:
+                          - requestMessage
+                          type: object
                         args:
                           description: 'Arguments to the entrypoint. The docker image''s
                             CMD is used if this is not provided. Variable references
@@ -295,6 +324,11 @@ spec:
                                 type: object
                             type: object
                           type: array
+                        gitCheckout:
+                          default: true
+                          description: GitCheckout describes whether or not to checkout
+                            from git before
+                          type: boolean
                         image:
                           description: 'Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images
                             This field is optional to allow higher level config management
@@ -1096,7 +1130,8 @@ spec:
                           type: boolean
                         tektonTask:
                           description: TektonTask is for referring local Tasks or
-                            the Tasks registered in tekton catalog github repo.
+                            the Tasks registered in tekton catalog github repo. Not
+                            implemented yet
                           properties:
                             params:
                               description: Params are input params for the task
@@ -1918,7 +1953,6 @@ spec:
                           type: string
                       required:
                       - name
-                      - script
                       type: object
                     type: array
                   preSubmit:
@@ -1931,6 +1965,35 @@ spec:
                           items:
                             type: string
                           type: array
+                        approval:
+                          description: Approval
+                          properties:
+                            approvers:
+                              description: Approvers is a list of approvers, in a
+                                form of <User name>=<Email> (Email is optional) e.g.,
+                                admin-tmax.co.kr e.g., admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+                              items:
+                                type: string
+                              type: array
+                            approversConfigMap:
+                              description: ApproversConfigMap is a configMap Name
+                                containing approvers list should exist in configMap's
+                                'approvers' key, as comma(,) separated list e.g.,
+                                admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr,test-tmax.co.kr=kyunghoon_min@tmax.co.kr
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            requestMessage:
+                              description: RequestMessage is a message to be sent
+                                to approvers by email
+                              type: string
+                          required:
+                          - requestMessage
+                          type: object
                         args:
                           description: 'Arguments to the entrypoint. The docker image''s
                             CMD is used if this is not provided. Variable references
@@ -2116,6 +2179,11 @@ spec:
                                 type: object
                             type: object
                           type: array
+                        gitCheckout:
+                          default: true
+                          description: GitCheckout describes whether or not to checkout
+                            from git before
+                          type: boolean
                         image:
                           description: 'Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images
                             This field is optional to allow higher level config management
@@ -2917,7 +2985,8 @@ spec:
                           type: boolean
                         tektonTask:
                           description: TektonTask is for referring local Tasks or
-                            the Tasks registered in tekton catalog github repo.
+                            the Tasks registered in tekton catalog github repo. Not
+                            implemented yet
                           properties:
                             params:
                               description: Params are input params for the task
@@ -3739,7 +3808,6 @@ spec:
                           type: string
                       required:
                       - name
-                      - script
                       type: object
                     type: array
                 required:

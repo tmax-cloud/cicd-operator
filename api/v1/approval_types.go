@@ -26,18 +26,31 @@ const (
 	ApprovalResultWaiting  ApprovalResult = "Waiting"
 	ApprovalResultApproved ApprovalResult = "Approved"
 	ApprovalResultRejected ApprovalResult = "Rejected"
-	ApprovalResultFailed   ApprovalResult = "Failed"
-	ApprovalResultCanceled ApprovalResult = "Canceled"
 )
 
 // ApprovalSpec defines the desired state of Approval
 type ApprovalSpec struct {
 	// PodName represents the name of the pod to be approved to proceed
 	// Deprecated: not used from HyperCloud5, only for the backward compatibility with HyperCloud4
-	PodName string `json:"podName"`
+	PodName string `json:"podName,omitempty"`
 
 	// PipelineRun points the actual pipeline run object which created this Approval
 	PipelineRun string `json:"pipelineRun"`
+
+	// IntegrationJob is a related IntegrationJob name (maybe a grand-parent of Approval)
+	IntegrationJob string `json:"integrationJob,omitempty"`
+
+	// JobName is a name of actual job in IntegrationJob
+	JobName string `json:"jobName,omitempty"`
+
+	// Message is a message from requester
+	Message string `json:"message,omitempty"`
+
+	// Sender is a requester (probably be pull-request author or pusher)
+	Sender string `json:"sender,omitempty"`
+
+	// Link is a description link approvers may refer to
+	Link string `json:"link,omitempty"`
 
 	// Users are the list of the users who are requested to approve the Approval
 	Users []string `json:"users"`
@@ -48,11 +61,14 @@ type ApprovalStatus struct {
 	// Decision result of Approval
 	Result ApprovalResult `json:"result"`
 
+	// Approver is a user who actually approved
+	Approver string `json:"approver"`
+
 	// Decision message
 	Reason string `json:"reason,omitempty"`
 
 	// Decision time of Approval
-	DecisionTime metav1.Time `json:"decisionTime,omitempty"`
+	DecisionTime *metav1.Time `json:"decisionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -80,5 +96,5 @@ type ApprovalList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&IntegrationConfig{}, &IntegrationConfigList{})
+	SchemeBuilder.Register(&Approval{}, &ApprovalList{})
 }

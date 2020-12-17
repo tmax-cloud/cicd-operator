@@ -18,7 +18,9 @@ package main
 
 import (
 	"flag"
+	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tmax-cloud/cicd-operator/controllers/customs"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -47,6 +49,7 @@ func init() {
 
 	utilruntime.Must(cicdv1.AddToScheme(scheme))
 	utilruntime.Must(tektonv1beta1.AddToScheme(scheme))
+	utilruntime.Must(tektonv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -92,6 +95,23 @@ func main() {
 		Scheduler: scheduler.New(mgr.GetClient(), mgr.GetScheme()),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IntegrationJob")
+		os.Exit(1)
+	}
+	customRunController := &controllers.CustomRunReconciler{
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("controllers").WithName("CustomRun"),
+		Scheme:          mgr.GetScheme(),
+		KindHandlerMap:  map[string]controllers.KindHandler{},
+		HandlerChildren: map[string][]runtime.Object{},
+	}
+	// Add custom Run handlers
+	customRunController.AddKindHandler(cicdv1.CustomTaskKindApproval, &customs.ApprovalRunHandler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ApprovalRun"),
+		Scheme: mgr.GetScheme(),
+	}, &cicdv1.Approval{})
+	if err = customRunController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CustomRun")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
