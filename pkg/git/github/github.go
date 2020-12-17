@@ -180,9 +180,12 @@ func IsValidPayload(secret, headerHash string, payload []byte) bool {
 
 func HashPayload(secret string, payloadBody []byte) string {
 	hm := hmac.New(sha1.New, []byte(secret))
-	hm.Write(payloadBody)
+	_, err := hm.Write(payloadBody)
 	sum := hm.Sum(nil)
-	return fmt.Sprintf("%x", sum)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%x", sum), nil
 }
 
 func Validate(secret, headerHash string, payload []byte) error {
