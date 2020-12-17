@@ -64,7 +64,7 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, Push: &push}
 
 	} else {
-		return webhook, fmt.Errorf("event %s is not supported", eventType)
+		return webhook, nil
 	}
 	return webhook, nil
 }
