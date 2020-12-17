@@ -49,9 +49,14 @@ spec:
           spec:
             description: ApprovalSpec defines the desired state of Approval
             properties:
+              pipelineRun:
+                description: PipelineRun points the actual pipeline run object which
+                  created this Approval
+                type: string
               podName:
-                description: PodName represents the name of the pod to be approved
-                  to proceed
+                description: 'PodName represents the name of the pod to be approved
+                  to proceed Deprecated: not used from HyperCloud5, only for the backward
+                  compatibility with HyperCloud4'
                 type: string
               users:
                 description: Users are the list of the users who are requested to
@@ -60,6 +65,7 @@ spec:
                   type: string
                 type: array
             required:
+            - pipelineRun
             - podName
             - users
             type: object

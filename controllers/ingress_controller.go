@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -22,7 +23,7 @@ func WaitIngressReady() error {
 		return err
 	}
 
-	watcher, err := ingCli.Watch(metav1.ListOptions{
+	watcher, err := ingCli.Watch(context.Background(), metav1.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(core.ObjectNameField, "cicd-webhook").String(),
 	})
 	if err != nil {
@@ -59,7 +60,7 @@ func WaitIngressReady() error {
 			hostname := fmt.Sprintf("cicd-webhook.%s.nip.io", ip)
 			ing.Spec.Rules[0].Host = hostname
 
-			if _, err := ingCli.Update(ing); err != nil {
+			if _, err := ingCli.Update(context.Background(), ing, metav1.UpdateOptions{}); err != nil {
 				return err
 			}
 
