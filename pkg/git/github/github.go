@@ -185,7 +185,7 @@ func HashPayload(secret string, payloadBody []byte) string {
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("%x", sum), nil
+	return fmt.Sprintf("%x", sum)
 }
 
 func Validate(secret, headerHash string, payload []byte) error {
