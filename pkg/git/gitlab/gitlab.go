@@ -23,12 +23,18 @@ type CommitStatusBody struct {
 	Context     string `json:"context"`
 }
 
-func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
+func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, header http.Header, jsonString []byte) (git.Webhook, error) {
 	// TODO
-	var eventType git.EventType
 	var webhook git.Webhook
+	if err := Validate(integrationConfig.Status.Secrets, header.Get("x-gitlab-token")); err != nil {
+		return webhook, err
+	}
+
+	var eventType git.EventType
+
 	var err error
-	eventFromHeader := header.Get("X-Gitlab-Event")
+
+	eventFromHeader := header.Get("x-gitlab-event")
 	if eventFromHeader == "Merge Request Hook" {
 		eventType = git.EventTypePullRequest
 	} else if eventFromHeader == "Push Hook" || eventFromHeader == "Tag Push Hook" {
@@ -104,7 +110,7 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 	if err != nil {
 		return err
 	}
-
+	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -169,6 +175,13 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 	}
 	if err := resp.Body.Close(); err != nil {
 		return err
+	}
+	return nil
+}
+
+func Validate(secret, headerToken string) error {
+	if secret != headerToken {
+		return fmt.Errorf("invalid request : X-Gitlab-Token does not match secret")
 	}
 	return nil
 }
