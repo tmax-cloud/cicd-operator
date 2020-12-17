@@ -14,8 +14,8 @@ require (
 	k8s.io/apimachinery v0.19.0
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/kubernetes v1.13.0
+	knative.dev/pkg v0.0.0-20200922164940-4bf40ad82aab
 	sigs.k8s.io/controller-runtime v0.6.4
-	knative.dev/pkg v0.0.0-20200711004937-22502028e31a
 )
 
 replace (
