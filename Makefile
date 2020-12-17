@@ -57,6 +57,9 @@ deploy: manifests kustomize
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=cicd-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+manifests-release:
+	./hack/release-manifest.sh $(VERSION)
+
 # Run go fmt against code
 fmt:
 	go fmt ./...
