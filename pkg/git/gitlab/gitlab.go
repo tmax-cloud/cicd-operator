@@ -24,7 +24,6 @@ type CommitStatusBody struct {
 }
 
 func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, header http.Header, jsonString []byte) (git.Webhook, error) {
-	// TODO
 	var webhook git.Webhook
 	if err := Validate(integrationConfig.Status.Secrets, header.Get("x-gitlab-token")); err != nil {
 		return webhook, err
@@ -65,13 +64,12 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, Push: &push}
 
 	} else {
-		return webhook, fmt.Errorf("event %s is not supported", eventType)
+		return webhook, nil
 	}
 	return webhook, nil
 }
 
 func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Url string, client *client.Client) error {
-	// TODO
 	var registrationBody RegistrationWebhookBody
 	EncodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
 	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
