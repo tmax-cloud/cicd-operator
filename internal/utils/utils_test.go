@@ -28,3 +28,19 @@ test2@tmax.co.kr=test2@tmax.co.kr`
 		t.Fatal("error not occur")
 	}
 }
+
+func TestParseEmailFromUsers(t *testing.T) {
+	// Include test
+	users := []string{
+		"aweilfjlwesfj",
+		"aweilfjlwesfj=aweiojweio",
+		"aweilfjlwesfj=admin@tmax.co.kr",
+		"asdij@oisdjf.sdfioj=test@tmax.co.kr",
+	}
+
+	tos := ParseEmailFromUsers(users)
+
+	assert.Equal(t, 2, len(tos), "list is not parsed well")
+	assert.Equal(t, "admin@tmax.co.kr", tos[0], "list is not parsed well")
+	assert.Equal(t, "test@tmax.co.kr", tos[1], "list is not parsed well")
+}

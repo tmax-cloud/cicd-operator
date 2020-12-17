@@ -52,3 +52,22 @@ func ParseApproversList(str string) ([]string, error) {
 
 	return approvers, nil
 }
+
+func ParseEmailFromUsers(users []string) []string {
+	var emails []string
+
+	emailRe := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+
+	for _, u := range users {
+		subs := strings.Split(u, "=")
+		if len(subs) < 2 {
+			continue
+		}
+		trimmed := strings.TrimSpace(subs[1])
+		if emailRe.MatchString(trimmed) {
+			emails = append(emails, trimmed)
+		}
+	}
+
+	return emails
+}

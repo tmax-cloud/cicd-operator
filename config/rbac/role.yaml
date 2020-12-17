@@ -9,6 +9,26 @@ rules:
 - apiGroups:
   - cicd.tmax.io
   resources:
+  - approvals
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cicd.tmax.io
+  resources:
+  - approvals/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - cicd.tmax.io
+  resources:
   - integrationconfigs
   verbs:
   - create
