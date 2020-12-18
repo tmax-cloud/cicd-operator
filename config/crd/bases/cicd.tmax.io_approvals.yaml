@@ -81,9 +81,14 @@ spec:
                 items:
                   type: string
                 type: array
+              usersConfigMap:
+                description: UsersConfigMap is a name of the configmap containing
+                  the users list
+                type: string
             required:
             - pipelineRun
             - users
+            - usersConfigMap
             type: object
           status:
             description: ApprovalStatus defines the observed state of Approval

@@ -111,7 +111,7 @@ func (s Scheduler) run() {
 		}
 
 		// Generate and create PipelineRun
-		pr, err := pipelinemanager.Generate(jobNode.IntegrationJob, s.k8sClient)
+		pr, err := pipelinemanager.Generate(jobNode.IntegrationJob)
 		if err != nil {
 			// TODO - update IntegrationJob status - reason: cannot generate PipelineRun
 			log.Error(err, "")

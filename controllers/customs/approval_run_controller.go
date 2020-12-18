@@ -122,6 +122,11 @@ func newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {
 		return nil, err
 	}
 
+	approverCm, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyApproversCM, tektonv1beta1.ParamTypeString)
+	if err != nil {
+		return nil, err
+	}
+
 	msg, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyMessage, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		return nil, err
@@ -155,6 +160,7 @@ func newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {
 		Spec: cicdv1.ApprovalSpec{
 			PipelineRun:    prName,
 			Users:          approvers,
+			UsersConfigMap: approverCm,
 			IntegrationJob: jobName,
 			JobName:        jobJobName,
 			Sender:         sender,

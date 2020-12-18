@@ -19,13 +19,13 @@ const (
 	DefaultWorkingDir = "/tekton/home/integ-source"
 )
 
-func Generate(job *cicdv1.IntegrationJob, c client.Client) (*tektonv1beta1.PipelineRun, error) {
+func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
 
 	// Generate Tasks
 	var tasks []tektonv1beta1.PipelineTask
 	for _, j := range job.Spec.Jobs {
-		taskSpec, err := generateTask(job, j, job.Namespace, c)
+		taskSpec, err := generateTask(job, j)
 		if err != nil {
 			return nil, err
 		}
@@ -52,12 +52,12 @@ func Generate(job *cicdv1.IntegrationJob, c client.Client) (*tektonv1beta1.Pipel
 	}, nil
 }
 
-func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job, ns string, c client.Client) (*tektonv1beta1.PipelineTask, error) {
+func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.PipelineTask, error) {
 	task := &tektonv1beta1.PipelineTask{Name: j.Name}
 
 	// Handle Approval
 	if j.Approval != nil {
-		if err := generateApprovalRunTask(job, j, ns, c, task); err != nil {
+		if err := generateApprovalRunTask(job, j, task); err != nil {
 			return nil, err
 		}
 	} else {

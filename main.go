@@ -22,6 +22,7 @@ import (
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/controllers/customs"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/pkg/apiserver"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
@@ -30,6 +31,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	apiregv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -50,6 +52,7 @@ func init() {
 	utilruntime.Must(cicdv1.AddToScheme(scheme))
 	utilruntime.Must(tektonv1beta1.AddToScheme(scheme))
 	utilruntime.Must(tektonv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiregv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -130,6 +133,10 @@ func main() {
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
 
 	go srv.Start()
+
+	// Start API aggregation server
+	apiServer := apiserver.New(mgr.GetScheme())
+	go apiServer.Start()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
