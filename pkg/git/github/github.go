@@ -1,12 +1,10 @@
 package github
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -45,7 +43,7 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
 		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
 		pullRequest := git.PullRequest{ID: data.PullRequest.ID, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
-		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, PullRequest: &pullRequest}
+		webhook = git.Webhook{EventType: eventType, Repo: repo, PullRequest: &pullRequest}
 
 	} else if eventType == git.EventTypePush {
 		var data PushWebhook
@@ -61,7 +59,7 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 			sha = data.Sha4Push
 		}
 		push := git.Push{Pusher: data.Pusher.Name, Ref: data.Ref, Sha: sha}
-		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, Push: &push}
+		webhook = git.Webhook{EventType: eventType, Repo: repo, Push: &push}
 
 	} else {
 		return webhook, nil
@@ -72,8 +70,7 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client *client.Client) error {
 	var registrationBody RegistrationWebhookBody
 	var registrationConfig RegistrationWebhookBodyConfig
-	var apiUrl string = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
-	var httpClient = &http.Client{}
+	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
 
 	registrationBody.Name = "web"
 	registrationBody.Active = true
@@ -84,34 +81,14 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	registrationConfig.Secret = integrationConfig.Status.Secrets
 
 	registrationBody.Config = registrationConfig
-	jsonBytes, err := json.Marshal(registrationBody)
-	if err != nil {
-		return err
-	}
 
-	req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
-	if err != nil {
-		return err
-	}
 	token, err := integrationConfig.GetToken(*client)
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Authorization", "token "+token)
-	resp, err := httpClient.Do(req)
+	header := map[string]string{"Authorization": "token " + token}
+	_, _, err = git.RequestHttp(http.MethodPost, apiUrl, header, registrationBody)
 	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf("error setting webhook, code %d, msg %s", resp.StatusCode, string(body))
-	}
-
-	if err := resp.Body.Close(); err != nil {
 		return err
 	}
 
@@ -119,9 +96,7 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 }
 
 func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client *client.Client) error {
-
 	var commitStatusBody CommitStatusBody
-	var httpClient = &http.Client{}
 	var sha string
 	if integrationJob.Spec.Refs.Pull == nil {
 		sha = integrationJob.Spec.Refs.Base.Sha
@@ -135,36 +110,17 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
 
-	jsonBytes, err := json.Marshal(commitStatusBody)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
-	if err != nil {
-		return nil
-	}
-
 	token, err := integrationConfig.GetToken(*client)
 	if err != nil {
 		return err
 	}
-
-	req.Header.Add("Authorization", "token "+token)
-	req.Header.Add("Accept", "application/vnd.github.v3+json")
-
-	resp, err := httpClient.Do(req)
+	header := map[string]string{
+		"Authorization": "token " + token,
+		"Accept":        "application/vnd.github.v3+json",
+	}
+	_, _, err = git.RequestHttp(http.MethodPost, apiUrl, header, commitStatusBody)
 	if err != nil {
 		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		return fmt.Errorf("error setting commit status, code %d, msg %s", resp.StatusCode, string(body))
 	}
 
 	return nil
