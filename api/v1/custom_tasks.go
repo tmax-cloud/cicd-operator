@@ -9,9 +9,10 @@ const (
 
 // Approval
 const (
-	CustomTaskKindApproval = "Approval"
+	CustomTaskKindApproval = "ApprovalTask"
 
 	CustomTaskApprovalParamKeyApprovers         = "approvers"
+	CustomTaskApprovalParamKeyApproversCM       = "approvers-config-map"
 	CustomTaskApprovalParamKeyMessage           = "message"
 	CustomTaskApprovalParamKeyIntegrationJob    = "integration-job"
 	CustomTaskApprovalParamKeyIntegrationJobJob = "integration-job-job"

@@ -14,8 +14,10 @@ spec:
   selector:
     control-plane: controller-manager
   ports:
-  - port: 24335
-  - port: 34335
+  - name: webhook
+    port: 24335
+  - name: api
+    port: 34335
 ---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
@@ -46,7 +48,7 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller-manager
+  name: cicd-operator
   namespace: cicd-system
   labels:
     control-plane: controller-manager

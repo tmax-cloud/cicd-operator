@@ -1,5 +1,6 @@
 # Current Operator version
 VERSION ?= 0.0.1
+REGISTRY ?= tmaxcloudck
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -12,7 +13,7 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= tmaxcloudck/cicd-operator:latest
+IMG ?= $(REGISTRY)/cicd-operator:$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -56,8 +57,6 @@ deploy: manifests kustomize
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=cicd-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
-manifests-release:
 	./hack/release-manifest.sh $(VERSION)
 
 # Run go fmt against code
@@ -156,12 +155,15 @@ compare-sha-gen:
 save-sha-crd:
 	$(eval CRDSHA1=$(shell sha512sum config/crd/bases/cicd.tmax.io_integrationconfigs.yaml))
 	$(eval CRDSHA2=$(shell sha512sum config/crd/bases/cicd.tmax.io_integrationjobs.yaml))
+	$(eval CRDSHA3=$(shell sha512sum config/release.yaml))
 
 compare-sha-crd:
 	$(eval CRDSHA1_AFTER=$(shell sha512sum config/crd/bases/cicd.tmax.io_integrationconfigs.yaml))
 	$(eval CRDSHA2_AFTER=$(shell sha512sum config/crd/bases/cicd.tmax.io_integrationjobs.yaml))
+	$(eval CRDSHA3_AFTER=$(shell sha512sum config/release.yaml))
 	@if [ "${CRDSHA1_AFTER}" = "${CRDSHA1}" ]; then echo "cicd.tmax.io_integrationconfigs.yaml is not changed"; else echo "cicd.tmax.io_integrationconfigs.yaml file is changed"; exit 1; fi
 	@if [ "${CRDSHA2_AFTER}" = "${CRDSHA2}" ]; then echo "cicd.tmax.io_integrationjobs.yaml is not changed"; else echo "cicd.tmax.io_integrationjobs.yaml file is changed"; exit 1; fi
+	@if [ "${CRDSHA3_AFTER}" = "${CRDSHA3}" ]; then echo "config/release.yaml is not changed"; else echo "config/release.yaml file is changed"; exit 1; fi
 
 save-sha-mod:
 	$(eval MODSHA=$(shell sha512sum go.mod))
