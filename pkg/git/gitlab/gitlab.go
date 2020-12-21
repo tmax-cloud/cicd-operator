@@ -1,10 +1,8 @@
 package gitlab
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -73,7 +71,6 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 	var registrationBody RegistrationWebhookBody
 	EncodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
 	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
-	var httpClient = &http.Client{}
 
 	//enable hooks from every events
 	registrationBody.ConfidentialIssueEvents = true
@@ -89,35 +86,16 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 	registrationBody.URL = Url
 	registrationBody.ID = EncodedRepoPath
 
-	jsonBytes, _ := json.Marshal(registrationBody)
-
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonBytes))
-	if err != nil {
-		return err
-	}
-
 	token, err := integrationConfig.GetToken(*client)
-
 	if err != nil {
 		return err
 	}
-
-	req.Header.Add("PRIVATE-TOKEN", token)
-	req.Header.Add("Content-Type", "application/json")
-	resp, err := httpClient.Do(req)
+	header := map[string]string{
+		"PRIVATE-TOKEN": token,
+		"Content-Type":  "application/json",
+	}
+	_, _, err = git.RequestHttp(http.MethodPost, apiURL, header, registrationBody)
 	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		return fmt.Errorf("error setting webhook, code %d, msg %s", resp.StatusCode, string(body))
-	}
-	if err := resp.Body.Close(); err != nil {
 		return err
 	}
 
@@ -125,9 +103,7 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 }
 
 func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client *client.Client) error {
-	// TODO
 	var commitStatusBody CommitStatusBody
-	var httpClient = &http.Client{}
 	var urlEncodePath = url.QueryEscape(integrationConfig.Spec.Git.Repository)
 	var sha string
 	if integrationJob.Spec.Refs.Pull == nil {
@@ -141,39 +117,19 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
 
-	jsonBytes, err := json.Marshal(commitStatusBody)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
-	if err != nil {
-		return nil
-	}
-
 	token, err := integrationConfig.GetToken(*client)
 	if err != nil {
 		return err
 	}
-	req.Header.Add("PRIVATE-TOKEN", token)
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := httpClient.Do(req)
+	header := map[string]string{
+		"PRIVATE-TOKEN": token,
+		"Content-Type":  "application/json",
+	}
+	_, _, err = git.RequestHttp(http.MethodPost, apiUrl, header, commitStatusBody)
 	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		return fmt.Errorf("error setting commit status, code %d, msg %s", resp.StatusCode, string(body))
-	}
-	if err := resp.Body.Close(); err != nil {
-		return err
-	}
 	return nil
 }
 
