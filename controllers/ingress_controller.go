@@ -18,7 +18,7 @@ import (
 func WaitIngressReady() error {
 	log := ctrl.Log.WithName("ingress-controller")
 
-	ingCli, err := newClient()
+	ingCli, err := newIngressClient()
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func WaitIngressReady() error {
 	return fmt.Errorf("cannot wait ingress ready")
 }
 
-func newClient() (v1beta1.IngressInterface, error) {
+func newIngressClient() (v1beta1.IngressInterface, error) {
 	conf, err := config.GetConfig()
 	if err != nil {
 		return nil, err

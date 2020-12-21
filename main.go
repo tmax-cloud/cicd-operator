@@ -18,11 +18,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/controllers/customs"
-	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
@@ -62,25 +60,9 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 
-	flag.StringVar(&configs.ExternalHostName, "external-hostname", "", "External hostname for webhook server (default is ingress hostname)")
-	flag.IntVar(&configs.MaxPipelineRun, "max-pipeline-run", 5, "Max number of pipelineruns that can run simultaneously")
-
-	// Email setting
-	flag.BoolVar(&configs.EnableMail, "enable-mail", false, "Whether or not to enable sendMail feature")
-	flag.StringVar(&configs.SMTPHost, "smtp-host", "", "SMTP host e.g., mail.tmax.co.kr:25")
-	flag.StringVar(&configs.SMTPUserSecret, "smtp-user-secret", "", "Secret name whose type is basic auth and contains username/password")
-
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-
-	// Check email setting
-	if configs.EnableMail {
-		if configs.SMTPHost == "" || configs.SMTPUserSecret == "" {
-			setupLog.Error(fmt.Errorf("email feature is enabled but following options are not given: smtp-host, smtp-user-secret"), "")
-			os.Exit(1)
-		}
-	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -94,6 +76,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Config Controller
+	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController")}
+	go cfgCtrl.Start()
+
+	// Controllers
 	if err = (&controllers.IntegrationConfigReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("IntegrationConfig"),
