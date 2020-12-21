@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/operator-framework/operator-lib/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,6 +27,9 @@ const (
 	ApprovalResultWaiting  ApprovalResult = "Waiting"
 	ApprovalResultApproved ApprovalResult = "Approved"
 	ApprovalResultRejected ApprovalResult = "Rejected"
+
+	ApprovalConditionSentRequestMail = status.ConditionType("SentRequestMail")
+	ApprovalConditionSentResultMail  = status.ConditionType("SentResultMail")
 )
 
 // ApprovalSpec defines the desired state of Approval
@@ -33,6 +37,10 @@ type ApprovalSpec struct {
 	// PodName represents the name of the pod to be approved to proceed
 	// Deprecated: not used from HyperCloud5, only for the backward compatibility with HyperCloud4
 	PodName string `json:"podName,omitempty"`
+
+	// SendMail describes whether or not to send mail for request/result for approvers
+	// +kubebuilder:default=true
+	SendMail bool `json:"sendMail"`
 
 	// PipelineRun points the actual pipeline run object which created this Approval
 	PipelineRun string `json:"pipelineRun"`
@@ -69,6 +77,9 @@ type ApprovalStatus struct {
 
 	// Decision time of Approval
 	DecisionTime *metav1.Time `json:"decisionTime,omitempty"`
+
+	// Conditions of Approval
+	Conditions status.Conditions `json:"conditions"`
 }
 
 // +kubebuilder:object:root=true

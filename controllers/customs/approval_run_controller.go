@@ -53,8 +53,7 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 
 	// Set startTime
 	if run.Status.StartTime == nil {
-		t := metav1.Time{Time: time.Now()}
-		run.Status.StartTime = &t
+		run.Status.StartTime = &metav1.Time{Time: time.Now()}
 	}
 
 	// Check approval
