@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: email-template
+  namespace: cicd-system
+data:
+  request-title: "[CI/CD] Approval '{{.Name}}' is requested to you"
+  request-content: |
+    IntegrationJob: {{.Spec.IntegrationJob}}
+    JobName: {{.Spec.JobName}}
+    Link: {{.Spec.Link}}
+    Message: {{.Spec.Message}}
+  result-title: "[CI/CD] Approval '{{.Name}}' is {{.Status.Result}}"
+  result-content: |
+    IntegrationJob: {{.Spec.IntegrationJob}}
+    JobName: {{.Spec.JobName}}
+    Link: {{.Spec.Link}}
+    Message: {{.Spec.Message}}
+
+    Result
+    Result: {{.Status.Result}}
+    Reason: {{.Status.Reason}}
+    DecisionTime: {{.Status.DecisionTime}}

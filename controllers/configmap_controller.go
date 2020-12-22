@@ -33,7 +33,8 @@ import (
 )
 
 const (
-	ConfigName = "cicd-config"
+	ConfigNameConfig        = "cicd-config"
+	ConfigNameEmailTemplate = "email-template"
 )
 
 // ConfigReconciler reconciles a Approval object
@@ -51,7 +52,13 @@ func (r *ConfigReconciler) Start() {
 	}
 
 	// Get first to check the ConfigMap's existence
-	_, err = r.client.Get(context.Background(), ConfigName, metav1.GetOptions{})
+	_, err = r.client.Get(context.Background(), ConfigNameConfig, metav1.GetOptions{})
+	if err != nil {
+		r.Log.Error(err, "")
+		os.Exit(1)
+	}
+
+	_, err = r.client.Get(context.Background(), ConfigNameEmailTemplate, metav1.GetOptions{})
 	if err != nil {
 		r.Log.Error(err, "")
 		os.Exit(1)
@@ -66,7 +73,7 @@ func (r *ConfigReconciler) watch() {
 	log := r.Log.WithName("config controller")
 
 	watcher, err := r.client.Watch(context.Background(), metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("metadata.name=%s", ConfigName),
+		FieldSelector: "metadata.name!=2787db31.tmax.io",
 	})
 	if err != nil {
 		log.Error(err, "")
@@ -111,6 +118,21 @@ func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 		return nil
 	}
 
+	switch cm.Name {
+	case ConfigNameConfig:
+		if err := r.reconcileConfig(cm); err != nil {
+			return err
+		}
+	case ConfigNameEmailTemplate:
+		if err := r.reconcileEmailTemplate(cm); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *ConfigReconciler) reconcileConfig(cm *corev1.ConfigMap) error {
 	vars := map[string]operatorConfig{
 		"maxPipelineRun":   {Type: cfgTypeInt, IntVal: &configs.MaxPipelineRun, IntDefault: 5},    // Max PipelineRun count
 		"enableMail":       {Type: cfgTypeBool, BoolVal: &configs.EnableMail, BoolDefault: false}, // Enable Mail
@@ -125,6 +147,19 @@ func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 	if configs.EnableMail && (configs.SMTPHost == "" || configs.SMTPUserSecret == "") {
 		return fmt.Errorf("email is enaled but smtp access info. is not given")
 	}
+
+	return nil
+}
+
+func (r *ConfigReconciler) reconcileEmailTemplate(cm *corev1.ConfigMap) error {
+	vars := map[string]operatorConfig{
+		"request-title":   {Type: cfgTypeString, StringVal: &configs.ApprovalRequestMailTitle, StringDefault: "[CI/CD] Approval '{{.Name}}' is requested to you"},
+		"request-content": {Type: cfgTypeString, StringVal: &configs.ApprovalRequestMailContent, StringDefault: "{{.Name}}"},
+		"result-title":    {Type: cfgTypeString, StringVal: &configs.ApprovalResultMailTitle, StringDefault: "[CI/CD] Approval is {{.Status.Result}}"},
+		"result-content":  {Type: cfgTypeString, StringVal: &configs.ApprovalResultMailContent, StringDefault: "{{.Name}}"},
+	}
+
+	getVars(cm.Data, vars)
 
 	return nil
 }
