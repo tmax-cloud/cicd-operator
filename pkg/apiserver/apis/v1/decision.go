@@ -130,6 +130,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 
 	// Update status
 	approval.Status.Result = decision
+	approval.Status.Reason = userReq.Reason
 	approval.Status.Approver = user
 	approval.Status.DecisionTime = &metav1.Time{Time: time.Now()}
 

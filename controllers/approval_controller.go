@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
+	"time"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
@@ -122,8 +123,17 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// Set SentResultMail - only if is decided
 	if instance.Status.Result == cicdv1.ApprovalResultApproved || instance.Status.Result == cicdv1.ApprovalResultRejected {
+		localTime := time.Now()
+		if instance.Status.DecisionTime != nil {
+			location, err := time.LoadLocation("Asia/Seoul")
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			localTime = instance.Status.DecisionTime.Time.In(location)
+		}
+
 		title := fmt.Sprintf("[CI/CD] Approval is %s", strings.ToLower(string(instance.Status.Result)))
-		content := fmt.Sprintf("IntegrationJob: %s\nJobName: %s\nLink: %s\nMessage: %s\n\nResult\nResult: %s\nReason: %s\nDecisionTime: %s", instance.Spec.IntegrationJob, instance.Spec.JobName, instance.Spec.Link, instance.Spec.Message, instance.Status.Result, instance.Status.Reason, instance.Status.DecisionTime)
+		content := fmt.Sprintf("IntegrationJob: %s\nJobName: %s\nLink: %s\nMessage: %s\n\nResult\nResult: %s\nReason: %s\nDecisionTime: %s", instance.Spec.IntegrationJob, instance.Spec.JobName, instance.Spec.Link, instance.Spec.Message, instance.Status.Result, instance.Status.Reason, localTime.String())
 		if sentResMailCond == nil || sentResMailCond.Status == corev1.ConditionUnknown {
 			r.sendMail(instance.Spec.Users, title, content, sentResMailCond)
 		}

@@ -65,8 +65,6 @@ spec:
       containers:
       - command:
         - /manager
-        args:
-        - --enable-leader-election
         image: tmaxcloudck/cicd-operator:0.0.1
         name: manager
         resources:
