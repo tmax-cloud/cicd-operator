@@ -96,7 +96,7 @@ func (i *IntegrationConfig) GetToken(c client.Client) (string, error) {
 	secretName := tokenStruct.ValueFrom.SecretKeyRef.Name
 	secretKey := tokenStruct.ValueFrom.SecretKeyRef.Key
 	secret := &corev1.Secret{}
-	if err := c.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: i.Namespace}, secret); err != nil {
+	if err := c.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: i.Namespace}, secret); err != nil {
 		return "", err
 	}
 	token, ok := secret.Data[secretKey]

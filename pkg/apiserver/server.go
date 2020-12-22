@@ -51,7 +51,7 @@ func New(scheme *runtime.Scheme) *Server {
 		os.Exit(1)
 	}
 
-	if err := createCert(context.TODO(), server.Client); err != nil {
+	if err := createCert(context.Background(), server.Client); err != nil {
 		log.Error(err, "cannot create cert")
 		os.Exit(1)
 	}

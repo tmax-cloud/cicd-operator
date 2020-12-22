@@ -52,7 +52,7 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	iJob := &cicdv1.IntegrationJob{}
-	if err := h.k8sClient.Get(context.TODO(), types.NamespacedName{Name: jobName, Namespace: ns}, iJob); err != nil {
+	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: jobName, Namespace: ns}, iJob); err != nil {
 		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("cannot get IntegrationJob %s/%s", ns, jobName))
 		log.Info("Bad request for path", "path", r.RequestURI)
 		return
@@ -145,7 +145,7 @@ func (h *reportHandler) getTemplateString() (string, error) {
 		return "", err
 	}
 	cm := &corev1.ConfigMap{}
-	if err := h.k8sClient.Get(context.TODO(), types.NamespacedName{Name: TemplateConfigMapName, Namespace: ns}, cm); err != nil {
+	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: TemplateConfigMapName, Namespace: ns}, cm); err != nil {
 		return "", err
 	}
 

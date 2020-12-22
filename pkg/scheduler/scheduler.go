@@ -73,7 +73,7 @@ func (s Scheduler) run() {
 			return
 		}
 		pr := &tektonv1beta1.PipelineRun{}
-		err := s.k8sClient.Get(context.TODO(), types.NamespacedName{Name: pipelinemanager.Name(j.IntegrationJob), Namespace: j.Namespace}, pr)
+		err := s.k8sClient.Get(context.Background(), types.NamespacedName{Name: pipelinemanager.Name(j.IntegrationJob), Namespace: j.Namespace}, pr)
 		// If PipelineRun is not found or is already completed, is not actually running
 		if (err != nil && errors.IsNotFound(err)) || (err == nil && pr.Status.CompletionTime != nil) {
 			availableCnt++
@@ -98,7 +98,7 @@ func (s Scheduler) run() {
 
 		// Check if PipelineRun already exists
 		testPr := &tektonv1beta1.PipelineRun{}
-		if err := s.k8sClient.Get(context.TODO(), types.NamespacedName{Name: pipelinemanager.Name(jobNode.IntegrationJob), Namespace: jobNode.Namespace}, testPr); err != nil {
+		if err := s.k8sClient.Get(context.Background(), types.NamespacedName{Name: pipelinemanager.Name(jobNode.IntegrationJob), Namespace: jobNode.Namespace}, testPr); err != nil {
 			// Not found error is expected
 			if !errors.IsNotFound(err) {
 				log.Error(err, "")
@@ -125,7 +125,7 @@ func (s Scheduler) run() {
 
 		log.Info(fmt.Sprintf("Scheduled %s / %s / %s", jobNode.Name, jobNode.Namespace, jobNode.CreationTimestamp))
 		// Create PipelineRun only when there is no Pipeline exists
-		if err := s.k8sClient.Create(context.TODO(), pr); err != nil {
+		if err := s.k8sClient.Create(context.Background(), pr); err != nil {
 			// TODO - update IntegrationJob status - reason: cannot create PipelineRun
 			log.Error(err, "")
 			return
