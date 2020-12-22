@@ -12,10 +12,10 @@ CONFIG_DIR="$PROJECT_DIR/config"
 
 RELEASE_MANIFEST="$CONFIG_DIR/release.yaml"
 
-TARGETS=("$CONFIG_DIR/manager/manager.yaml" "$CONFIG_DIR/apiservice" "$CONFIG_DIR/rbac/role.yaml" "$CONFIG_DIR/rbac/role_binding.yaml" "$CONFIG_DIR/crd/bases")
+TARGETS=("$CONFIG_DIR/manager/manager.yaml" "$CONFIG_DIR/rbac/role.yaml" "$CONFIG_DIR/rbac/role_binding.yaml" "$CONFIG_DIR/apiservice" "$CONFIG_DIR/report" "$CONFIG_DIR/crd/bases")
 
 function append_target(){
-  local TARGET=$1
+  local TARGET="$1"
 
   if [ "${TARGET: -5}" == ".yaml" ]; then
     cat "$TARGET" >> "$RELEASE_MANIFEST"

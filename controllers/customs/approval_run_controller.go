@@ -31,11 +31,14 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 	log := a.Log.WithValues("ApprovalRun", run.Namespace)
 
 	// New Condition default
-	cond := &apis.Condition{
-		Type:    apis.ConditionSucceeded,
-		Status:  corev1.ConditionUnknown,
-		Reason:  "Waiting",
-		Message: "waiting for approval",
+	cond := run.Status.GetCondition(apis.ConditionSucceeded)
+	if cond == nil {
+		cond = &apis.Condition{
+			Type:    apis.ConditionSucceeded,
+			Status:  corev1.ConditionUnknown,
+			Reason:  "Waiting",
+			Message: "waiting for approval",
+		}
 	}
 
 	defer func() {
@@ -121,6 +124,11 @@ func newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {
 		return nil, err
 	}
 
+	approverCm, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyApproversCM, tektonv1beta1.ParamTypeString)
+	if err != nil {
+		return nil, err
+	}
+
 	msg, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyMessage, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		return nil, err
@@ -154,6 +162,7 @@ func newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {
 		Spec: cicdv1.ApprovalSpec{
 			PipelineRun:    prName,
 			Users:          approvers,
+			UsersConfigMap: approverCm,
 			IntegrationJob: jobName,
 			JobName:        jobJobName,
 			Sender:         sender,
