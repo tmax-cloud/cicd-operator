@@ -16,6 +16,10 @@ Add following 'approval' job before the job which needs an approval in `Integrat
       - admin@tmax.co.kr=sunghyun_kim3@tmax.co.kr
       - test@tmax.co.kr
       - system:serviceaccount:default:approver-account # Service account is also supported
+- name: need-approval
+  image: busybox
+  after:
+    - approval
 ```
 
 ## Reusing Approvers list
@@ -39,6 +43,10 @@ data:
       name: approver-test
     approvers: # You can use both approvers & approversConfigMap
       - system:serviceaccount:default:approver-account
+- name: need-approval
+  image: busybox
+  after:
+     - approval
 ```
 
 ## Send mail before/after approval
@@ -51,6 +59,10 @@ Enable email feature, following the [installation guide](./installation.md#enabl
       - test@tmax.co.kr
       - system:serviceaccount:default:approver-account
     requestMessage: Please approve this! # Message to be sent via email when the Approval is created
+- name: need-approval
+  image: busybox
+  after:
+     - approval
 ```
 
 ## Approving/Rejecting the `Approval`
