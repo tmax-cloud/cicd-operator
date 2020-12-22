@@ -98,6 +98,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("no Approval %s/%s is found", ns, approvalName))
 		return
 	}
+	original := approval.DeepCopy()
 
 	// If Approval is already in approved/rejected status, respond with error
 	if approval.Status.Result == cicdv1.ApprovalResultApproved || approval.Status.Result == cicdv1.ApprovalResultRejected {
@@ -123,7 +124,8 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	}
 
 	defer func() {
-		if err := k8sClient.Status().Update(context.Background(), approval); err != nil {
+		p := client.MergeFrom(original)
+		if err := k8sClient.Status().Patch(context.Background(), approval, p); err != nil {
 			log.Error(err, "")
 		}
 	}()

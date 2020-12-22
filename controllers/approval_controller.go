@@ -74,6 +74,7 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		log.Error(err, "")
 		return reconcile.Result{}, err
 	}
+	original := instance.DeepCopy()
 
 	sentReqMailCond := instance.Status.Conditions.GetCondition(cicdv1.ApprovalConditionSentRequestMail)
 	if sentReqMailCond == nil {
@@ -94,7 +95,8 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	defer func() {
 		instance.Status.Conditions.SetCondition(*sentReqMailCond)
 		instance.Status.Conditions.SetCondition(*sentResMailCond)
-		if err := r.Client.Status().Update(ctx, instance); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
 			log.Error(err, "")
 		}
 	}()
@@ -158,6 +160,7 @@ func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error
 			return err
 		}
 	}
+	original := role.DeepCopy()
 
 	// Set rules
 	role.Rules = []rbac.PolicyRule{{
@@ -178,7 +181,8 @@ func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error
 		}
 	} else {
 		// Update
-		if err := r.Client.Update(context.Background(), role); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), role, p); err != nil {
 			return err
 		}
 	}
@@ -202,6 +206,7 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 			return err
 		}
 	}
+	original := binding.DeepCopy()
 
 	// Set bindings
 	binding.RoleRef = rbac.RoleRef{
@@ -252,7 +257,8 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 		}
 	} else {
 		// Update
-		if err := r.Client.Update(context.Background(), binding); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), binding, p); err != nil {
 			return err
 		}
 	}

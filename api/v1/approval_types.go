@@ -70,7 +70,7 @@ type ApprovalStatus struct {
 	Result ApprovalResult `json:"result"`
 
 	// Approver is a user who actually approved
-	Approver string `json:"approver"`
+	Approver string `json:"approver,omitempty"`
 
 	// Decision message
 	Reason string `json:"reason,omitempty"`

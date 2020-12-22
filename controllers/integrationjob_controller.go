@@ -58,6 +58,7 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		log.Error(err, "")
 		return reconcile.Result{}, err
 	}
+	original := instance.DeepCopy()
 
 	// Notify state change to scheduler
 	defer r.Scheduler.Notify(instance)
@@ -93,7 +94,8 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Update IntegrationJob
-	if err := r.Client.Status().Update(context.Background(), instance); err != nil {
+	p := client.MergeFrom(original)
+	if err := r.Client.Status().Patch(context.Background(), instance, p); err != nil {
 		log.Error(err, "")
 		return ctrl.Result{}, err
 	}
