@@ -25,12 +25,17 @@ import (
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/mail"
 	corev1 "k8s.io/api/core/v1"
+	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
+	"time"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
@@ -42,8 +47,19 @@ type ApprovalReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+const (
+	ApiGroup           = "cicdapi.tmax.io"
+	ApprovalKind       = "approvals"
+	ApprovalSubApprove = "approve"
+	ApprovalSubReject  = "reject"
+
+	ServiceAccountPrefix = "system:serviceaccount:"
+)
+
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=approvals,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=approvals/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=cicdapi.tmax.io,resources=approvals/approve;approvals/reject,verbs=update
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -88,6 +104,16 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		instance.Status.Result = cicdv1.ApprovalResultWaiting
 	}
 
+	// Create Role/RoleBinding if not exists
+	if err := r.createOrUpdateRole(instance); err != nil {
+		log.Error(err, "updating roles")
+		return ctrl.Result{}, err
+	}
+	if err := r.createOrUpdateRoleBinding(instance); err != nil {
+		log.Error(err, "updating rolebindings")
+		return ctrl.Result{}, err
+	}
+
 	// Set SentRequestMail
 	if sentReqMailCond == nil || sentReqMailCond.Status == corev1.ConditionUnknown {
 		title := "[CI/CD] Approval is requested to you"
@@ -97,14 +123,141 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// Set SentResultMail - only if is decided
 	if instance.Status.Result == cicdv1.ApprovalResultApproved || instance.Status.Result == cicdv1.ApprovalResultRejected {
+		localTime := time.Now()
+		if instance.Status.DecisionTime != nil {
+			location, err := time.LoadLocation("Asia/Seoul")
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			localTime = instance.Status.DecisionTime.Time.In(location)
+		}
+
 		title := fmt.Sprintf("[CI/CD] Approval is %s", strings.ToLower(string(instance.Status.Result)))
-		content := fmt.Sprintf("IntegrationJob: %s\nJobName: %s\nLink: %s\nMessage: %s\n\nResult\nResult: %s\nReason: %s\nDecisionTime: %s", instance.Spec.IntegrationJob, instance.Spec.JobName, instance.Spec.Link, instance.Spec.Message, instance.Status.Result, instance.Status.Reason, instance.Status.DecisionTime)
+		content := fmt.Sprintf("IntegrationJob: %s\nJobName: %s\nLink: %s\nMessage: %s\n\nResult\nResult: %s\nReason: %s\nDecisionTime: %s", instance.Spec.IntegrationJob, instance.Spec.JobName, instance.Spec.Link, instance.Spec.Message, instance.Status.Result, instance.Status.Reason, localTime.String())
 		if sentResMailCond == nil || sentResMailCond.Status == corev1.ConditionUnknown {
 			r.sendMail(instance.Spec.Users, title, content, sentResMailCond)
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error {
+	notExist := false
+	role := &rbac.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      approval.Name,
+			Namespace: approval.Namespace,
+			Labels:    map[string]string{}, // TODO
+		},
+	}
+	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: role.Name, Namespace: role.Namespace}, role); err != nil {
+		if errors.IsNotFound(err) {
+			notExist = true
+		} else {
+			return err
+		}
+	}
+
+	// Set rules
+	role.Rules = []rbac.PolicyRule{{
+		APIGroups:     []string{ApiGroup},
+		Resources:     []string{fmt.Sprintf("%s/%s", ApprovalKind, ApprovalSubApprove), fmt.Sprintf("%s/%s", ApprovalKind, ApprovalSubReject)},
+		ResourceNames: []string{approval.Name},
+		Verbs:         []string{"update"},
+	}}
+
+	if err := controllerutil.SetOwnerReference(approval, role, r.Scheme); err != nil {
+		return err
+	}
+
+	if notExist {
+		// Create
+		if err := r.Client.Create(context.Background(), role); err != nil {
+			return err
+		}
+	} else {
+		// Update
+		if err := r.Client.Update(context.Background(), role); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval) error {
+	notExist := false
+	binding := &rbac.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      approval.Name,
+			Namespace: approval.Namespace,
+			Labels:    map[string]string{}, // TODO
+		},
+	}
+	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}, binding); err != nil {
+		if errors.IsNotFound(err) {
+			notExist = true
+		} else {
+			return err
+		}
+	}
+
+	// Set bindings
+	binding.RoleRef = rbac.RoleRef{
+		APIGroup: rbac.GroupName,
+		Kind:     "Role",
+		Name:     approval.Name,
+	}
+
+	for _, u := range approval.Spec.Users {
+		token := strings.Split(u, "=")
+		user := token[0]
+
+		// Default is user
+		apiGroup := rbac.GroupName
+		kind := rbac.UserKind
+		name := user
+		ns := approval.Namespace
+
+		// Check if it's ServiceAccount
+		if strings.HasPrefix(user, ServiceAccountPrefix) {
+			apiGroup = ""
+			kind = rbac.ServiceAccountKind
+
+			token := strings.Split(strings.TrimPrefix(user, ServiceAccountPrefix), ":")
+			if len(token) != 2 {
+				continue
+			}
+			ns = token[0]
+			name = token[1]
+		}
+
+		binding.Subjects = append(binding.Subjects, rbac.Subject{
+			APIGroup:  apiGroup,
+			Kind:      kind,
+			Name:      name,
+			Namespace: ns,
+		})
+	}
+
+	if err := controllerutil.SetOwnerReference(approval, binding, r.Scheme); err != nil {
+		return err
+	}
+
+	if notExist {
+		// Create
+		if err := r.Client.Create(context.Background(), binding); err != nil {
+			return err
+		}
+	} else {
+		// Update
+		if err := r.Client.Update(context.Background(), binding); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *ApprovalReconciler) sendMail(users []string, title, content string, cond *status.Condition) {
@@ -133,5 +286,7 @@ func (r *ApprovalReconciler) sendMail(users []string, title, content string, con
 func (r *ApprovalReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cicdv1.Approval{}).
+		Owns(&rbac.Role{}).
+		Owns(&rbac.RoleBinding{}).
 		Complete(r)
 }

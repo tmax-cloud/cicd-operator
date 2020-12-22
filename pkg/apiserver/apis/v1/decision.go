@@ -6,7 +6,6 @@ import (
 	"fmt"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,21 +106,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	}
 
 	// Check if the user is in the approver list
-	// Suppress any error during parsing users
 	approvers := approval.Spec.Users
-	if approval.Spec.UsersConfigMap != "" {
-		cm := &corev1.ConfigMap{}
-		_ = k8sClient.Get(context.Background(), types.NamespacedName{Name: approval.Spec.UsersConfigMap, Namespace: ns}, cm)
-		if cm.Data != nil {
-			cmListStr, exist := cm.Data[cicdv1.CustomTaskApprovalApproversConfigMapKey]
-			if exist {
-				cmList, _ := utils.ParseApproversList(cmListStr)
-				if cmList != nil {
-					approvers = append(approvers, cmList...)
-				}
-			}
-		}
-	}
 
 	isApprover := false
 	for _, a := range approvers {
@@ -145,6 +130,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 
 	// Update status
 	approval.Status.Result = decision
+	approval.Status.Reason = userReq.Reason
 	approval.Status.Approver = user
 	approval.Status.DecisionTime = &metav1.Time{Time: time.Now()}
 
