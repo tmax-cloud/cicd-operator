@@ -101,17 +101,6 @@ rules:
   - ""
   resources:
   - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - serviceaccounts
   verbs:
   - create
@@ -207,6 +196,13 @@ rules:
   - patch
   - update
 - apiGroups:
+  - cicdapi.tmax.io
+  resources:
+  - approvals/approve
+  - approvals/reject
+  verbs:
+  - update
+- apiGroups:
   - networking.k8s.io
   resources:
   - ingresses
@@ -226,6 +222,19 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - tekton.dev
   resources:
@@ -506,15 +515,10 @@ spec:
                 items:
                   type: string
                 type: array
-              usersConfigMap:
-                description: UsersConfigMap is a name of the configmap containing
-                  the users list
-                type: string
             required:
             - pipelineRun
             - sendMail
             - users
-            - usersConfigMap
             type: object
           status:
             description: ApprovalStatus defines the observed state of Approval

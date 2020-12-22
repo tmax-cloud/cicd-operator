@@ -62,9 +62,6 @@ type ApprovalSpec struct {
 
 	// Users are the list of the users who are requested to approve the Approval
 	Users []string `json:"users"`
-
-	// UsersConfigMap is a name of the configmap containing the users list
-	UsersConfigMap string `json:"usersConfigMap"`
 }
 
 // ApprovalStatus defines the observed state of Approval

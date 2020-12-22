@@ -7,6 +7,8 @@ import (
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +62,7 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 	}
 
 	// Check approval
-	approval, err := newApproval(run)
+	approval, err := a.newApproval(run)
 	if err != nil {
 		log.Error(err, "")
 		return ctrl.Result{}, err
@@ -107,7 +109,7 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 	return ctrl.Result{}, nil
 }
 
-func newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {
+func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {
 	prName := "none"
 
 	// Get PipelineRun (owner)
@@ -127,6 +129,19 @@ func newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {
 	approverCm, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyApproversCM, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		return nil, err
+	}
+	if approverCm != "" {
+		cm := &corev1.ConfigMap{}
+		_ = a.Client.Get(context.Background(), types.NamespacedName{Name: approverCm, Namespace: run.Namespace}, cm)
+		if cm.Data != nil {
+			cmListStr, exist := cm.Data[cicdv1.CustomTaskApprovalApproversConfigMapKey]
+			if exist {
+				cmList, _ := utils.ParseApproversList(cmListStr)
+				if cmList != nil {
+					approvers = append(approvers, cmList...)
+				}
+			}
+		}
 	}
 
 	msg, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyMessage, tektonv1beta1.ParamTypeString)
@@ -160,9 +175,9 @@ func newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {
 			Namespace: run.Namespace,
 		},
 		Spec: cicdv1.ApprovalSpec{
+			SendMail:       configs.EnableMail,
 			PipelineRun:    prName,
 			Users:          approvers,
-			UsersConfigMap: approverCm,
 			IntegrationJob: jobName,
 			JobName:        jobJobName,
 			Sender:         sender,

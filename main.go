@@ -26,6 +26,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
+	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -52,6 +53,7 @@ func init() {
 	utilruntime.Must(tektonv1beta1.AddToScheme(scheme))
 	utilruntime.Must(tektonv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apiregv1.AddToScheme(scheme))
+	utilruntime.Must(rbac.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
