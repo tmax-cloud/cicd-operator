@@ -32,6 +32,8 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 	ctx := context.Background()
 	log := a.Log.WithValues("ApprovalRun", run.Namespace)
 
+	original := run.DeepCopy()
+
 	// New Condition default
 	cond := run.Status.GetCondition(apis.ConditionSucceeded)
 	if cond == nil {
@@ -45,7 +47,8 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 
 	defer func() {
 		run.Status.SetCondition(cond)
-		if err := a.Client.Status().Update(ctx, run); err != nil {
+		p := client.MergeFrom(original)
+		if err := a.Client.Status().Patch(ctx, run, p); err != nil {
 			log.Error(err, "")
 		}
 	}()

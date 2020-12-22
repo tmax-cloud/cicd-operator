@@ -148,7 +148,6 @@ spec:
                 description: Decision result of Approval
                 type: string
             required:
-            - approver
             - conditions
             - result
             type: object

@@ -59,6 +59,7 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		log.Error(err, "")
 		return ctrl.Result{}, err
 	}
+	original := instance.DeepCopy()
 
 	// Set secret
 	secretChanged := r.setSecretString(instance)
@@ -83,7 +84,8 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// If conditions changed, update status
 	if secretChanged || webhookConditionChanged || readyConditionChanged {
-		if err := r.Client.Status().Update(ctx, instance); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
 			log.Error(err, "")
 			return ctrl.Result{}, err
 		}
@@ -185,6 +187,7 @@ func (r *IntegrationConfigReconciler) createGitSecret(instance *cicdv1.Integrati
 			return err
 		}
 	}
+	original := secret.DeepCopy()
 
 	secret.Name = cicdv1.GetSecretName(instance.Name)
 	secret.Namespace = instance.Namespace
@@ -246,7 +249,8 @@ func (r *IntegrationConfigReconciler) createGitSecret(instance *cicdv1.Integrati
 
 	// Update if resourceVersion exists, but create if not
 	if secret.ResourceVersion != "" {
-		if err := r.Client.Update(context.Background(), secret); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), secret, p); err != nil {
 			return err
 		}
 	} else {
@@ -267,6 +271,7 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 			return err
 		}
 	}
+	original := sa.DeepCopy()
 
 	sa.Name = cicdv1.GetServiceAccountName(instance.Name)
 	sa.Namespace = instance.Namespace
@@ -287,7 +292,8 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 
 	// Update if resourceVersion exists, but create if not
 	if sa.ResourceVersion != "" {
-		if err := r.Client.Update(context.Background(), sa); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), sa, p); err != nil {
 			return err
 		}
 	} else {
