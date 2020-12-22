@@ -15,6 +15,12 @@ This guides to install CI/CD operator. The contents are as follows.
    VERSION=v0.1.0
    kubectl apply -f https://raw.githubusercontent.com/cqbqdd11519/cicd-operator/$VERSION/config/release.yaml
    ```
+2. Enable `CustomTask` feature
+   ```bash
+   kubectl -n tekton-pipelines patch configmap feature-flags \
+   --type merge \
+   -p '{"data": {"enable-custom-tasks": "true"}}'
+   ```
 
 ## Enabling email feature
 **You need an external SMTP server**
