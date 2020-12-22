@@ -126,7 +126,8 @@ func filterJobs(webhook git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1
 	}
 
 	// TODO - filter
-	jobs = append(jobs, cand...)
+	// jobs = append(jobs, cand...)
+	jobs = filter(cand, webhook, config)
 
 	return jobs, nil
 }
