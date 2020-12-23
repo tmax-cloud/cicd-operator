@@ -17,10 +17,3 @@ type Client interface {
 }
 
 type CommitStatusState string
-
-const (
-	CommitStatusStateSuccess = CommitStatusState("success")
-	CommitStatusStateFailure = CommitStatusState("failure")
-	CommitStatusStateError   = CommitStatusState("error")
-	CommitStatusStatePending = CommitStatusState("pending")
-)

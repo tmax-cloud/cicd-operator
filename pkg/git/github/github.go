@@ -42,7 +42,7 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		base := git.Base{Ref: data.PullRequest.Base.Ref}
 		head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
 		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
-		pullRequest := git.PullRequest{ID: data.PullRequest.ID, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
+		pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action)}
 		webhook = git.Webhook{EventType: eventType, Repo: repo, PullRequest: &pullRequest}
 
 	} else if eventType == git.EventTypePush {

@@ -6,7 +6,7 @@ type MergeRequestWebhook struct {
 	Kind            string          `json:"kind"`
 	Sender          Sender          `json:"user"`
 	ObjectAttribute ObjectAttribute `json:"object_attributes"`
-	Repo            Repo            `json:"repository"`
+	Project         Project         `json:"project"`
 }
 
 // Structure for push webhook event
@@ -24,6 +24,11 @@ type Repo struct {
 	Htmlurl string `json:"url"`
 }
 
+type Project struct {
+	Name   string `json:"path_with_namespace"`
+	WebUrl string `json:"web_url"`
+}
+
 type Sender struct {
 	ID string `json:"username"`
 }
@@ -34,23 +39,27 @@ type ObjectAttribute struct {
 	BaseRef    string     `json:"target_branch"`
 	HeadRef    string     `json:"source_branch"`
 	LastCommit LastCommit `json:"last_commit"`
+	State      string     `json:"state"`
+	Action     string     `json:"action"`
 }
 type LastCommit struct {
 	Sha string `json:"id"`
 }
 
 type RegistrationWebhookBody struct {
+	EnableSSLVerification   bool   `json:"enable_ssl_verification"`
 	ConfidentialIssueEvents bool   `json:"confidential_issues_events"`
-	ConfidentialNoteEvents  bool   `json:"confidential_notes_events"`
+	ConfidentialNoteEvents  bool   `json:"confidential_note_events"`
 	DeploymentEvents        bool   `json:"deployment_events"`
 	ID                      string `json:"id"`
-	IssueEvents             bool   `json:"issue_events"`
+	IssueEvents             bool   `json:"issues_events"`
 	JobEvents               bool   `json:"job_events"`
-	MergeRequestEvents      bool   `json:"merge_request_events"`
+	MergeRequestEvents      bool   `json:"merge_requests_events"`
 	NoteEvents              bool   `json:"note_events"`
 	PipeLineEvents          bool   `json:"pipeline_events"`
 	PushEvents              bool   `json:"push_events"`
 	TagPushEvents           bool   `json:"tag_push_events"`
 	WikiPageEvents          bool   `json:"wiki_page_events"`
 	URL                     string `json:"url"`
+	Token                   string `json:"token"`
 }

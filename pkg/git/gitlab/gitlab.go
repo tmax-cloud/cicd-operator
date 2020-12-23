@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -47,9 +48,27 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		sender := git.Sender{Name: data.Sender.ID}
 		base := git.Base{Ref: data.ObjectAttribute.BaseRef}
 		head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
-		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
-		pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
-		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, PullRequest: &pullRequest}
+		repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebUrl}
+		action := git.PullRequestAction(data.ObjectAttribute.Action)
+		switch string(action) {
+		case "close":
+			action = git.PullRequestActionClose
+		case "open":
+			action = git.PullRequestActionOpen
+		case "reopen":
+			action = git.PullRequestActionReOpen
+		case "update":
+			action = git.PullRequestActionSynchronize
+		}
+		state := git.PullRequestState(data.ObjectAttribute.State)
+		switch string(state) {
+		case "opened":
+			state = git.PullRequestStateOpen
+		case "closed":
+			state = git.PullRequestStateClosed
+		}
+		pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Project.WebUrl, Base: base, Head: head, State: state, Action: action}
+		webhook = git.Webhook{EventType: eventType, Repo: repo, PullRequest: &pullRequest}
 
 	} else if eventType == git.EventTypePush {
 		var data PushWebhook
@@ -59,7 +78,7 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		}
 		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
 		push := git.Push{Pusher: data.User, Ref: data.Ref, Sha: data.Sha}
-		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, Push: &push}
+		webhook = git.Webhook{EventType: eventType, Repo: repo, Push: &push}
 
 	} else {
 		return webhook, nil
@@ -73,18 +92,21 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
 
 	//enable hooks from every events
+	registrationBody.EnableSSLVerification = false
 	registrationBody.ConfidentialIssueEvents = true
 	registrationBody.ConfidentialNoteEvents = true
 	registrationBody.DeploymentEvents = true
 	registrationBody.IssueEvents = true
 	registrationBody.JobEvents = true
 	registrationBody.MergeRequestEvents = true
+	registrationBody.NoteEvents = true
 	registrationBody.PipeLineEvents = true
 	registrationBody.PushEvents = true
 	registrationBody.TagPushEvents = true
 	registrationBody.WikiPageEvents = true
 	registrationBody.URL = Url
 	registrationBody.ID = EncodedRepoPath
+	registrationBody.Token = integrationConfig.Status.Secrets
 
 	token, err := integrationConfig.GetToken(*client)
 	if err != nil {
@@ -112,7 +134,14 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 		sha = integrationJob.Spec.Refs.Pull.Sha
 	}
 	apiUrl := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + urlEncodePath + "/statuses/" + sha
-	commitStatusBody.State = string(state)
+	switch cicdv1.CommitStatusState(state) {
+	case cicdv1.CommitStatusStatePending:
+		commitStatusBody.State = "running"
+	case cicdv1.CommitStatusStateFailure, cicdv1.CommitStatusStateError:
+		commitStatusBody.State = "failed"
+	default:
+		commitStatusBody.State = string(state)
+	}
 	commitStatusBody.TargetURL = targetUrl
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
@@ -126,6 +155,11 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 		"Content-Type":  "application/json",
 	}
 	_, _, err = git.RequestHttp(http.MethodPost, apiUrl, header, commitStatusBody)
+	// TODO - error from gitlab
+	// Cannot transition status via :run from :running
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "cannot transition status via") {
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
