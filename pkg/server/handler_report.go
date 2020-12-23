@@ -73,9 +73,13 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get Job-Job Log
-	podLog, err := h.getPodLogs(jobStatus.PodName, ns)
-	if err != nil {
-		podLog = ErrorLogNotExist
+	var podLog string
+	if jobStatus.PodName != "" {
+		var err error
+		podLog, err = h.getPodLogs(jobStatus.PodName, ns)
+		if err != nil {
+			podLog = ErrorLogNotExist
+		}
 	}
 
 	// Get template
@@ -101,6 +105,8 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+// +kubebuilder:rbac:groups="",resources=pods;pods/log,verbs=get;list;watch
 
 func (h *reportHandler) getPodLogs(podName, namespace string) (string, error) {
 	var logBuf bytes.Buffer

@@ -105,6 +105,7 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 		}
 		cond.Reason = reason
 		cond.Message = fmt.Sprintf("%s %s this approval, reason: %s, decisionTime: %s", approval.Status.Approver, strings.ToLower(reason), approval.Status.Reason, approval.Status.DecisionTime)
+		run.Status.CompletionTime = &metav1.Time{Time: time.Now()}
 	} else {
 		cond.Status = corev1.ConditionUnknown
 	}
