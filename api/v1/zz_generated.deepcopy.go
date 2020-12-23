@@ -276,6 +276,11 @@ func (in *IntegrationConfigList) DeepCopyObject() runtime.Object {
 func (in *IntegrationConfigSpec) DeepCopyInto(out *IntegrationConfigSpec) {
 	*out = *in
 	in.Git.DeepCopyInto(&out.Git)
+	if in.Secrets != nil {
+		in, out := &in.Secrets, &out.Secrets
+		*out = make([]corev1.LocalObjectReference, len(*in))
+		copy(*out, *in)
+	}
 	in.Jobs.DeepCopyInto(&out.Jobs)
 }
 

@@ -33,6 +33,9 @@ type IntegrationConfigSpec struct {
 	// Git config for target repository
 	Git GitConfig `json:"git"`
 
+	// Secrets are the list of secret names which are included in service account
+	Secrets []corev1.LocalObjectReference `json:"secrets,omitempty"`
+
 	// Jobs specify the tasks to be executed
 	Jobs IntegrationConfigJobs `json:"jobs"`
 
