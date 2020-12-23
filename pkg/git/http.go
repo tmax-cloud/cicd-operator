@@ -43,7 +43,7 @@ func RequestHttp(method string, uri string, header map[string]string, data inter
 	// Check additional response header
 	var newErr error
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		newErr = fmt.Errorf("error setting webhook, code %d, msg %s", resp.StatusCode, string(body))
+		newErr = fmt.Errorf("error requesting api, code %d, msg %s", resp.StatusCode, string(body))
 	}
 
 	return body, resp.Header, newErr

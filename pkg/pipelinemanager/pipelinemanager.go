@@ -5,6 +5,7 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -171,6 +172,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 			var runReason string
 			var runMessage string
 
+			state := cicdv1.CommitStatusStatePending
 			// Find in TaskRun first
 			for _, runStatus := range pr.Status.TaskRuns {
 				if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
@@ -187,6 +189,12 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 						stepStatus := s.DeepCopy()
 						job.Status.Jobs[i].Containers = append(job.Status.Jobs[i].Containers, *stepStatus)
 					}
+					switch tektonv1beta1.TaskRunReason(runReason) {
+					case tektonv1beta1.TaskRunReasonSuccessful:
+						state = cicdv1.CommitStatusStateSuccess
+					case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
+						state = cicdv1.CommitStatusStateFailure
+					}
 					isTaskRun = true
 					break
 				}
@@ -200,7 +208,12 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 						runCompletionTime = rStatus.CompletionTime.DeepCopy()
 						if len(rStatus.Conditions) > 0 {
 							runMessage = rStatus.Conditions[0].Message
-							runReason = rStatus.Conditions[0].Reason
+							switch rStatus.Conditions[0].Status {
+							case corev1.ConditionTrue:
+								state = cicdv1.CommitStatusStateSuccess
+							case corev1.ConditionFalse:
+								state = cicdv1.CommitStatusStateFailure
+							}
 						}
 						isRun = true
 						break
@@ -210,14 +223,6 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 
 			// Only update if taskRun's status exists
 			if isRun || isTaskRun {
-				state := cicdv1.CommitStatusStatePending
-				switch tektonv1beta1.TaskRunReason(runReason) {
-				case tektonv1beta1.TaskRunReasonSuccessful:
-					state = cicdv1.CommitStatusStateSuccess
-				case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
-					state = cicdv1.CommitStatusStateFailure
-				}
-
 				// If something is changed, commit status should be posted
 				stateChanged[i] = job.Status.Jobs[i].State != state ||
 					job.Status.Jobs[i].Message != runMessage ||
@@ -242,7 +247,11 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 	// If state is changed, update git commit status
 	for i, j := range job.Status.Jobs {
 		if stateChanged[i] {
-			if err := gitCli.SetCommitStatus(job, cfg, j.Name, git.CommitStatusState(j.State), j.Message, job.GetReportServerAddress(j.Name), &client); err != nil {
+			msg := j.Message
+			if len(msg) > 140 {
+				msg = msg[:139]
+			}
+			if err := gitCli.SetCommitStatus(job, cfg, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name), &client); err != nil {
 				return err
 			}
 		}

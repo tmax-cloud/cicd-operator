@@ -1,10 +1,20 @@
 package git
 
 type EventType string
+type PullRequestState string
+type PullRequestAction string
 
 const (
 	EventTypePullRequest = EventType("pull_request")
 	EventTypePush        = EventType("push")
+
+	PullRequestStateOpen   = PullRequestState("open")
+	PullRequestStateClosed = PullRequestState("closed")
+
+	PullRequestActionReOpen      = PullRequestAction("reopened")
+	PullRequestActionOpen        = PullRequestAction("opened")
+	PullRequestActionClose       = PullRequestAction("closed")
+	PullRequestActionSynchronize = PullRequestAction("synchronize")
 )
 
 // Webhook is a common structure for git webhooks
@@ -26,6 +36,8 @@ type Push struct {
 type PullRequest struct {
 	ID     int
 	Title  string
+	State  PullRequestState
+	Action PullRequestAction
 	Sender Sender
 	URL    string
 	Base   Base
