@@ -21,11 +21,13 @@ import (
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/controllers/customs"
+	"github.com/tmax-cloud/cicd-operator/internal/logrotate"
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
+	"io"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -69,7 +71,19 @@ func main() {
 
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	// Set log rotation
+	logFile, err := logrotate.LogFile()
+	if err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
+	defer logFile.Close()
+	logWriter := io.MultiWriter(logFile, os.Stdout)
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(logWriter)))
+	if err := logrotate.StartRotate(); err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
