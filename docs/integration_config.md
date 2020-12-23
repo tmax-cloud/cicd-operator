@@ -17,6 +17,8 @@ spec:
         secretKeyRef:
           name: <Token secret name>
           key: <Token secret key>
+  secrets:
+    - name: <Secret name to be included in a service account>
   jobs:
     preSubmit:
     - name: <Job name>
@@ -81,6 +83,8 @@ spec:
         secretKeyRef:
           name: tmax-cloud-bot-credential
           key: token
+  secrets:
+    - name: tmax-cloud-hub
   jobs:
     preSubmit:
     - name: test-unit

@@ -36,8 +36,8 @@ type Job struct {
 	// Approval
 	Approval *JobApproval `json:"approval,omitempty"`
 
-	// MailNotification
-	// TODO
+	// Email
+	Email *JobEmail `json:"email,omitempty"`
 }
 
 type TektonTask struct {
@@ -77,6 +77,22 @@ type JobApproval struct {
 
 	// RequestMessage is a message to be sent to approvers by email
 	RequestMessage string `json:"requestMessage"`
+}
+
+// JobEmail sends email to receivers
+type JobEmail struct {
+	// Receivers is a list of email receivers
+	Receivers []string `json:"receivers,omitempty"`
+
+	// Title of the email
+	Title string `json:"title"`
+
+	// Content of the email
+	Content string `json:"content"`
+
+	// IsHtml describes if it's html content
+	// +kubebuilder:default=true
+	IsHtml bool `json:"isHtml,omitempty"`
 }
 
 type JobWhen struct {

@@ -126,6 +126,11 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("ApprovalRun"),
 		Scheme: mgr.GetScheme(),
 	}, &cicdv1.Approval{})
+	customRunController.AddKindHandler(cicdv1.CustomTaskKindEmail, &customs.EmailRunHandler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ApprovalRun"),
+		Scheme: mgr.GetScheme(),
+	}, &cicdv1.Approval{})
 	if err = customRunController.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CustomRun")
 	}

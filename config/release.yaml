@@ -790,6 +790,28 @@ spec:
                           items:
                             type: string
                           type: array
+                        email:
+                          description: Email
+                          properties:
+                            content:
+                              description: Content of the email
+                              type: string
+                            isHtml:
+                              default: true
+                              description: IsHtml describes if it's html content
+                              type: boolean
+                            receivers:
+                              description: Receivers is a list of email receivers
+                              items:
+                                type: string
+                              type: array
+                            title:
+                              description: Title of the email
+                              type: string
+                          required:
+                          - content
+                          - title
+                          type: object
                         env:
                           description: List of environment variables to set in the
                             container. Cannot be updated.
@@ -2645,6 +2667,28 @@ spec:
                           items:
                             type: string
                           type: array
+                        email:
+                          description: Email
+                          properties:
+                            content:
+                              description: Content of the email
+                              type: string
+                            isHtml:
+                              default: true
+                              description: IsHtml describes if it's html content
+                              type: boolean
+                            receivers:
+                              description: Receivers is a list of email receivers
+                              items:
+                                type: string
+                              type: array
+                            title:
+                              description: Title of the email
+                              type: string
+                          required:
+                          - content
+                          - title
+                          type: object
                         env:
                           description: List of environment variables to set in the
                             container. Cannot be updated.
@@ -4435,9 +4479,6 @@ spec:
                       - name
                       type: object
                     type: array
-                required:
-                - postSubmit
-                - preSubmit
                 type: object
               secrets:
                 description: Secrets are the list of secret names which are included
@@ -4645,6 +4686,28 @@ spec:
                       items:
                         type: string
                       type: array
+                    email:
+                      description: Email
+                      properties:
+                        content:
+                          description: Content of the email
+                          type: string
+                        isHtml:
+                          default: true
+                          description: IsHtml describes if it's html content
+                          type: boolean
+                        receivers:
+                          description: Receivers is a list of email receivers
+                          items:
+                            type: string
+                          type: array
+                        title:
+                          description: Title of the email
+                          type: string
+                      required:
+                      - content
+                      - title
+                      type: object
                     env:
                       description: List of environment variables to set in the container.
                         Cannot be updated.
