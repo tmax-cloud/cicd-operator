@@ -61,3 +61,8 @@ type Head struct {
 	Ref string
 	Sha string
 }
+
+type WebhookEntry struct {
+	Id  int
+	Url string
+}

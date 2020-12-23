@@ -65,3 +65,10 @@ type RegistrationWebhookBodyConfig struct {
 	InsecureSsl string `json:"insecure_ssl"`
 	Secret      string `json:"secret"`
 }
+
+type WebhookEntry struct {
+	Id     int `json:"id"`
+	Config struct {
+		Url string `json:"url"`
+	} `json:"config"`
+}

@@ -36,6 +36,10 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
 
+const (
+	Finalizer = "cicd.tmax.io/finalizer"
+)
+
 // IntegrationConfigReconciler reconciles a IntegrationConfig object
 type IntegrationConfigReconciler struct {
 	client.Client
@@ -60,6 +64,14 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		return ctrl.Result{}, err
 	}
 	original := instance.DeepCopy()
+
+	exit, err := r.handleFinalizer(instance, original)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if exit {
+		return ctrl.Result{}, nil
+	}
 
 	// Set secret
 	secretChanged := r.setSecretString(instance)
@@ -98,6 +110,67 @@ func (r *IntegrationConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cicdv1.IntegrationConfig{}).
 		Complete(r)
+}
+
+func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1.IntegrationConfig) (bool, error) {
+	// Check first if finalizer is already set
+	found := false
+	idx := -1
+	for i, f := range instance.Finalizers {
+		if f == Finalizer {
+			found = true
+			idx = i
+			break
+		}
+	}
+	if !found {
+		instance.Finalizers = append(instance.Finalizers, Finalizer)
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	// Deletion check-up
+	if instance.DeletionTimestamp != nil && idx >= 0 {
+		// Delete webhook
+		gitCli, err := utils.GetGitCli(instance)
+		if err != nil {
+			return false, err
+		}
+		hookList, err := gitCli.ListWebhook(instance, r.Client)
+		if err != nil {
+			return false, err
+		}
+		for _, h := range hookList {
+			if h.Url == instance.GetWebhookServerAddress() {
+				r.Log.Info("Deleting webhook " + h.Url)
+				if err := gitCli.DeleteWebhook(instance, h.Id, r.Client); err != nil {
+					return false, err
+				}
+			}
+		}
+
+		// Delete finalizer
+		if len(instance.Finalizers) == 1 {
+			instance.Finalizers = nil
+		} else {
+			last := len(instance.Finalizers) - 1
+			instance.Finalizers[idx] = instance.Finalizers[last]
+			instance.Finalizers[last] = ""
+			instance.Finalizers = instance.Finalizers[:last]
+		}
+
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // Set status.secrets, return if it's changed or not
@@ -140,7 +213,9 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 		}
 		if gitCli != nil {
 			// TODO - check if there is one and register if there isn't
-			if err := gitCli.RegisterWebhook(instance, instance.GetWebhookServerAddress(), &r.Client); err != nil {
+			addr := instance.GetWebhookServerAddress()
+			r.Log.Info("Registering webhook " + addr)
+			if err := gitCli.RegisterWebhook(instance, addr, r.Client); err != nil {
 				webhookRegistered.Reason = "webhookRegisterFailed"
 				webhookRegistered.Message = err.Error()
 			} else {
