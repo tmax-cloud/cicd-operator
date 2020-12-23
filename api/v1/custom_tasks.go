@@ -22,4 +22,14 @@ const (
 	CustomTaskApprovalApproversConfigMapKey = "approvers"
 )
 
+// Email
+const (
+	CustomTaskKindEmail = "EmailTask"
+
+	CustomTaskEmailParamKeyReceivers = "receivers"
+	CustomTaskEmailParamKeyTitle     = "title"
+	CustomTaskEmailParamKeyContent   = "content"
+	CustomTaskEmailParamKeyIsHtml    = "isHtml"
+)
+
 var CustomTaskApiVersion = fmt.Sprintf("%s/%s", CustomTaskGroup, CustomTaskVersion)

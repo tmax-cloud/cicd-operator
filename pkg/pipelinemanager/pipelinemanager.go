@@ -63,6 +63,10 @@ func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.Pipe
 		if err := generateApprovalRunTask(job, j, task); err != nil {
 			return nil, err
 		}
+	} else if j.Email != nil {
+		if err := generateEmailRunTask(j, task); err != nil {
+			return nil, err
+		}
 	} else {
 		// Steps
 		steps, err := generateSteps(j)
