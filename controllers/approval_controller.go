@@ -17,13 +17,16 @@ limitations under the License.
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
+	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/mail"
+	"html/template"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -35,9 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
-	"time"
-
-	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
 
 // ApprovalReconciler reconciles a Approval object
@@ -118,25 +118,20 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// Set SentRequestMail
 	if sentReqMailCond == nil || sentReqMailCond.Status == corev1.ConditionUnknown {
-		title := "[CI/CD] Approval is requested to you"
-		content := fmt.Sprintf("IntegrationJob: %s\nJobName: %s\nLink: %s\nMessage: %s", instance.Spec.IntegrationJob, instance.Spec.JobName, instance.Spec.Link, instance.Spec.Message)
+		title, content, err := r.generateMail(instance, &configs.ApprovalRequestMailTitle, &configs.ApprovalRequestMailContent)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		r.sendMail(instance.Spec.Users, title, content, sentReqMailCond)
 	}
 
 	// Set SentResultMail - only if is decided
 	if instance.Status.Result == cicdv1.ApprovalResultApproved || instance.Status.Result == cicdv1.ApprovalResultRejected {
-		localTime := time.Now()
-		if instance.Status.DecisionTime != nil {
-			location, err := time.LoadLocation("Asia/Seoul")
+		if sentResMailCond == nil || sentResMailCond.Status == corev1.ConditionUnknown {
+			title, content, err := r.generateMail(instance, &configs.ApprovalResultMailTitle, &configs.ApprovalResultMailContent)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
-			localTime = instance.Status.DecisionTime.Time.In(location)
-		}
-
-		title := fmt.Sprintf("[CI/CD] Approval is %s", strings.ToLower(string(instance.Status.Result)))
-		content := fmt.Sprintf("IntegrationJob: %s\nJobName: %s\nLink: %s\nMessage: %s\n\nResult\nResult: %s\nReason: %s\nDecisionTime: %s", instance.Spec.IntegrationJob, instance.Spec.JobName, instance.Spec.Link, instance.Spec.Message, instance.Status.Result, instance.Status.Reason, localTime.String())
-		if sentResMailCond == nil || sentResMailCond.Status == corev1.ConditionUnknown {
 			r.sendMail(instance.Spec.Users, title, content, sentResMailCond)
 		}
 	}
@@ -264,6 +259,34 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 	}
 
 	return nil
+}
+
+func (r *ApprovalReconciler) generateMail(instance *cicdv1.Approval, titleTemplateCfg, contentTemplateCfg *string) (string, string, error) {
+	// Get template
+	var err error
+	titleTemplate := template.New("")
+	titleTemplate, err = titleTemplate.Parse(*titleTemplateCfg)
+	if err != nil {
+		return "", "", err
+	}
+
+	contentTemplate := template.New("")
+	contentTemplate, err = contentTemplate.Parse(*contentTemplateCfg)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Generate mail title, content
+	title := &bytes.Buffer{}
+	if err := titleTemplate.Execute(title, instance); err != nil {
+		return "", "", err
+	}
+	content := &bytes.Buffer{}
+	if err := contentTemplate.Execute(content, instance); err != nil {
+		return "", "", err
+	}
+
+	return title.String(), content.String(), nil
 }
 
 func (r *ApprovalReconciler) sendMail(users []string, title, content string, cond *status.Condition) {

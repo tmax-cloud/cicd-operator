@@ -17,4 +17,11 @@ var (
 
 	// SMTPUserSecret string
 	SMTPUserSecret string
+
+	// Email templates
+	ApprovalRequestMailTitle   string
+	ApprovalRequestMailContent string
+
+	ApprovalResultMailTitle   string
+	ApprovalResultMailContent string
 )
