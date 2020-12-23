@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -67,7 +68,33 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 	return webhook, nil
 }
 
-func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client *client.Client) error {
+func (c *Client) ListWebhook(integrationConfig *cicdv1.IntegrationConfig, client client.Client) ([]git.WebhookEntry, error) {
+	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
+
+	token, err := integrationConfig.GetToken(client)
+	if err != nil {
+		return nil, err
+	}
+	header := map[string]string{"Authorization": "token " + token}
+	data, _, err := git.RequestHttp(http.MethodGet, apiUrl, header, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var entries []WebhookEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return nil, err
+	}
+
+	var result []git.WebhookEntry
+	for _, e := range entries {
+		result = append(result, git.WebhookEntry{Id: e.Id, Url: e.Config.Url})
+	}
+
+	return result, nil
+}
+
+func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client client.Client) error {
 	var registrationBody RegistrationWebhookBody
 	var registrationConfig RegistrationWebhookBodyConfig
 	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
@@ -82,7 +109,7 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 
 	registrationBody.Config = registrationConfig
 
-	token, err := integrationConfig.GetToken(*client)
+	token, err := integrationConfig.GetToken(client)
 	if err != nil {
 		return err
 	}
@@ -95,7 +122,22 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	return nil
 }
 
-func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client *client.Client) error {
+func (c *Client) DeleteWebhook(integrationConfig *cicdv1.IntegrationConfig, id int, client client.Client) error {
+	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks/" + strconv.Itoa(id)
+	token, err := integrationConfig.GetToken(client)
+	if err != nil {
+		return err
+	}
+	header := map[string]string{"Authorization": "token " + token}
+	_, _, err = git.RequestHttp(http.MethodDelete, apiUrl, header, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client client.Client) error {
 	var commitStatusBody CommitStatusBody
 	var sha string
 	if integrationJob.Spec.Refs.Pull == nil {
@@ -110,7 +152,7 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
 
-	token, err := integrationConfig.GetToken(*client)
+	token, err := integrationConfig.GetToken(client)
 	if err != nil {
 		return err
 	}

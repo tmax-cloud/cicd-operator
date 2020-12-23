@@ -60,6 +60,11 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 	original := instance.DeepCopy()
 
+	// Skip if it's ended
+	if instance.Status.CompletionTime != nil {
+		return ctrl.Result{}, nil
+	}
+
 	// Notify state change to scheduler
 	defer r.Scheduler.Notify(instance)
 

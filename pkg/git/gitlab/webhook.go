@@ -63,3 +63,8 @@ type RegistrationWebhookBody struct {
 	URL                     string `json:"url"`
 	Token                   string `json:"token"`
 }
+
+type WebhookEntry struct {
+	Id  int    `json:"id"`
+	Url string `json:"url"`
+}

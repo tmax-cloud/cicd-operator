@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
+	"time"
 )
 
 // PipelineManager implements utility functions for generating, watching PipelineRuns
@@ -49,6 +50,7 @@ func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 			PipelineSpec: &tektonv1beta1.PipelineSpec{
 				Tasks: tasks,
 			},
+			Timeout: &metav1.Duration{Duration: 120 * time.Hour},
 		},
 	}, nil
 }
@@ -251,7 +253,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 			if len(msg) > 140 {
 				msg = msg[:139]
 			}
-			if err := gitCli.SetCommitStatus(job, cfg, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name), &client); err != nil {
+			if err := gitCli.SetCommitStatus(job, cfg, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name), client); err != nil {
 				return err
 			}
 		}
