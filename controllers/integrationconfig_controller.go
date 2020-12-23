@@ -276,15 +276,30 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 	sa.Name = cicdv1.GetServiceAccountName(instance.Name)
 	sa.Namespace = instance.Namespace
 
-	// Check if secret is set for the service account
-	for _, s := range sa.Secrets {
-		if s.Name == cicdv1.GetSecretName(instance.Name) {
-			return nil
+	desiredSecrets := []corev1.LocalObjectReference{{Name: cicdv1.GetSecretName(instance.Name)}}
+	desiredSecrets = append(desiredSecrets, instance.Spec.Secrets...)
+
+	changed := false
+	for _, s := range desiredSecrets {
+		// Check if secret is set for the service account
+		found := false
+		for _, cur := range sa.Secrets {
+			if cur.Name == s.Name {
+				found = true
+				break
+			}
 		}
+		if found {
+			continue
+		}
+		// If not set, set one
+		changed = true
+		sa.Secrets = append(sa.Secrets, corev1.ObjectReference{Name: s.Name})
 	}
 
-	// If not set, set one
-	sa.Secrets = append(sa.Secrets, corev1.ObjectReference{Name: cicdv1.GetSecretName(instance.Name)})
+	if !changed {
+		return nil
+	}
 
 	if err := controllerutil.SetControllerReference(instance, sa, r.Scheme); err != nil {
 		return err
