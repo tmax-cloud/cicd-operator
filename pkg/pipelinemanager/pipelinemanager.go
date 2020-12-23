@@ -116,7 +116,7 @@ func generateCustomTaskRef(kind string) *tektonv1beta1.TaskRef {
 func generateSteps(j cicdv1.Job) ([]tektonv1beta1.Step, error) {
 	var steps []tektonv1beta1.Step
 
-	if j.GitCheckout {
+	if !j.SkipCheckout {
 		steps = append(steps, gitCheckout())
 	}
 

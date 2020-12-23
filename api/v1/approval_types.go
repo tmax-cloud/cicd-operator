@@ -38,12 +38,11 @@ type ApprovalSpec struct {
 	// Deprecated: not used from HyperCloud5, only for the backward compatibility with HyperCloud4
 	PodName string `json:"podName,omitempty"`
 
-	// SendMail describes whether or not to send mail for request/result for approvers
-	// +kubebuilder:default=true
-	SendMail bool `json:"sendMail"`
+	// SkipSendMail describes whether or not to send mail for request/result for approvers
+	SkipSendMail bool `json:"skipSendMail,omitempty"`
 
 	// PipelineRun points the actual pipeline run object which created this Approval
-	PipelineRun string `json:"pipelineRun"`
+	PipelineRun string `json:"pipelineRun,omitempty"`
 
 	// IntegrationJob is a related IntegrationJob name (maybe a grand-parent of Approval)
 	IntegrationJob string `json:"integrationJob,omitempty"`
