@@ -281,6 +281,13 @@ func (in *IntegrationConfigSpec) DeepCopyInto(out *IntegrationConfigSpec) {
 		*out = make([]corev1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
+	if in.Workspaces != nil {
+		in, out := &in.Workspaces, &out.Workspaces
+		*out = make([]v1beta1.WorkspaceBinding, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	in.Jobs.DeepCopyInto(&out.Jobs)
 }
 
@@ -461,6 +468,13 @@ func (in *IntegrationJobRefsPullAuthor) DeepCopy() *IntegrationJobRefsPullAuthor
 func (in *IntegrationJobSpec) DeepCopyInto(out *IntegrationJobSpec) {
 	*out = *in
 	out.ConfigRef = in.ConfigRef
+	if in.Workspaces != nil {
+		in, out := &in.Workspaces, &out.Workspaces
+		*out = make([]v1beta1.WorkspaceBinding, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Jobs != nil {
 		in, out := &in.Jobs, &out.Jobs
 		*out = make([]Job, len(*in))

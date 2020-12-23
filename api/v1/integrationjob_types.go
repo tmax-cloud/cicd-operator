@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,6 +30,9 @@ type IntegrationJobSpec struct {
 
 	// Id is a unique random string for the IntegrationJob
 	Id string `json:"id"`
+
+	// Workspaces list
+	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
 
 	// Jobs are the tasks to be executed
 	Jobs []Job `json:"jobs"`
