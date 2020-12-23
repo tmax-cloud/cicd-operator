@@ -19,6 +19,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 
 	"github.com/operator-framework/operator-lib/status"
@@ -35,6 +36,9 @@ type IntegrationConfigSpec struct {
 
 	// Secrets are the list of secret names which are included in service account
 	Secrets []corev1.LocalObjectReference `json:"secrets,omitempty"`
+
+	// Workspaces list
+	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
 
 	// Jobs specify the tasks to be executed
 	Jobs IntegrationConfigJobs `json:"jobs"`

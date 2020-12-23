@@ -24,6 +24,12 @@ const (
 func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
 
+	// Workspace defs
+	var workspaceDefs []tektonv1beta1.PipelineWorkspaceDeclaration
+	for _, w := range job.Spec.Workspaces {
+		workspaceDefs = append(workspaceDefs, tektonv1beta1.PipelineWorkspaceDeclaration{Name: w.Name})
+	}
+
 	// Generate Tasks
 	var tasks []tektonv1beta1.PipelineTask
 	for _, j := range job.Spec.Jobs {
@@ -48,9 +54,11 @@ func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 		Spec: tektonv1beta1.PipelineRunSpec{
 			ServiceAccountName: cicdv1.GetServiceAccountName(job.Spec.ConfigRef.Name),
 			PipelineSpec: &tektonv1beta1.PipelineSpec{
-				Tasks: tasks,
+				Tasks:      tasks,
+				Workspaces: workspaceDefs,
 			},
-			Timeout: &metav1.Duration{Duration: 120 * time.Hour},
+			Workspaces: job.Spec.Workspaces,
+			Timeout:    &metav1.Duration{Duration: 120 * time.Hour},
 		},
 	}, nil
 }
@@ -76,6 +84,20 @@ func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.Pipe
 
 		task.TaskSpec = &tektonv1beta1.EmbeddedTask{}
 		task.TaskSpec.Steps = steps
+
+		// Workspaces
+		var wsDefs []tektonv1beta1.WorkspaceDeclaration
+		for _, w := range job.Spec.Workspaces {
+			wsDefs = append(wsDefs, tektonv1beta1.WorkspaceDeclaration{Name: w.Name})
+		}
+
+		var wsBindings []tektonv1beta1.WorkspacePipelineTaskBinding
+		for _, w := range job.Spec.Workspaces {
+			wsBindings = append(wsBindings, tektonv1beta1.WorkspacePipelineTaskBinding{Name: w.Name, Workspace: w.Name})
+		}
+
+		task.TaskSpec.Workspaces = wsDefs
+		task.Workspaces = wsBindings
 	}
 
 	// After
