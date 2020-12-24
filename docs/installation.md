@@ -15,11 +15,11 @@ This guides to install CI/CD operator. The contents are as follows.
    VERSION=v0.1.0
    kubectl apply -f https://raw.githubusercontent.com/cqbqdd11519/cicd-operator/$VERSION/config/release.yaml
    ```
-2. Enable `CustomTask` feature
+2. Enable `CustomTask` feature, disable `Affinity Assistant`
    ```bash
    kubectl -n tekton-pipelines patch configmap feature-flags \
    --type merge \
-   -p '{"data": {"enable-custom-tasks": "true"}}'
+   -p '{"data": {"enable-custom-tasks": "true", "disable-affinity-assistant": "true"}}'
    ```
 
 ## Enabling email feature
