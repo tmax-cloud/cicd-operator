@@ -14,12 +14,13 @@ func generateApprovalRunTask(job *cicdv1.IntegrationJob, j cicdv1.Job, task *tek
 	// Get message
 	msg := j.Approval.RequestMessage
 
-	var sender, link string
+	// Get sender
+	sender := job.Spec.Refs.Sender
+
+	var link string
 	if job.Spec.Refs.Pull != nil {
-		sender = job.Spec.Refs.Pull.Author.Name
 		link = job.Spec.Refs.Pull.Link
 	} else {
-		// TODO: Sender for Push event
 		link = job.Spec.Refs.Base.Link
 	}
 
