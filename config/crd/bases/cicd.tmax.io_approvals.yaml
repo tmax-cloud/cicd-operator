@@ -71,15 +71,14 @@ spec:
                   to proceed Deprecated: not used from HyperCloud5, only for the backward
                   compatibility with HyperCloud4'
                 type: string
-              sendMail:
-                default: true
-                description: SendMail describes whether or not to send mail for request/result
-                  for approvers
-                type: boolean
               sender:
                 description: Sender is a requester (probably be pull-request author
                   or pusher)
                 type: string
+              skipSendMail:
+                description: SkipSendMail describes whether or not to send mail for
+                  request/result for approvers
+                type: boolean
               users:
                 description: Users are the list of the users who are requested to
                   approve the Approval
@@ -87,8 +86,6 @@ spec:
                   type: string
                 type: array
             required:
-            - pipelineRun
-            - sendMail
             - users
             type: object
           status:

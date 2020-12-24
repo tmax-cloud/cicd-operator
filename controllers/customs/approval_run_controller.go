@@ -179,7 +179,7 @@ func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Appro
 			Namespace: run.Namespace,
 		},
 		Spec: cicdv1.ApprovalSpec{
-			SendMail:       configs.EnableMail,
+			SkipSendMail:   !configs.EnableMail,
 			PipelineRun:    prName,
 			Users:          approvers,
 			IntegrationJob: jobName,

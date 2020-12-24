@@ -117,7 +117,7 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// Set SentRequestMail
-	if sentReqMailCond == nil || sentReqMailCond.Status == corev1.ConditionUnknown {
+	if !instance.Spec.SkipSendMail && (sentReqMailCond == nil || sentReqMailCond.Status == corev1.ConditionUnknown) {
 		title, content, err := r.generateMail(instance, &configs.ApprovalRequestMailTitle, &configs.ApprovalRequestMailContent)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -126,7 +126,7 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// Set SentResultMail - only if is decided
-	if instance.Status.Result == cicdv1.ApprovalResultApproved || instance.Status.Result == cicdv1.ApprovalResultRejected {
+	if !instance.Spec.SkipSendMail && (instance.Status.Result == cicdv1.ApprovalResultApproved || instance.Status.Result == cicdv1.ApprovalResultRejected) {
 		if sentResMailCond == nil || sentResMailCond.Status == corev1.ConditionUnknown {
 			title, content, err := r.generateMail(instance, &configs.ApprovalResultMailTitle, &configs.ApprovalResultMailContent)
 			if err != nil {

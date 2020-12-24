@@ -133,7 +133,6 @@ spec:
                           description: Content of the email
                           type: string
                         isHtml:
-                          default: true
                           description: IsHtml describes if it's html content
                           type: boolean
                         receivers:
@@ -303,11 +302,6 @@ spec:
                             type: object
                         type: object
                       type: array
-                    gitCheckout:
-                      default: true
-                      description: GitCheckout describes whether or not to checkout
-                        from git before
-                      type: boolean
                     image:
                       description: 'Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images
                         This field is optional to allow higher level config management
@@ -953,6 +947,10 @@ spec:
                               type: string
                           type: object
                       type: object
+                    skipCheckout:
+                      description: SkipCheckout describes whether or not to checkout
+                        from git before
+                      type: boolean
                     startupProbe:
                       description: 'StartupProbe indicates that the Pod has successfully
                         initialized. If specified, no other probes are executed until

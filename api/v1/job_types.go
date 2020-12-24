@@ -23,9 +23,8 @@ type Job struct {
 	// Not implemented yet
 	TektonTask *TektonTask `json:"tektonTask,omitempty"`
 
-	// GitCheckout describes whether or not to checkout from git before
-	// +kubebuilder:default=true
-	GitCheckout bool `json:"gitCheckout,omitempty"`
+	// SkipCheckout describes whether or not to checkout from git before
+	SkipCheckout bool `json:"skipCheckout,omitempty"`
 
 	// When is condition for running the job
 	When *JobWhen `json:"when,omitempty"`
@@ -91,7 +90,6 @@ type JobEmail struct {
 	Content string `json:"content"`
 
 	// IsHtml describes if it's html content
-	// +kubebuilder:default=true
 	IsHtml bool `json:"isHtml,omitempty"`
 }
 
