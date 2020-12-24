@@ -17,8 +17,10 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"github.com/operator-framework/operator-lib/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 type ApprovalResult string
@@ -108,4 +110,16 @@ type ApprovalList struct {
 
 func init() {
 	SchemeBuilder.Register(&Approval{}, &ApprovalList{})
+}
+
+func (a *ApprovalStatus) GetDecisionTimeInZone(zone string) (*time.Time, error) {
+	if a.DecisionTime == nil {
+		return nil, fmt.Errorf("decision time is nil")
+	}
+	location, err := time.LoadLocation(zone)
+	if err != nil {
+		return nil, err
+	}
+	localTime := a.DecisionTime.Time.In(location)
+	return &localTime, nil
 }

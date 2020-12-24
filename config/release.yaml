@@ -398,7 +398,7 @@ data:
     Result
     Result: {{.Status.Result}}
     Reason: {{.Status.Reason}}
-    DecisionTime: {{.Status.DecisionTime}}
+    DecisionTime: {{.Status.GetDecisionTimeInZone "Asia/Seoul"}}
 ---
 apiVersion: v1
 kind: ConfigMap
