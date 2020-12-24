@@ -6899,10 +6899,14 @@ spec:
                       form, e.g., tmax-cloud/cicd-operator)
                     pattern: .+/.+
                     type: string
+                  sender:
+                    description: Sender is a git user who triggered the webhook
+                    type: string
                 required:
                 - base
                 - link
                 - repository
+                - sender
                 type: object
               workspaces:
                 description: Workspaces list
