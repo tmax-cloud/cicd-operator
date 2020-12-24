@@ -23,13 +23,13 @@ spec:
       jsonPath: .status.state
       name: State
       type: string
-    - description: Started time
+    - description: Start time
       jsonPath: .status.startTime
-      name: Started
+      name: StartTime
       type: date
-    - description: Ended time
+    - description: Completion time
       jsonPath: .status.completionTime
-      name: Ended
+      name: CompletionTime
       type: date
     name: v1
     schema:
