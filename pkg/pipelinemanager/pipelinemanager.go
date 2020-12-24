@@ -1,6 +1,7 @@
 package pipelinemanager
 
 import (
+	"fmt"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -279,8 +280,9 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 			if len(msg) > 140 {
 				msg = msg[:139]
 			}
+			log.Info(fmt.Sprintf("Setting commit status %s to %s", j.State, cfg.Spec.Git.Repository))
 			if err := gitCli.SetCommitStatus(job, cfg, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name), client); err != nil {
-				return err
+				log.Error(err, "")
 			}
 		}
 	}
