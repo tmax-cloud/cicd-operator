@@ -25,6 +25,7 @@ type Webhook struct {
 
 	Push        *Push
 	PullRequest *PullRequest
+	Action      string
 }
 
 type Push struct {
