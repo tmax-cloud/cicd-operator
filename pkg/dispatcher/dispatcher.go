@@ -33,11 +33,12 @@ func (d Dispatcher) Handle(webhook git.Webhook, config *cicdv1.IntegrationConfig
 	if err != nil {
 		return err
 	}
-	if pr != nil && push == nil {
+	if webhook.EventType == git.EventTypePullRequest {
 		job = handlePullRequest(webhook, config, jobId, jobName, jobs)
-	} else if push != nil && pr != nil {
+	} else if webhook.EventType == git.EventTypePush {
 		job = handlePush(webhook, config, jobId, jobName, jobs)
 	}
+
 	if err := d.Client.Create(context.Background(), job); err != nil {
 		return err
 	}
