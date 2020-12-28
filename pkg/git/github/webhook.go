@@ -3,8 +3,8 @@ package github
 // Webhook is a github-specific webhook body
 // Should contain json tag for each field, to be unmarshalled properly
 type PullRequestWebhook struct {
-	Sender Sender `json:"sender"`
-
+	Sender      Sender `json:"sender"`
+	Action      string `json:"action"`
 	PullRequest struct {
 		Title string `json:"title"`
 		ID    int    `json:"id"`

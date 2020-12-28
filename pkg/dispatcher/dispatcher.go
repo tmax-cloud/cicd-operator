@@ -48,39 +48,41 @@ func (d Dispatcher) Handle(webhook git.Webhook, config *cicdv1.IntegrationConfig
 
 func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId, jobName string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
 	pr := webhook.PullRequest
-	job := &cicdv1.IntegrationJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      jobName,
-			Namespace: config.Namespace,
-			Labels:    map[string]string{}, // TODO
-		},
-		Spec: cicdv1.IntegrationJobSpec{
-			ConfigRef: cicdv1.IntegrationJobConfigRef{
-				Name: config.Name,
-				Type: cicdv1.JobTypePreSubmit,
+	var job *cicdv1.IntegrationJob
+	if webhook.Action == "opened" || webhook.Action == "synchronize" {
+		job = &cicdv1.IntegrationJob{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      jobName,
+				Namespace: config.Namespace,
+				Labels:    map[string]string{}, // TODO
 			},
-			Id:   jobId,
-			Jobs: jobs,
-			Refs: cicdv1.IntegrationJobRefs{
-				Repository: webhook.Repo.Name,
-				Link:       webhook.Repo.URL,
-				Base: cicdv1.IntegrationJobRefsBase{
-					Ref:  pr.Base.Ref,
-					Link: webhook.Repo.URL,
+			Spec: cicdv1.IntegrationJobSpec{
+				ConfigRef: cicdv1.IntegrationJobConfigRef{
+					Name: config.Name,
+					Type: cicdv1.JobTypePreSubmit,
 				},
-				Pull: &cicdv1.IntegrationJobRefsPull{
-					Id:   pr.ID,
-					Ref:  pr.Head.Ref,
-					Sha:  pr.Head.Sha,
-					Link: pr.URL,
-					Author: cicdv1.IntegrationJobRefsPullAuthor{
-						Name: pr.Sender.Name,
+				Id:   jobId,
+				Jobs: jobs,
+				Refs: cicdv1.IntegrationJobRefs{
+					Repository: webhook.Repo.Name,
+					Link:       webhook.Repo.URL,
+					Base: cicdv1.IntegrationJobRefsBase{
+						Ref:  pr.Base.Ref,
+						Link: webhook.Repo.URL,
+					},
+					Pull: &cicdv1.IntegrationJobRefsPull{
+						Id:   pr.ID,
+						Ref:  pr.Head.Ref,
+						Sha:  pr.Head.Sha,
+						Link: pr.URL,
+						Author: cicdv1.IntegrationJobRefsPullAuthor{
+							Name: pr.Sender.Name,
+						},
 					},
 				},
 			},
-		},
+		}
 	}
-
 	return job
 }
 
@@ -127,7 +129,6 @@ func filterJobs(webhook git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1
 	}
 
 	// TODO - filter
-	// jobs = append(jobs, cand...)
 	jobs = filter(cand, webhook, config)
 
 	return jobs, nil
