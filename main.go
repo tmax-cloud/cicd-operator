@@ -18,16 +18,20 @@ package main
 
 import (
 	"flag"
+	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/controllers/customs"
+	"github.com/tmax-cloud/cicd-operator/pkg/apiserver"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
+	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	apiregv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -47,8 +51,13 @@ func init() {
 
 	utilruntime.Must(cicdv1.AddToScheme(scheme))
 	utilruntime.Must(tektonv1beta1.AddToScheme(scheme))
+	utilruntime.Must(tektonv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiregv1.AddToScheme(scheme))
+	utilruntime.Must(rbac.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
+
+// +kubebuilder:rbac:groups="",resources=events,namespace=cicd-system,verbs=get;list;watch;create;update;patch
 
 func main() {
 	var metricsAddr string
@@ -57,9 +66,6 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-
-	flag.StringVar(&configs.ExternalHostName, "external-hostname", "", "External hostname for webhook server (default is ingress hostname)")
-	flag.IntVar(&configs.MaxPipelineRun, "max-pipeline-run", 5, "Max number of pipelineruns that can run simultaneously")
 
 	flag.Parse()
 
@@ -77,6 +83,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Config Controller
+	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController")}
+	go cfgCtrl.Start()
+
+	// Controllers
 	if err = (&controllers.IntegrationConfigReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("IntegrationConfig"),
@@ -94,6 +105,35 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "IntegrationJob")
 		os.Exit(1)
 	}
+	if err = (&controllers.ApprovalReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Approval"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Approval")
+		os.Exit(1)
+	}
+	customRunController := &controllers.CustomRunReconciler{
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("controllers").WithName("CustomRun"),
+		Scheme:          mgr.GetScheme(),
+		KindHandlerMap:  map[string]controllers.KindHandler{},
+		HandlerChildren: map[string][]runtime.Object{},
+	}
+	// Add custom Run handlers
+	customRunController.AddKindHandler(cicdv1.CustomTaskKindApproval, &customs.ApprovalRunHandler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ApprovalRun"),
+		Scheme: mgr.GetScheme(),
+	}, &cicdv1.Approval{})
+	customRunController.AddKindHandler(cicdv1.CustomTaskKindEmail, &customs.EmailRunHandler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ApprovalRun"),
+		Scheme: mgr.GetScheme(),
+	}, &cicdv1.Approval{})
+	if err = customRunController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CustomRun")
+	}
 	// +kubebuilder:scaffold:builder
 
 	// Check for ingress first
@@ -110,6 +150,10 @@ func main() {
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
 
 	go srv.Start()
+
+	// Start API aggregation server
+	apiServer := apiserver.New(mgr.GetScheme())
+	go apiServer.Start()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

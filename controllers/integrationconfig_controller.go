@@ -36,6 +36,10 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
 
+const (
+	Finalizer = "cicd.tmax.io/finalizer"
+)
+
 // IntegrationConfigReconciler reconciles a IntegrationConfig object
 type IntegrationConfigReconciler struct {
 	client.Client
@@ -45,6 +49,7 @@ type IntegrationConfigReconciler struct {
 
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 
 func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -57,6 +62,15 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		}
 		log.Error(err, "")
 		return ctrl.Result{}, err
+	}
+	original := instance.DeepCopy()
+
+	exit, err := r.handleFinalizer(instance, original)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if exit {
+		return ctrl.Result{}, nil
 	}
 
 	// Set secret
@@ -82,7 +96,8 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	// If conditions changed, update status
 	if secretChanged || webhookConditionChanged || readyConditionChanged {
-		if err := r.Client.Status().Update(ctx, instance); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
 			log.Error(err, "")
 			return ctrl.Result{}, err
 		}
@@ -95,6 +110,67 @@ func (r *IntegrationConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cicdv1.IntegrationConfig{}).
 		Complete(r)
+}
+
+func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1.IntegrationConfig) (bool, error) {
+	// Check first if finalizer is already set
+	found := false
+	idx := -1
+	for i, f := range instance.Finalizers {
+		if f == Finalizer {
+			found = true
+			idx = i
+			break
+		}
+	}
+	if !found {
+		instance.Finalizers = append(instance.Finalizers, Finalizer)
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	// Deletion check-up
+	if instance.DeletionTimestamp != nil && idx >= 0 {
+		// Delete webhook
+		gitCli, err := utils.GetGitCli(instance)
+		if err != nil {
+			return false, err
+		}
+		hookList, err := gitCli.ListWebhook(instance, r.Client)
+		if err != nil {
+			return false, err
+		}
+		for _, h := range hookList {
+			if h.Url == instance.GetWebhookServerAddress() {
+				r.Log.Info("Deleting webhook " + h.Url)
+				if err := gitCli.DeleteWebhook(instance, h.Id, r.Client); err != nil {
+					return false, err
+				}
+			}
+		}
+
+		// Delete finalizer
+		if len(instance.Finalizers) == 1 {
+			instance.Finalizers = nil
+		} else {
+			last := len(instance.Finalizers) - 1
+			instance.Finalizers[idx] = instance.Finalizers[last]
+			instance.Finalizers[last] = ""
+			instance.Finalizers = instance.Finalizers[:last]
+		}
+
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // Set status.secrets, return if it's changed or not
@@ -137,7 +213,9 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 		}
 		if gitCli != nil {
 			// TODO - check if there is one and register if there isn't
-			if err := gitCli.RegisterWebhook(instance, instance.GetWebhookServerAddress(), &r.Client); err != nil {
+			addr := instance.GetWebhookServerAddress()
+			r.Log.Info("Registering webhook " + addr)
+			if err := gitCli.RegisterWebhook(instance, addr, r.Client); err != nil {
 				webhookRegistered.Reason = "webhookRegisterFailed"
 				webhookRegistered.Message = err.Error()
 			} else {
@@ -184,6 +262,7 @@ func (r *IntegrationConfigReconciler) createGitSecret(instance *cicdv1.Integrati
 			return err
 		}
 	}
+	original := secret.DeepCopy()
 
 	secret.Name = cicdv1.GetSecretName(instance.Name)
 	secret.Namespace = instance.Namespace
@@ -245,7 +324,8 @@ func (r *IntegrationConfigReconciler) createGitSecret(instance *cicdv1.Integrati
 
 	// Update if resourceVersion exists, but create if not
 	if secret.ResourceVersion != "" {
-		if err := r.Client.Update(context.Background(), secret); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), secret, p); err != nil {
 			return err
 		}
 	} else {
@@ -266,19 +346,35 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 			return err
 		}
 	}
+	original := sa.DeepCopy()
 
 	sa.Name = cicdv1.GetServiceAccountName(instance.Name)
 	sa.Namespace = instance.Namespace
 
-	// Check if secret is set for the service account
-	for _, s := range sa.Secrets {
-		if s.Name == cicdv1.GetSecretName(instance.Name) {
-			return nil
+	desiredSecrets := []corev1.LocalObjectReference{{Name: cicdv1.GetSecretName(instance.Name)}}
+	desiredSecrets = append(desiredSecrets, instance.Spec.Secrets...)
+
+	changed := false
+	for _, s := range desiredSecrets {
+		// Check if secret is set for the service account
+		found := false
+		for _, cur := range sa.Secrets {
+			if cur.Name == s.Name {
+				found = true
+				break
+			}
 		}
+		if found {
+			continue
+		}
+		// If not set, set one
+		changed = true
+		sa.Secrets = append(sa.Secrets, corev1.ObjectReference{Name: s.Name})
 	}
 
-	// If not set, set one
-	sa.Secrets = append(sa.Secrets, corev1.ObjectReference{Name: cicdv1.GetSecretName(instance.Name)})
+	if !changed {
+		return nil
+	}
 
 	if err := controllerutil.SetControllerReference(instance, sa, r.Scheme); err != nil {
 		return err
@@ -286,7 +382,8 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 
 	// Update if resourceVersion exists, but create if not
 	if sa.ResourceVersion != "" {
-		if err := r.Client.Update(context.Background(), sa); err != nil {
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), sa, p); err != nil {
 			return err
 		}
 	} else {

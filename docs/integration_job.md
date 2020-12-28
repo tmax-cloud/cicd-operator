@@ -18,6 +18,7 @@ spec:
     link: <e.g., https://github.com/tmax-cloud/cicd-operator>
     base:
       ref: <e.g., master>
+      sha: <SHA of base commit>
       link: <Link of base repo.>
     pull:
       id: <Pull request ID>
@@ -27,8 +28,17 @@ spec:
         name: <Author name>
 status:
   state: [pending | running | completed | failed]
-  taskStatus:
-  - <Tekton Task Status>
+  startTime: <Started timestamp>
+  completionTime: <Completed timestamp>
+  jobs:
+  - name: <job's name>
+    startTime: <Started timestamp>
+    completionTime: <Completed timestamp>
+    state: [success | failure | error | pending]
+    message: <Message of the job>
+    podName: <Pod's name where the job is running>
+    containers:
+      - <Container status>
 ```
 
 ## Sample YAML
@@ -42,7 +52,6 @@ metadata:
     cicd.tmax.io/integration-config: sample-config 
     cicd.tmax.io/integration-type: presubmit
     cicd.tmax.io/integration-id: fudsfh389s234fasdf323df3fxf5df
-    cicd.tmax.io/repository: tmax-cloud/cicd-operator
     cicd.tmax.io/pull-request: 32
 spec:
   configRef:
@@ -63,15 +72,12 @@ spec:
     link: https://github.com/tmax-cloud/cicd-operator
     base:
       ref: master
+      sha: wef89weaf8wefje8cn2jd8c83nd9322502183c79
       link: https://github.com/tmax-cloud/cicd-operator
     pull:
       id: 32
       sha: 48f6ce4dd655a64f723de28695e3322502183c79
       link: https://github.com/tmax-cloud/cicd-operator/pull/32
       author: 
-        name: cqbqdd11519
-status:
-  state: running
-  taskStatus:
-  - <Tekton Task Status>
+        name: sunghyunkim3
 ```

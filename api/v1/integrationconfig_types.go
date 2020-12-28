@@ -19,6 +19,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 
 	"github.com/operator-framework/operator-lib/status"
@@ -33,6 +34,12 @@ type IntegrationConfigSpec struct {
 	// Git config for target repository
 	Git GitConfig `json:"git"`
 
+	// Secrets are the list of secret names which are included in service account
+	Secrets []corev1.LocalObjectReference `json:"secrets,omitempty"`
+
+	// Workspaces list
+	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
+
 	// Jobs specify the tasks to be executed
 	Jobs IntegrationConfigJobs `json:"jobs"`
 
@@ -42,10 +49,10 @@ type IntegrationConfigSpec struct {
 
 type IntegrationConfigJobs struct {
 	// PreSubmit jobs are for pull-request events
-	PreSubmit []Job `json:"preSubmit"`
+	PreSubmit []Job `json:"preSubmit,omitempty"`
 
 	// PostSubmit jobs are for push events (including tag events)
-	PostSubmit []Job `json:"postSubmit"`
+	PostSubmit []Job `json:"postSubmit,omitempty"`
 }
 
 // IntegrationConfigStatus defines the observed state of IntegrationConfig
@@ -96,7 +103,7 @@ func (i *IntegrationConfig) GetToken(c client.Client) (string, error) {
 	secretName := tokenStruct.ValueFrom.SecretKeyRef.Name
 	secretKey := tokenStruct.ValueFrom.SecretKeyRef.Key
 	secret := &corev1.Secret{}
-	if err := c.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: i.Namespace}, secret); err != nil {
+	if err := c.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: i.Namespace}, secret); err != nil {
 		return "", err
 	}
 	token, ok := secret.Data[secretKey]

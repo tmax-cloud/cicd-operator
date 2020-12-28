@@ -1,0 +1,13 @@
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1.cicdapi.tmax.io
+spec:
+  group: cicdapi.tmax.io
+  groupPriorityMinimum: 100
+  service:
+    name: cicd-webhook
+    namespace: cicd-system
+    port: 34335
+  version: v1
+  versionPriority: 100

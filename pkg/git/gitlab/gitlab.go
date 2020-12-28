@@ -1,12 +1,12 @@
 package gitlab
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -24,7 +24,6 @@ type CommitStatusBody struct {
 }
 
 func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, header http.Header, jsonString []byte) (git.Webhook, error) {
-	// TODO
 	var webhook git.Webhook
 	if err := Validate(integrationConfig.Status.Secrets, header.Get("x-gitlab-token")); err != nil {
 		return webhook, err
@@ -50,9 +49,27 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		sender := git.Sender{Name: data.Sender.ID}
 		base := git.Base{Ref: data.ObjectAttribute.BaseRef}
 		head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
-		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
-		pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head}
-		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, PullRequest: &pullRequest}
+		repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebUrl}
+		action := git.PullRequestAction(data.ObjectAttribute.Action)
+		switch string(action) {
+		case "close":
+			action = git.PullRequestActionClose
+		case "open":
+			action = git.PullRequestActionOpen
+		case "reopen":
+			action = git.PullRequestActionReOpen
+		case "update":
+			action = git.PullRequestActionSynchronize
+		}
+		state := git.PullRequestState(data.ObjectAttribute.State)
+		switch string(state) {
+		case "opened":
+			state = git.PullRequestStateOpen
+		case "closed":
+			state = git.PullRequestStateClosed
+		}
+		pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Project.WebUrl, Base: base, Head: head, State: state, Action: action}
+		webhook = git.Webhook{EventType: eventType, Repo: repo, PullRequest: &pullRequest}
 
 	} else if eventType == git.EventTypePush {
 		var data PushWebhook
@@ -62,74 +79,107 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		}
 		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
 		push := git.Push{Pusher: data.User, Ref: data.Ref, Sha: data.Sha}
-		webhook = git.Webhook{EventType: git.EventType(eventType), Repo: repo, Push: &push}
+		webhook = git.Webhook{EventType: eventType, Repo: repo, Push: &push}
 
 	} else {
-		return webhook, fmt.Errorf("event %s is not supported", eventType)
+		return webhook, nil
 	}
 	return webhook, nil
 }
 
-func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Url string, client *client.Client) error {
-	// TODO
+func (c *Client) ListWebhook(integrationConfig *cicdv1.IntegrationConfig, client client.Client) ([]git.WebhookEntry, error) {
+	encodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
+	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks"
+
+	token, err := integrationConfig.GetToken(client)
+	if err != nil {
+		return nil, err
+	}
+
+	header := map[string]string{
+		"PRIVATE-TOKEN": token,
+		"Content-Type":  "application/json",
+	}
+	data, _, err := git.RequestHttp(http.MethodGet, apiURL, header, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var entries []WebhookEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return nil, err
+	}
+
+	var result []git.WebhookEntry
+	for _, e := range entries {
+		result = append(result, git.WebhookEntry{Id: e.Id, Url: e.Url})
+	}
+
+	return result, nil
+}
+
+func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Url string, client client.Client) error {
 	var registrationBody RegistrationWebhookBody
 	EncodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
 	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
-	var httpClient = &http.Client{}
 
 	//enable hooks from every events
+	registrationBody.EnableSSLVerification = false
 	registrationBody.ConfidentialIssueEvents = true
 	registrationBody.ConfidentialNoteEvents = true
 	registrationBody.DeploymentEvents = true
 	registrationBody.IssueEvents = true
 	registrationBody.JobEvents = true
 	registrationBody.MergeRequestEvents = true
+	registrationBody.NoteEvents = true
 	registrationBody.PipeLineEvents = true
 	registrationBody.PushEvents = true
 	registrationBody.TagPushEvents = true
 	registrationBody.WikiPageEvents = true
 	registrationBody.URL = Url
 	registrationBody.ID = EncodedRepoPath
+	registrationBody.Token = integrationConfig.Status.Secrets
 
-	jsonBytes, _ := json.Marshal(registrationBody)
-
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonBytes))
+	token, err := integrationConfig.GetToken(client)
 	if err != nil {
 		return err
 	}
-
-	token, err := integrationConfig.GetToken(*client)
-
+	header := map[string]string{
+		"PRIVATE-TOKEN": token,
+		"Content-Type":  "application/json",
+	}
+	_, _, err = git.RequestHttp(http.MethodPost, apiURL, header, registrationBody)
 	if err != nil {
-		return err
-	}
-
-	req.Header.Add("PRIVATE-TOKEN", token)
-	req.Header.Add("Content-Type", "application/json")
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		return fmt.Errorf("error setting webhook, code %d, msg %s", resp.StatusCode, string(body))
-	}
-	if err := resp.Body.Close(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client *client.Client) error {
-	// TODO
+func (c *Client) DeleteWebhook(integrationConfig *cicdv1.IntegrationConfig, id int, client client.Client) error {
+	encodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
+	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks/" + strconv.Itoa(id)
+
+	token, err := integrationConfig.GetToken(client)
+	if err != nil {
+		return err
+	}
+
+	header := map[string]string{
+		"PRIVATE-TOKEN": token,
+		"Content-Type":  "application/json",
+	}
+
+	_, _, err = git.RequestHttp(http.MethodDelete, apiURL, header, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client client.Client) error {
 	var commitStatusBody CommitStatusBody
-	var httpClient = &http.Client{}
 	var urlEncodePath = url.QueryEscape(integrationConfig.Spec.Git.Repository)
 	var sha string
 	if integrationJob.Spec.Refs.Pull == nil {
@@ -138,44 +188,36 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 		sha = integrationJob.Spec.Refs.Pull.Sha
 	}
 	apiUrl := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + urlEncodePath + "/statuses/" + sha
-	commitStatusBody.State = string(state)
+	switch cicdv1.CommitStatusState(state) {
+	case cicdv1.CommitStatusStatePending:
+		commitStatusBody.State = "running"
+	case cicdv1.CommitStatusStateFailure, cicdv1.CommitStatusStateError:
+		commitStatusBody.State = "failed"
+	default:
+		commitStatusBody.State = string(state)
+	}
 	commitStatusBody.TargetURL = targetUrl
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
 
-	jsonBytes, err := json.Marshal(commitStatusBody)
+	token, err := integrationConfig.GetToken(client)
+	if err != nil {
+		return err
+	}
+	header := map[string]string{
+		"PRIVATE-TOKEN": token,
+		"Content-Type":  "application/json",
+	}
+	_, _, err = git.RequestHttp(http.MethodPost, apiUrl, header, commitStatusBody)
+	// TODO - error from gitlab
+	// Cannot transition status via :run from :running
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "cannot transition status via") {
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", apiUrl, bytes.NewBuffer(jsonBytes))
-	if err != nil {
-		return nil
-	}
-
-	token, err := integrationConfig.GetToken(*client)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("PRIVATE-TOKEN", token)
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		return fmt.Errorf("error setting commit status, code %d, msg %s", resp.StatusCode, string(body))
-	}
-	if err := resp.Body.Close(); err != nil {
-		return err
-	}
 	return nil
 }
 

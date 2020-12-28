@@ -17,12 +17,15 @@ spec:
         secretKeyRef:
           name: <Token secret name>
           key: <Token secret key>
+  secrets:
+    - name: <Secret name to be included in a service account>
   jobs:
     preSubmit:
     - name: <Job name>
       image: <Job image>
       command:
       - <Command>
+      script: <Script>
       resources:
         requests:
           memory: "64Mi"
@@ -33,21 +36,6 @@ spec:
       env:
       - name: TEST
         value: val
-      privileged: false
-      tektonTask:
-        taskRef:
-          name: <Tekton Task name>
-          catalog: <Tekton Catalog name>
-        params:
-        - name: <Param name>
-          value: <Param value>
-        resources:
-          inputs:
-          - <Refer to tekton input>
-          outputs:
-          - <Refer to tekton input>
-        workspaces:
-        - <Refer to tekton workspace>
       when:
         branch:
         - <RegExp>
@@ -65,37 +53,18 @@ spec:
       - <Job Name>
       approval:
         approvers:
-          list: <List (comma-seperated user names)>
-          listFrom:
-            configMapKeyRef:
-              name: <ConfigMap name>
-              key: <ConfigMap key>
-      mailNotification:
-        server: <Mail-notifier server address>
-        subject: <Mail subject>
-        content: <Mail content>
-        list: <Mail recepient list (comma-seperated user emails)>
-        listFrom:
-          configMapKeyRef:
-            name: <ConfigMap Name>
-            key: <ConfigMap Key>
+        - <List (comma-seperated user names)>
+        approversConfigMap:
+          name: <ConfigMap name>
     postSubmit:
     - <Same as preSubmit>
-  merge: // TODO
 status:
+  secrets: <Webhook secret>
   conditions:
-  - type: Ready
-    status: [True|False]
-    reason: <>
-    message: <>
-  - type: TokenValid
-    status: [True|False]
-    reason: <>
-    message: <>
   - type: WebhookRegistered
     status: [True|False]
-    reason: <>
-    message: <>
+    reason: <Reason of the condition status>
+    message: <Message for the condition status>
 ```
 
 ## Sample YAML
@@ -114,6 +83,8 @@ spec:
         secretKeyRef:
           name: tmax-cloud-bot-credential
           key: token
+  secrets:
+    - name: tmax-cloud-hub
   jobs:
     preSubmit:
     - name: test-unit

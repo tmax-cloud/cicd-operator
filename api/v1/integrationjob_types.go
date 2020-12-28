@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,6 +30,9 @@ type IntegrationJobSpec struct {
 
 	// Id is a unique random string for the IntegrationJob
 	Id string `json:"id"`
+
+	// Workspaces list
+	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
 
 	// Jobs are the tasks to be executed
 	Jobs []Job `json:"jobs"`
@@ -49,6 +53,9 @@ type IntegrationJobRefs struct {
 
 	// Link is a full url of the repository
 	Link string `json:"link"`
+
+	// Sender is a git user who triggered the webhook
+	Sender string `json:"sender"`
 
 	// Base is a base pointer for base commit for the pull request
 	// If Pull is nil (i.e., is push event), Base works as Head
@@ -94,11 +101,10 @@ type IntegrationJobStatus struct {
 type IntegrationJobState string
 
 const (
-	IntegrationJobStatePending   = IntegrationJobState("pending")
-	IntegrationJobStateScheduled = IntegrationJobState("scheduled")
+	IntegrationJobStatePending   = IntegrationJobState("Pending")
 	IntegrationJobStateRunning   = IntegrationJobState("running")
-	IntegrationJobStateCompleted = IntegrationJobState("completed")
-	IntegrationJobStateFailed    = IntegrationJobState("failed")
+	IntegrationJobStateCompleted = IntegrationJobState("Completed")
+	IntegrationJobStateFailed    = IntegrationJobState("Failed")
 )
 
 // +kubebuilder:object:root=true
@@ -107,8 +113,8 @@ const (
 // IntegrationJob is the Schema for the integrationjobs API
 // +kubebuilder:resource:shortName="ij"
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="Current status of IntegrationJob"
-// +kubebuilder:printcolumn:name="Started",type="date",JSONPath=".status.startTime",description="Started time"
-// +kubebuilder:printcolumn:name="Ended",type="date",JSONPath=".status.completionTime",description="Ended time"
+// +kubebuilder:printcolumn:name="StartTime",type="date",JSONPath=".status.startTime",description="Start time"
+// +kubebuilder:printcolumn:name="CompletionTime",type="date",JSONPath=".status.completionTime",description="Completion time"
 type IntegrationJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

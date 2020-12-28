@@ -17,7 +17,10 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"github.com/operator-framework/operator-lib/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 type ApprovalResult string
@@ -26,18 +29,37 @@ const (
 	ApprovalResultWaiting  ApprovalResult = "Waiting"
 	ApprovalResultApproved ApprovalResult = "Approved"
 	ApprovalResultRejected ApprovalResult = "Rejected"
-	ApprovalResultFailed   ApprovalResult = "Failed"
-	ApprovalResultCanceled ApprovalResult = "Canceled"
+
+	ApprovalConditionSentRequestMail = status.ConditionType("SentRequestMail")
+	ApprovalConditionSentResultMail  = status.ConditionType("SentResultMail")
 )
 
 // ApprovalSpec defines the desired state of Approval
 type ApprovalSpec struct {
 	// PodName represents the name of the pod to be approved to proceed
 	// Deprecated: not used from HyperCloud5, only for the backward compatibility with HyperCloud4
-	PodName string `json:"podName"`
+	PodName string `json:"podName,omitempty"`
+
+	// SkipSendMail describes whether or not to send mail for request/result for approvers
+	SkipSendMail bool `json:"skipSendMail,omitempty"`
 
 	// PipelineRun points the actual pipeline run object which created this Approval
-	PipelineRun string `json:"pipelineRun"`
+	PipelineRun string `json:"pipelineRun,omitempty"`
+
+	// IntegrationJob is a related IntegrationJob name (maybe a grand-parent of Approval)
+	IntegrationJob string `json:"integrationJob,omitempty"`
+
+	// JobName is a name of actual job in IntegrationJob
+	JobName string `json:"jobName,omitempty"`
+
+	// Message is a message from requester
+	Message string `json:"message,omitempty"`
+
+	// Sender is a requester (probably be pull-request author or pusher)
+	Sender string `json:"sender,omitempty"`
+
+	// Link is a description link approvers may refer to
+	Link string `json:"link,omitempty"`
 
 	// Users are the list of the users who are requested to approve the Approval
 	Users []string `json:"users"`
@@ -48,11 +70,17 @@ type ApprovalStatus struct {
 	// Decision result of Approval
 	Result ApprovalResult `json:"result"`
 
+	// Approver is a user who actually approved
+	Approver string `json:"approver,omitempty"`
+
 	// Decision message
 	Reason string `json:"reason,omitempty"`
 
 	// Decision time of Approval
-	DecisionTime metav1.Time `json:"decisionTime,omitempty"`
+	DecisionTime *metav1.Time `json:"decisionTime,omitempty"`
+
+	// Conditions of Approval
+	Conditions status.Conditions `json:"conditions"`
 }
 
 // +kubebuilder:object:root=true
@@ -80,5 +108,17 @@ type ApprovalList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&IntegrationConfig{}, &IntegrationConfigList{})
+	SchemeBuilder.Register(&Approval{}, &ApprovalList{})
+}
+
+func (a *ApprovalStatus) GetDecisionTimeInZone(zone string) (*time.Time, error) {
+	if a.DecisionTime == nil {
+		return nil, fmt.Errorf("decision time is nil")
+	}
+	location, err := time.LoadLocation(zone)
+	if err != nil {
+		return nil, err
+	}
+	localTime := a.DecisionTime.Time.In(location)
+	return &localTime, nil
 }

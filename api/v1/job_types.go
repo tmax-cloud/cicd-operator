@@ -17,10 +17,14 @@ type Job struct {
 	corev1.Container `json:",inline"`
 
 	// Script will override command of container
-	Script string `json:"script"`
+	Script string `json:"script,omitempty"`
 
 	// TektonTask is for referring local Tasks or the Tasks registered in tekton catalog github repo.
+	// Not implemented yet
 	TektonTask *TektonTask `json:"tektonTask,omitempty"`
+
+	// SkipCheckout describes whether or not to checkout from git before
+	SkipCheckout bool `json:"skipCheckout,omitempty"`
 
 	// When is condition for running the job
 	When *JobWhen `json:"when,omitempty"`
@@ -29,10 +33,10 @@ type Job struct {
 	After []string `json:"after,omitempty"`
 
 	// Approval
-	// TODO
+	Approval *JobApproval `json:"approval,omitempty"`
 
-	// MailNotification
-	// TODO
+	// Email
+	Email *JobEmail `json:"email,omitempty"`
 }
 
 type TektonTask struct {
@@ -56,6 +60,37 @@ type JobTaskRef struct {
 	// Catalog is a name of the task @ tekton catalog github repo. (e.g., s2i@0.2)
 	// FYI: https://github.com/tektoncd/catalog
 	Catalog string `json:"catalog,omitempty"`
+}
+
+// JobApproval describes who can approve it
+type JobApproval struct {
+	// Approvers is a list of approvers, in a form of <User name>=<Email> (Email is optional)
+	// e.g., admin-tmax.co.kr
+	// e.g., admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+	Approvers []string `json:"approvers,omitempty"`
+
+	// ApproversConfigMap is a configMap Name containing
+	// approvers list should exist in configMap's 'approvers' key, as comma(,) separated list
+	// e.g., admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr,test-tmax.co.kr=kyunghoon_min@tmax.co.kr
+	ApproversConfigMap *corev1.LocalObjectReference `json:"approversConfigMap,omitempty"`
+
+	// RequestMessage is a message to be sent to approvers by email
+	RequestMessage string `json:"requestMessage"`
+}
+
+// JobEmail sends email to receivers
+type JobEmail struct {
+	// Receivers is a list of email receivers
+	Receivers []string `json:"receivers,omitempty"`
+
+	// Title of the email
+	Title string `json:"title"`
+
+	// Content of the email
+	Content string `json:"content"`
+
+	// IsHtml describes if it's html content
+	IsHtml bool `json:"isHtml,omitempty"`
 }
 
 type JobWhen struct {

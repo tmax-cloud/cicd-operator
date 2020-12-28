@@ -40,7 +40,7 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config := &cicdv1.IntegrationConfig{}
-	if err := h.k8sClient.Get(context.TODO(), types.NamespacedName{Name: configName, Namespace: ns}, config); err != nil {
+	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: configName, Namespace: ns}, config); err != nil {
 		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("cannot get IntegrationConfig %s/%s", ns, configName))
 		log.Info("Bad request for path", "path", r.RequestURI)
 		return

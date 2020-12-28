@@ -52,7 +52,7 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	iJob := &cicdv1.IntegrationJob{}
-	if err := h.k8sClient.Get(context.TODO(), types.NamespacedName{Name: jobName, Namespace: ns}, iJob); err != nil {
+	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: jobName, Namespace: ns}, iJob); err != nil {
 		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("cannot get IntegrationJob %s/%s", ns, jobName))
 		log.Info("Bad request for path", "path", r.RequestURI)
 		return
@@ -73,9 +73,13 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get Job-Job Log
-	podLog, err := h.getPodLogs(jobStatus.PodName, ns)
-	if err != nil {
-		podLog = ErrorLogNotExist
+	var podLog string
+	if jobStatus.PodName != "" {
+		var err error
+		podLog, err = h.getPodLogs(jobStatus.PodName, ns)
+		if err != nil {
+			podLog = ErrorLogNotExist
+		}
 	}
 
 	// Get template
@@ -102,6 +106,8 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// +kubebuilder:rbac:groups="",resources=pods;pods/log,verbs=get;list;watch
+
 func (h *reportHandler) getPodLogs(podName, namespace string) (string, error) {
 	var logBuf bytes.Buffer
 
@@ -124,7 +130,7 @@ func (h *reportHandler) getPodLogs(podName, namespace string) (string, error) {
 
 func (h *reportHandler) getPodLog(podName, namespace, container string) (string, error) {
 	podReq := h.clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{Container: container})
-	podLogs, err := podReq.Stream()
+	podLogs, err := podReq.Stream(context.Background())
 	if err != nil {
 		return "", err
 	}
@@ -145,7 +151,7 @@ func (h *reportHandler) getTemplateString() (string, error) {
 		return "", err
 	}
 	cm := &corev1.ConfigMap{}
-	if err := h.k8sClient.Get(context.TODO(), types.NamespacedName{Name: TemplateConfigMapName, Namespace: ns}, cm); err != nil {
+	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: TemplateConfigMapName, Namespace: ns}, cm); err != nil {
 		return "", err
 	}
 

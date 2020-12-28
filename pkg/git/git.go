@@ -9,18 +9,13 @@ import (
 
 type Client interface {
 	// Webhooks
-	RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, c *client.Client) error
+	ListWebhook(integrationConfig *cicdv1.IntegrationConfig, c client.Client) ([]WebhookEntry, error)
+	RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, c client.Client) error
+	DeleteWebhook(integrationConfig *cicdv1.IntegrationConfig, id int, c client.Client) error
 	ParseWebhook(*cicdv1.IntegrationConfig, http.Header, []byte) (Webhook, error)
 
 	// Commit Status
-	SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state CommitStatusState, description, targetUrl string, c *client.Client) error
+	SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state CommitStatusState, description, targetUrl string, c client.Client) error
 }
 
 type CommitStatusState string
-
-const (
-	CommitStatusStateSuccess = CommitStatusState("success")
-	CommitStatusStateFailure = CommitStatusState("failure")
-	CommitStatusStateError   = CommitStatusState("error")
-	CommitStatusStatePending = CommitStatusState("pending")
-)

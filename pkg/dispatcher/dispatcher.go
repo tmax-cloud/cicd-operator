@@ -49,7 +49,7 @@ func (d Dispatcher) Handle(webhook git.Webhook, config *cicdv1.IntegrationConfig
 func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId, jobName string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
 	pr := webhook.PullRequest
 	var job *cicdv1.IntegrationJob
-	if webhook.Action == "opened" || webhook.Action == "synchronize" {
+	if webhook.PullRequest.Action == git.PullRequestActionOpen || webhook.PullRequest.Action == git.PullRequestActionSynchronize {
 		job = &cicdv1.IntegrationJob{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      jobName,

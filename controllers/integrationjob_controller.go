@@ -42,6 +42,8 @@ type IntegrationJobReconciler struct {
 
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationjobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationjobs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/status,verbs=get
 
 func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -56,6 +58,15 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		log.Error(err, "")
 		return reconcile.Result{}, err
 	}
+	original := instance.DeepCopy()
+
+	// Skip if it's ended
+	if instance.Status.CompletionTime != nil {
+		return ctrl.Result{}, nil
+	}
+
+	// Notify state change to scheduler
+	defer r.Scheduler.Notify(instance)
 
 	// Get parent IntegrationConfig
 	config := &cicdv1.IntegrationConfig{}
@@ -88,13 +99,11 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Update IntegrationJob
-	if err := r.Client.Status().Update(context.Background(), instance); err != nil {
+	p := client.MergeFrom(original)
+	if err := r.Client.Status().Patch(context.Background(), instance, p); err != nil {
 		log.Error(err, "")
 		return ctrl.Result{}, err
 	}
-
-	// Notify state change to scheduler
-	r.Scheduler.Notify(instance)
 
 	return ctrl.Result{}, nil
 }

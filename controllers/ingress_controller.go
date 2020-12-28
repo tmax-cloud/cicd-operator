@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -14,15 +15,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
+
 func WaitIngressReady() error {
 	log := ctrl.Log.WithName("ingress-controller")
 
-	ingCli, err := newClient()
+	ingCli, err := newIngressClient()
 	if err != nil {
 		return err
 	}
 
-	watcher, err := ingCli.Watch(metav1.ListOptions{
+	watcher, err := ingCli.Watch(context.Background(), metav1.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(core.ObjectNameField, "cicd-webhook").String(),
 	})
 	if err != nil {
@@ -59,7 +63,7 @@ func WaitIngressReady() error {
 			hostname := fmt.Sprintf("cicd-webhook.%s.nip.io", ip)
 			ing.Spec.Rules[0].Host = hostname
 
-			if _, err := ingCli.Update(ing); err != nil {
+			if _, err := ingCli.Update(context.Background(), ing, metav1.UpdateOptions{}); err != nil {
 				return err
 			}
 
@@ -74,7 +78,7 @@ func WaitIngressReady() error {
 	return fmt.Errorf("cannot wait ingress ready")
 }
 
-func newClient() (v1beta1.IngressInterface, error) {
+func newIngressClient() (v1beta1.IngressInterface, error) {
 	conf, err := config.GetConfig()
 	if err != nil {
 		return nil, err
