@@ -99,9 +99,6 @@ type JobWhen struct {
 
 	Tag     []string `json:"tag,omitempty"`
 	SkipTag []string `json:"skipTag,omitempty"`
-
-	Ref     []string `json:"ref,omitempty"`
-	SkipRef []string `json:"skipRef,omitempty"`
 }
 
 // JobStatus is a current status for each job
