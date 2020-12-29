@@ -22,6 +22,7 @@ import (
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/controllers/customs"
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver"
+	"github.com/tmax-cloud/cicd-operator/pkg/collector"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
@@ -84,7 +85,8 @@ func main() {
 	}
 
 	// Config Controller
-	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController")}
+	gcChan := make(chan struct{})
+	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), GcChan: gcChan}
 	go cfgCtrl.Start()
 
 	// Controllers
@@ -145,15 +147,21 @@ func main() {
 
 	// Create and start webhook server
 	srv := server.New(mgr.GetClient(), mgr.GetConfig())
-
 	// Add plugins for webhook
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
-
 	go srv.Start()
 
 	// Start API aggregation server
 	apiServer := apiserver.New(mgr.GetScheme())
 	go apiServer.Start()
+
+	// Start garbage collector
+	gc, err := collector.New(mgr.GetClient(), gcChan)
+	if err != nil {
+		setupLog.Error(err, "error initializing garbage collector")
+		os.Exit(1)
+	}
+	go gc.Start()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

@@ -41,6 +41,8 @@ const (
 type ConfigReconciler struct {
 	client typedcorev1.ConfigMapInterface
 	Log    logr.Logger
+
+	GcChan chan struct{}
 }
 
 func (r *ConfigReconciler) Start() {
@@ -134,11 +136,13 @@ func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 
 func (r *ConfigReconciler) reconcileConfig(cm *corev1.ConfigMap) error {
 	vars := map[string]operatorConfig{
-		"maxPipelineRun":   {Type: cfgTypeInt, IntVal: &configs.MaxPipelineRun, IntDefault: 5},    // Max PipelineRun count
-		"enableMail":       {Type: cfgTypeBool, BoolVal: &configs.EnableMail, BoolDefault: false}, // Enable Mail
-		"externalHostName": {Type: cfgTypeString, StringVal: &configs.ExternalHostName},           // External Hostname
-		"smtpHost":         {Type: cfgTypeString, StringVal: &configs.SMTPHost},                   // SMTP Host
-		"smtpUserSecret":   {Type: cfgTypeString, StringVal: &configs.SMTPUserSecret},             // SMTP Cred
+		"maxPipelineRun":    {Type: cfgTypeInt, IntVal: &configs.MaxPipelineRun, IntDefault: 5},      // Max PipelineRun count
+		"enableMail":        {Type: cfgTypeBool, BoolVal: &configs.EnableMail, BoolDefault: false},   // Enable Mail
+		"externalHostName":  {Type: cfgTypeString, StringVal: &configs.ExternalHostName},             // External Hostname
+		"smtpHost":          {Type: cfgTypeString, StringVal: &configs.SMTPHost},                     // SMTP Host
+		"smtpUserSecret":    {Type: cfgTypeString, StringVal: &configs.SMTPUserSecret},               // SMTP Cred
+		"collectPeriod":     {Type: cfgTypeInt, IntVal: &configs.CollectPeriod, IntDefault: 120},     // GC period
+		"integrationJobTTL": {Type: cfgTypeInt, IntVal: &configs.IntegrationJobTTL, IntDefault: 120}, // GC threshold
 	}
 
 	getVars(cm.Data, vars)
@@ -147,6 +151,9 @@ func (r *ConfigReconciler) reconcileConfig(cm *corev1.ConfigMap) error {
 	if configs.EnableMail && (configs.SMTPHost == "" || configs.SMTPUserSecret == "") {
 		return fmt.Errorf("email is enaled but smtp access info. is not given")
 	}
+
+	// Reconfigure GC
+	r.GcChan <- struct{}{}
 
 	return nil
 }
