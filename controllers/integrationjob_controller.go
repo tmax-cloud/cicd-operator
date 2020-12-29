@@ -60,6 +60,14 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 	original := instance.DeepCopy()
 
+	exit, err := r.handleFinalizer(instance, original)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if exit {
+		return ctrl.Result{}, nil
+	}
+
 	// Skip if it's ended
 	if instance.Status.CompletionTime != nil {
 		return ctrl.Result{}, nil
@@ -106,6 +114,52 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *IntegrationJobReconciler) handleFinalizer(instance, original *cicdv1.IntegrationJob) (bool, error) {
+	// Check first if finalizer is already set
+	found := false
+	idx := -1
+	for i, f := range instance.Finalizers {
+		if f == Finalizer {
+			found = true
+			idx = i
+			break
+		}
+	}
+	if !found {
+		instance.Finalizers = append(instance.Finalizers, Finalizer)
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	// Deletion check-up
+	if instance.DeletionTimestamp != nil && idx >= 0 {
+		// Notify scheduler
+		r.Scheduler.Notify(instance)
+
+		// Delete finalizer
+		if len(instance.Finalizers) == 1 {
+			instance.Finalizers = nil
+		} else {
+			last := len(instance.Finalizers) - 1
+			instance.Finalizers[idx] = instance.Finalizers[last]
+			instance.Finalizers[last] = ""
+			instance.Finalizers = instance.Finalizers[:last]
+		}
+
+		p := client.MergeFrom(original)
+		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (r *IntegrationJobReconciler) SetupWithManager(mgr ctrl.Manager) error {

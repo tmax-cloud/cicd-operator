@@ -62,6 +62,15 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 	}
 	j.jobMap[nodeId] = node
 
+	// If there's deletion timestamp, dismiss it
+	if node.DeletionTimestamp != nil {
+		j.Pending.Delete(node)
+		j.Running.Delete(node)
+		delete(j.jobMap, nodeId)
+		j.sendSchedule()
+		return
+	}
+
 	// If status is not changed, do nothing
 	if exist && oldStatus == newStatus {
 		return
@@ -75,15 +84,6 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 		case v1.IntegrationJobStateRunning:
 			j.Running.Add(node)
 		}
-		j.sendSchedule()
-		return
-	}
-
-	// If there's deletion timestamp, dismiss it
-	if node.DeletionTimestamp != nil {
-		j.Pending.Delete(node)
-		j.Running.Delete(node)
-		delete(j.jobMap, nodeId)
 		j.sendSchedule()
 		return
 	}
