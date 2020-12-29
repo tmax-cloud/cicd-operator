@@ -144,14 +144,14 @@ func filter(cand []cicdv1.Job, webhook git.Webhook, config *cicdv1.IntegrationCo
 		incomingBranch = webhook.PullRequest.Base.Ref
 	} else if webhook.EventType == git.EventTypePush {
 		if strings.Contains(webhook.Push.Ref, "refs/tags/") {
-			incomingTag = strings.Replace(webhook.Push.Ref, "refs/tags/", "")
+			incomingTag = strings.Replace(webhook.Push.Ref, "refs/tags/", "", -1)
 		} else {
-			incomingBranch = strings.Replace(webhook.Push.Ref, "refs/heads/", "")
+			incomingBranch = strings.Replace(webhook.Push.Ref, "refs/heads/", "", -1)
 		}
 	}
 
 	//tag push events
-	if incomingTag != nil {
+	if incomingTag != "" {
 		filteredJobs = filterTags(cand, incomingTag)
 	} else {
 		filteredJobs = filterBranches(cand, incomingBranch)
@@ -162,7 +162,7 @@ func filter(cand []cicdv1.Job, webhook git.Webhook, config *cicdv1.IntegrationCo
 func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 	var filteredJobs []cicdv1.Job
 
-	for _, job := range cand {
+	for _, job := range jobs {
 		tags := job.When.Tag
 		skipTags := job.When.SkipTag
 		isValidJob := false
@@ -175,10 +175,10 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 				}
 			}
 			if isValidJob {
-				append(filteredJobs, job)
+				filteredJobs = append(filteredJobs, job)
 			}
 		} else if skipTags != nil && tags == nil {
-			for _, job := range cand {
+			for _, job := range jobs {
 				isInValidJob := false
 				for _, tag := range tags {
 					if incomingTag == tag {
@@ -187,11 +187,11 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 					}
 				}
 				if !isInValidJob {
-					append(filteredJobs, job)
+					filteredJobs = append(filteredJobs, job)
 				}
 			}
 		} else if tags == nil && skipTags == nil {
-			append(filteredJobs, job)
+			filteredJobs = append(filteredJobs, job)
 		}
 	}
 	return filteredJobs
@@ -200,7 +200,7 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 	var filteredJobs []cicdv1.Job
 
-	for _, job := range cand {
+	for _, job := range jobs {
 		branches := job.When.Branch
 		skipBranches := job.When.SkipBranch
 		isValidJob := false
@@ -213,10 +213,10 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 				}
 			}
 			if isValidJob {
-				append(filteredJobs, job)
+				filteredJobs = append(filteredJobs, job)
 			}
 		} else if skipBranches != nil && branches == nil {
-			for _, job := range cand {
+			for _, job := range jobs {
 				isInValidJob := false
 				for _, branch := range branches {
 					if incomingBranch == branch {
@@ -225,11 +225,11 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 					}
 				}
 				if !isInValidJob {
-					append(filteredJobs, job)
+					filteredJobs = append(filteredJobs, job)
 				}
 			}
 		} else if branches == nil && skipBranches == nil {
-			append(filteredJobs, job)
+			filteredJobs = append(filteredJobs, job)
 		}
 	}
 	return filteredJobs
