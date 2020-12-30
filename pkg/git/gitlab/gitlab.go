@@ -123,14 +123,6 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, Ur
 	EncodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
 	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
 
-	isUnique, err := CheckUniqueness(integrationConfig, Url, client)
-	if err != nil {
-		return err
-	}
-	if !isUnique {
-		return fmt.Errorf("same webhook has already registered")
-	}
-
 	//enable hooks from every events
 	registrationBody.EnableSSLVerification = false
 	registrationBody.ConfidentialIssueEvents = true
@@ -234,36 +226,4 @@ func Validate(secret, headerToken string) error {
 		return fmt.Errorf("invalid request : X-Gitlab-Token does not match secret")
 	}
 	return nil
-}
-
-func CheckUniqueness(integrationConfig *cicdv1.IntegrationConfig, Url string, client client.Client) (bool, error) {
-	encodedRepoPath := url.QueryEscape(integrationConfig.Spec.Git.Repository)
-	apiURL := integrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks"
-
-	token, err := integrationConfig.GetToken(client)
-	if err != nil {
-		return false, err
-	}
-
-	header := map[string]string{
-		"PRIVATE-TOKEN": token,
-		"Content-Type":  "application/json",
-	}
-	data, _, err := git.RequestHttp(http.MethodGet, apiURL, header, nil)
-	if err != nil {
-		return false, err
-	}
-
-	var entries []WebhookEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		return false, err
-	}
-
-	for _, e := range entries {
-		if Url == e.Url {
-			return false, nil
-		}
-	}
-
-	return true, nil
 }

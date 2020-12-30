@@ -99,15 +99,6 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	var registrationConfig RegistrationWebhookBodyConfig
 	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
 
-	isUnique, err := CheckUniqueness(integrationConfig, url, client)
-	if err != nil {
-		return err
-	}
-
-	if !isUnique {
-		return fmt.Errorf("same webhook has already registered")
-	}
-
 	registrationBody.Name = "web"
 	registrationBody.Active = true
 	registrationBody.Events = []string{"*"}
@@ -200,31 +191,4 @@ func Validate(secret, headerHash string, payload []byte) error {
 		return fmt.Errorf("invalid request : X-Hub-Signature does not match secret")
 	}
 	return nil
-}
-
-func CheckUniqueness(integrationConfig *cicdv1.IntegrationConfig, url string, client client.Client) (bool, error) {
-	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
-
-	token, err := integrationConfig.GetToken(client)
-	if err != nil {
-		return false, err
-	}
-	header := map[string]string{"Authorization": "token " + token}
-	data, _, err := git.RequestHttp(http.MethodGet, apiUrl, header, nil)
-	if err != nil {
-		return false, err
-	}
-
-	var entries []WebhookEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		return false, err
-	}
-
-	for _, e := range entries {
-		if url == e.Config.Url {
-			return false, nil
-		}
-	}
-
-	return true, nil
 }
