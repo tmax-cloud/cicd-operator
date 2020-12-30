@@ -28,16 +28,19 @@ func (d Dispatcher) Handle(webhook git.Webhook, config *cicdv1.IntegrationConfig
 	}
 
 	jobId := utils.RandomString(20)
-	jobName := fmt.Sprintf("%s-%s-%s", config.Name, pr.Head.Sha[:5], jobId[:5])
 
 	jobs, err := filterJobs(webhook, config)
 	if err != nil {
 		return err
 	}
 	if webhook.EventType == git.EventTypePullRequest {
-		job = handlePullRequest(webhook, config, jobId, jobName, jobs)
+		job = handlePullRequest(webhook, config, jobId, jobs)
 	} else if webhook.EventType == git.EventTypePush {
-		job = handlePush(webhook, config, jobId, jobName, jobs)
+		job = handlePush(webhook, config, jobId, jobs)
+	}
+
+	if job == nil {
+		return nil
 	}
 
 	if err := d.Client.Create(context.Background(), job); err != nil {
@@ -47,13 +50,13 @@ func (d Dispatcher) Handle(webhook git.Webhook, config *cicdv1.IntegrationConfig
 	return nil
 }
 
-func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId, jobName string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
+func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
 	pr := webhook.PullRequest
 	var job *cicdv1.IntegrationJob
-	if webhook.PullRequest.Action == git.PullRequestActionOpen || webhook.PullRequest.Action == git.PullRequestActionSynchronize {
+	if pr.Action == git.PullRequestActionOpen || pr.Action == git.PullRequestActionSynchronize || pr.Action == git.PullRequestActionReOpen {
 		job = &cicdv1.IntegrationJob{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      jobName,
+				Name:      fmt.Sprintf("%s-%s-%s", config.Name, pr.Head.Sha[:5], jobId[:5]),
 				Namespace: config.Namespace,
 				Labels:    map[string]string{}, // TODO
 			},
@@ -67,6 +70,7 @@ func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jo
 				Refs: cicdv1.IntegrationJobRefs{
 					Repository: webhook.Repo.Name,
 					Link:       webhook.Repo.URL,
+					Sender:     pr.Sender.Name,
 					Base: cicdv1.IntegrationJobRefsBase{
 						Ref:  pr.Base.Ref,
 						Link: webhook.Repo.URL,
@@ -87,11 +91,11 @@ func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jo
 	return job
 }
 
-func handlePush(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId, jobName string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
+func handlePush(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
 	push := webhook.Push
 	job := &cicdv1.IntegrationJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      jobName,
+			Name:      fmt.Sprintf("%s-%s-%s", config.Name, push.Sha[:5], jobId[:5]),
 			Namespace: config.Namespace,
 			Labels:    map[string]string{}, // TODO
 		},
@@ -105,6 +109,7 @@ func handlePush(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId, jo
 			Refs: cicdv1.IntegrationJobRefs{
 				Repository: webhook.Repo.Name,
 				Link:       webhook.Repo.URL,
+				Sender:     push.Pusher,
 				Base: cicdv1.IntegrationJobRefsBase{
 					Ref:  push.Ref,
 					Link: webhook.Repo.URL,
@@ -129,13 +134,12 @@ func filterJobs(webhook git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1
 		return cand, nil
 	}
 
-	// TODO - filter
-	jobs = filter(cand, webhook, config)
+	jobs = filter(cand, webhook)
 
 	return jobs, nil
 }
 
-func filter(cand []cicdv1.Job, webhook git.Webhook, config *cicdv1.IntegrationConfig) []cicdv1.Job {
+func filter(cand []cicdv1.Job, webhook git.Webhook) []cicdv1.Job {
 	var filteredJobs []cicdv1.Job
 	var incomingBranch string
 	var incomingTag string
@@ -178,9 +182,8 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 				filteredJobs = append(filteredJobs, job)
 			}
 		} else if skipTags != nil && tags == nil {
-
 			isInValidJob := false
-			for _, tag := range tags {
+			for _, tag := range skipTags {
 				if incomingTag == tag {
 					isInValidJob = true
 					break
@@ -216,9 +219,8 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 				filteredJobs = append(filteredJobs, job)
 			}
 		} else if skipBranches != nil && branches == nil {
-
 			isInValidJob := false
-			for _, branch := range branches {
+			for _, branch := range skipBranches {
 				if incomingBranch == branch {
 					isInValidJob = true
 					break
