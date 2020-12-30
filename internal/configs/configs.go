@@ -9,6 +9,13 @@ var (
 	// ExternalHostName to be used for webhook server (default is ingress host name)
 	ExternalHostName string
 
+	// CollectPeriod is a garbage collection period (in hour)
+	CollectPeriod int
+
+	// JobTTL is a garbage collection threshold (in hour).
+	// If IntegrationJob's .status.completionTime + TTL < now, it's collected
+	IntegrationJobTTL int
+
 	// EnableMail
 	EnableMail bool
 
