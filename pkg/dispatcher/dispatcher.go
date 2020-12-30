@@ -181,6 +181,10 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) ([]cicdv1.Job, error) {
 	var filteredJobs []cicdv1.Job
 
 	for _, job := range jobs {
+		if job.When == nil {
+			filteredJobs = append(filteredJobs, job)
+			continue
+		}
 		tags := job.When.Tag
 		skipTags := job.When.SkipTag
 
@@ -232,6 +236,10 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) ([]cicdv1.Job, err
 	var filteredJobs []cicdv1.Job
 
 	for _, job := range jobs {
+		if job.When == nil {
+			filteredJobs = append(filteredJobs, job)
+			continue
+		}
 		branches := job.When.Branch
 		skipBranches := job.When.SkipBranch
 
