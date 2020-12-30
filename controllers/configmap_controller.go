@@ -42,7 +42,10 @@ type ConfigReconciler struct {
 	client typedcorev1.ConfigMapInterface
 	Log    logr.Logger
 
-	GcChan chan struct{}
+	GcChan   chan struct{}
+	InitChan chan struct{}
+
+	Init bool
 }
 
 func (r *ConfigReconciler) Start() {
@@ -131,18 +134,24 @@ func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 		}
 	}
 
+	if !r.Init {
+		r.Init = true
+		r.InitChan <- struct{}{}
+	}
+
 	return nil
 }
 
 func (r *ConfigReconciler) reconcileConfig(cm *corev1.ConfigMap) error {
 	vars := map[string]operatorConfig{
-		"maxPipelineRun":    {Type: cfgTypeInt, IntVal: &configs.MaxPipelineRun, IntDefault: 5},      // Max PipelineRun count
-		"enableMail":        {Type: cfgTypeBool, BoolVal: &configs.EnableMail, BoolDefault: false},   // Enable Mail
-		"externalHostName":  {Type: cfgTypeString, StringVal: &configs.ExternalHostName},             // External Hostname
-		"smtpHost":          {Type: cfgTypeString, StringVal: &configs.SMTPHost},                     // SMTP Host
-		"smtpUserSecret":    {Type: cfgTypeString, StringVal: &configs.SMTPUserSecret},               // SMTP Cred
-		"collectPeriod":     {Type: cfgTypeInt, IntVal: &configs.CollectPeriod, IntDefault: 120},     // GC period
-		"integrationJobTTL": {Type: cfgTypeInt, IntVal: &configs.IntegrationJobTTL, IntDefault: 120}, // GC threshold
+		"maxPipelineRun":    {Type: cfgTypeInt, IntVal: &configs.MaxPipelineRun, IntDefault: 5},         // Max PipelineRun count
+		"enableMail":        {Type: cfgTypeBool, BoolVal: &configs.EnableMail, BoolDefault: false},      // Enable Mail
+		"externalHostName":  {Type: cfgTypeString, StringVal: &configs.ExternalHostName},                // External Hostname
+		"smtpHost":          {Type: cfgTypeString, StringVal: &configs.SMTPHost},                        // SMTP Host
+		"smtpUserSecret":    {Type: cfgTypeString, StringVal: &configs.SMTPUserSecret},                  // SMTP Cred
+		"collectPeriod":     {Type: cfgTypeInt, IntVal: &configs.CollectPeriod, IntDefault: 120},        // GC period
+		"integrationJobTTL": {Type: cfgTypeInt, IntVal: &configs.IntegrationJobTTL, IntDefault: 120},    // GC threshold
+		"ingressClass":      {Type: cfgTypeString, StringVal: &configs.IngressClass, StringDefault: ""}, // Ingress class
 	}
 
 	getVars(cm.Data, vars)

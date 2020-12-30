@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/controllers/customs"
@@ -75,7 +76,7 @@ func main() {
 	// Set log rotation
 	logFile, err := logrotate.LogFile()
 	if err != nil {
-		setupLog.Error(err, "")
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 	defer logFile.Close()
@@ -98,10 +99,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Config Controller
 	gcChan := make(chan struct{})
-	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), GcChan: gcChan}
+	// Start garbage collector
+	gc, err := collector.New(mgr.GetClient(), gcChan)
+	if err != nil {
+		setupLog.Error(err, "error initializing garbage collector")
+		os.Exit(1)
+	}
+	go gc.Start()
+
+	// Config Controller
+	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), GcChan: gcChan, InitChan: make(chan struct{})}
 	go cfgCtrl.Start()
+	// Wait for initial config reconcile
+	<-cfgCtrl.InitChan
 
 	// Controllers
 	if err = (&controllers.IntegrationConfigReconciler{
@@ -168,14 +179,6 @@ func main() {
 	// Start API aggregation server
 	apiServer := apiserver.New(mgr.GetScheme())
 	go apiServer.Start()
-
-	// Start garbage collector
-	gc, err := collector.New(mgr.GetClient(), gcChan)
-	if err != nil {
-		setupLog.Error(err, "error initializing garbage collector")
-		os.Exit(1)
-	}
-	go gc.Start()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

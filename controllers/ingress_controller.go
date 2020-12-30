@@ -41,6 +41,17 @@ func WaitIngressReady() error {
 
 		log.Info(ing.Name)
 
+		// Check if class is set properly
+		class := ing.Annotations[networkingv1beta1.AnnotationIngressClass]
+		if class != configs.IngressClass {
+			log.Info("Updating ingress with proper class...")
+			ing.Annotations[networkingv1beta1.AnnotationIngressClass] = configs.IngressClass
+			if _, err := ingCli.Update(context.Background(), ing, metav1.UpdateOptions{}); err != nil {
+				return err
+			}
+			continue
+		}
+
 		// IP is set
 		if len(ing.Status.LoadBalancer.Ingress) > 0 && ing.Status.LoadBalancer.Ingress[0].IP != "" {
 			ip := ing.Status.LoadBalancer.Ingress[0].IP
