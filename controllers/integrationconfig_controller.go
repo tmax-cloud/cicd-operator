@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -212,16 +213,31 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 			webhookRegistered.Message = fmt.Sprintf("git type %s is not supported", instance.Spec.Git.Type)
 		}
 		if gitCli != nil {
-			// TODO - check if there is one and register if there isn't
 			addr := instance.GetWebhookServerAddress()
+			isUnique := true
 			r.Log.Info("Registering webhook " + addr)
-			if err := gitCli.RegisterWebhook(instance, addr, r.Client); err != nil {
+			entries, err := gitCli.ListWebhook(instance, r.Client)
+			if err != nil {
 				webhookRegistered.Reason = "webhookRegisterFailed"
 				webhookRegistered.Message = err.Error()
-			} else {
-				webhookRegistered.Status = corev1.ConditionTrue
-				webhookRegistered.Reason = ""
-				webhookRegistered.Message = ""
+			}
+			for _, e := range entries {
+				if addr == e.Url {
+					webhookRegistered.Reason = "webhookRegisterFailed"
+					webhookRegistered.Message = "same webhook has already registered"
+					isUnique = false
+					break
+				}
+			}
+			if isUnique {
+				if err := gitCli.RegisterWebhook(instance, addr, r.Client); err != nil {
+					webhookRegistered.Reason = "webhookRegisterFailed"
+					webhookRegistered.Message = err.Error()
+				} else {
+					webhookRegistered.Status = corev1.ConditionTrue
+					webhookRegistered.Reason = ""
+					webhookRegistered.Message = ""
+				}
 			}
 		}
 		webhookConditionChanged = instance.Status.Conditions.SetCondition(*webhookRegistered)
