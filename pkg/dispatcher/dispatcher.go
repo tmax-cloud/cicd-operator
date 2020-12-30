@@ -165,9 +165,9 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 	for _, job := range jobs {
 		tags := job.When.Tag
 		skipTags := job.When.SkipTag
-		isValidJob := false
 
 		if tags != nil && skipTags == nil {
+			isValidJob := false
 			for _, tag := range tags {
 				if incomingTag == tag {
 					isValidJob = true
@@ -178,18 +178,18 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 				filteredJobs = append(filteredJobs, job)
 			}
 		} else if skipTags != nil && tags == nil {
-			for _, job := range jobs {
-				isInValidJob := false
-				for _, tag := range tags {
-					if incomingTag == tag {
-						isInValidJob = true
-						break
-					}
-				}
-				if !isInValidJob {
-					filteredJobs = append(filteredJobs, job)
+
+			isInValidJob := false
+			for _, tag := range tags {
+				if incomingTag == tag {
+					isInValidJob = true
+					break
 				}
 			}
+			if !isInValidJob {
+				filteredJobs = append(filteredJobs, job)
+			}
+
 		} else if tags == nil && skipTags == nil {
 			filteredJobs = append(filteredJobs, job)
 		}
@@ -203,9 +203,9 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 	for _, job := range jobs {
 		branches := job.When.Branch
 		skipBranches := job.When.SkipBranch
-		isValidJob := false
 
 		if branches != nil && skipBranches == nil {
+			isValidJob := false
 			for _, branch := range branches {
 				if incomingBranch == branch {
 					isValidJob = true
@@ -216,18 +216,18 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 				filteredJobs = append(filteredJobs, job)
 			}
 		} else if skipBranches != nil && branches == nil {
-			for _, job := range jobs {
-				isInValidJob := false
-				for _, branch := range branches {
-					if incomingBranch == branch {
-						isInValidJob = true
-						break
-					}
-				}
-				if !isInValidJob {
-					filteredJobs = append(filteredJobs, job)
+
+			isInValidJob := false
+			for _, branch := range branches {
+				if incomingBranch == branch {
+					isInValidJob = true
+					break
 				}
 			}
+			if !isInValidJob {
+				filteredJobs = append(filteredJobs, job)
+			}
+
 		} else if branches == nil && skipBranches == nil {
 			filteredJobs = append(filteredJobs, job)
 		}
