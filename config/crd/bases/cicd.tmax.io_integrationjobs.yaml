@@ -1859,15 +1859,7 @@ spec:
                           items:
                             type: string
                           type: array
-                        ref:
-                          items:
-                            type: string
-                          type: array
                         skipBranch:
-                          items:
-                            type: string
-                          type: array
-                        skipRef:
                           items:
                             type: string
                           type: array

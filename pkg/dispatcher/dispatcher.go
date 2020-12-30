@@ -3,6 +3,7 @@ package dispatcher
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -125,7 +126,7 @@ func filterJobs(webhook git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1
 	case git.EventTypePush:
 		cand = config.Spec.Jobs.PostSubmit
 	default:
-		return nil, fmt.Errorf("dispatcher cannot handle event %s", webhook.EventType)
+		return cand, nil
 	}
 
 	// TODO - filter
@@ -135,5 +136,101 @@ func filterJobs(webhook git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1
 }
 
 func filter(cand []cicdv1.Job, webhook git.Webhook, config *cicdv1.IntegrationConfig) []cicdv1.Job {
-	return nil
+	var filteredJobs []cicdv1.Job
+	var incomingBranch string
+	var incomingTag string
+
+	if webhook.EventType == git.EventTypePullRequest {
+		incomingBranch = webhook.PullRequest.Base.Ref
+	} else if webhook.EventType == git.EventTypePush {
+		if strings.Contains(webhook.Push.Ref, "refs/tags/") {
+			incomingTag = strings.Replace(webhook.Push.Ref, "refs/tags/", "", -1)
+		} else {
+			incomingBranch = strings.Replace(webhook.Push.Ref, "refs/heads/", "", -1)
+		}
+	}
+
+	//tag push events
+	if incomingTag != "" {
+		filteredJobs = filterTags(cand, incomingTag)
+	} else {
+		filteredJobs = filterBranches(cand, incomingBranch)
+	}
+	return filteredJobs
+}
+
+func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
+	var filteredJobs []cicdv1.Job
+
+	for _, job := range jobs {
+		tags := job.When.Tag
+		skipTags := job.When.SkipTag
+
+		if tags != nil && skipTags == nil {
+			isValidJob := false
+			for _, tag := range tags {
+				if incomingTag == tag {
+					isValidJob = true
+					break
+				}
+			}
+			if isValidJob {
+				filteredJobs = append(filteredJobs, job)
+			}
+		} else if skipTags != nil && tags == nil {
+
+			isInValidJob := false
+			for _, tag := range tags {
+				if incomingTag == tag {
+					isInValidJob = true
+					break
+				}
+			}
+			if !isInValidJob {
+				filteredJobs = append(filteredJobs, job)
+			}
+
+		} else if tags == nil && skipTags == nil {
+			filteredJobs = append(filteredJobs, job)
+		}
+	}
+	return filteredJobs
+}
+
+func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
+	var filteredJobs []cicdv1.Job
+
+	for _, job := range jobs {
+		branches := job.When.Branch
+		skipBranches := job.When.SkipBranch
+
+		if branches != nil && skipBranches == nil {
+			isValidJob := false
+			for _, branch := range branches {
+				if incomingBranch == branch {
+					isValidJob = true
+					break
+				}
+			}
+			if isValidJob {
+				filteredJobs = append(filteredJobs, job)
+			}
+		} else if skipBranches != nil && branches == nil {
+
+			isInValidJob := false
+			for _, branch := range branches {
+				if incomingBranch == branch {
+					isInValidJob = true
+					break
+				}
+			}
+			if !isInValidJob {
+				filteredJobs = append(filteredJobs, job)
+			}
+
+		} else if branches == nil && skipBranches == nil {
+			filteredJobs = append(filteredJobs, job)
+		}
+	}
+	return filteredJobs
 }
