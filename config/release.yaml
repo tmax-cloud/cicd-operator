@@ -67,7 +67,7 @@ spec:
       containers:
       - command:
         - /manager
-        image: tmaxcloudck/cicd-operator:0.0.1
+        image: tmaxcloudck/cicd-operator:v0.1.0
         name: manager
         resources:
           limits:
