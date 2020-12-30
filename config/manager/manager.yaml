@@ -76,4 +76,11 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        volumeMounts:
+          - mountPath: /logs
+            name: operator-log
+      volumes:
+        - name: operator-log
+          hostPath:
+            path: /var/log/cicd-operator/logs
       terminationGracePeriodSeconds: 10
