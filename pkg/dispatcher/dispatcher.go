@@ -3,6 +3,7 @@ package dispatcher
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -134,12 +135,15 @@ func filterJobs(webhook git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1
 		return cand, nil
 	}
 
-	jobs = filter(cand, webhook)
+	jobs, err := filter(cand, webhook)
+	if err != nil {
+		return nil, err
+	}
 
 	return jobs, nil
 }
 
-func filter(cand []cicdv1.Job, webhook git.Webhook) []cicdv1.Job {
+func filter(cand []cicdv1.Job, webhook git.Webhook) ([]cicdv1.Job, error) {
 	var filteredJobs []cicdv1.Job
 	var incomingBranch string
 	var incomingTag string
@@ -155,15 +159,22 @@ func filter(cand []cicdv1.Job, webhook git.Webhook) []cicdv1.Job {
 	}
 
 	//tag push events
+	var err error
 	if incomingTag != "" {
-		filteredJobs = filterTags(cand, incomingTag)
+		filteredJobs, err = filterTags(cand, incomingTag)
+		if err != nil {
+			return nil, err
+		}
 	} else {
-		filteredJobs = filterBranches(cand, incomingBranch)
+		filteredJobs, err = filterBranches(cand, incomingBranch)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return filteredJobs
+	return filteredJobs, nil
 }
 
-func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
+func filterTags(jobs []cicdv1.Job, incomingTag string) ([]cicdv1.Job, error) {
 	var filteredJobs []cicdv1.Job
 
 	for _, job := range jobs {
@@ -173,7 +184,11 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 		if tags != nil && skipTags == nil {
 			isValidJob := false
 			for _, tag := range tags {
-				if incomingTag == tag {
+				re, err := regexp.Compile(tag)
+				if err != nil {
+					return nil, err
+				}
+				if re.MatchString(incomingTag) {
 					isValidJob = true
 					break
 				}
@@ -184,7 +199,11 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 		} else if skipTags != nil && tags == nil {
 			isInValidJob := false
 			for _, tag := range skipTags {
-				if incomingTag == tag {
+				re, err := regexp.Compile(tag)
+				if err != nil {
+					return nil, err
+				}
+				if re.MatchString(incomingTag) {
 					isInValidJob = true
 					break
 				}
@@ -197,10 +216,10 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 			filteredJobs = append(filteredJobs, job)
 		}
 	}
-	return filteredJobs
+	return filteredJobs, nil
 }
 
-func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
+func filterBranches(jobs []cicdv1.Job, incomingBranch string) ([]cicdv1.Job, error) {
 	var filteredJobs []cicdv1.Job
 
 	for _, job := range jobs {
@@ -210,7 +229,11 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 		if branches != nil && skipBranches == nil {
 			isValidJob := false
 			for _, branch := range branches {
-				if incomingBranch == branch {
+				re, err := regexp.Compile(branch)
+				if err != nil {
+					return nil, err
+				}
+				if re.MatchString(incomingBranch) {
 					isValidJob = true
 					break
 				}
@@ -221,7 +244,11 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 		} else if skipBranches != nil && branches == nil {
 			isInValidJob := false
 			for _, branch := range skipBranches {
-				if incomingBranch == branch {
+				re, err := regexp.Compile(branch)
+				if err != nil {
+					return nil, err
+				}
+				if re.MatchString(incomingBranch) {
 					isInValidJob = true
 					break
 				}
@@ -234,5 +261,5 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 			filteredJobs = append(filteredJobs, job)
 		}
 	}
-	return filteredJobs
+	return filteredJobs, nil
 }
