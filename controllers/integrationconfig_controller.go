@@ -213,7 +213,6 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 			webhookRegistered.Message = fmt.Sprintf("git type %s is not supported", instance.Spec.Git.Type)
 		}
 		if gitCli != nil {
-			// TODO - check if there is one and register if there isn't
 			addr := instance.GetWebhookServerAddress()
 			isUnique := true
 			r.Log.Info("Registering webhook " + addr)
