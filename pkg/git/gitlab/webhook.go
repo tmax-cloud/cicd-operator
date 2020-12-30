@@ -11,17 +11,11 @@ type MergeRequestWebhook struct {
 
 // Structure for push webhook event
 type PushWebhook struct {
-	Kind string `json:"object_kind"`
-	Ref  string `json:"ref"`
-	Repo Repo   `json:"repository"`
-	User string `json:"user_name"`
-	Sha  string `json:"checkout_sha"`
-}
-
-// Repo structure for webhook event
-type Repo struct {
-	Name    string `json:"name"`
-	Htmlurl string `json:"url"`
+	Kind    string  `json:"object_kind"`
+	Ref     string  `json:"ref"`
+	Project Project `json:"project"`
+	User    string  `json:"user_name"`
+	Sha     string  `json:"after"`
 }
 
 type Project struct {
