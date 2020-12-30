@@ -25,8 +25,7 @@ type PushWebhook struct {
 	Pusher struct {
 		Name string `json:"name"`
 	} `json:"pusher"`
-	Sha4Push string `json:"after"`
-	Sha4Tag  string `json:"before"`
+	Sha string `json:"after"`
 }
 
 // Repo structure for webhook event

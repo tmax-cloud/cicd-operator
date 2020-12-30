@@ -53,13 +53,10 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 			return git.Webhook{}, err
 		}
 		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
-		var sha string
-		if strings.Contains(data.Ref, "refs/tags") {
-			sha = data.Sha4Tag
-		} else {
-			sha = data.Sha4Push
+		if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
+			return git.Webhook{}, err
 		}
-		push := git.Push{Pusher: data.Pusher.Name, Ref: data.Ref, Sha: sha}
+		push := git.Push{Pusher: data.Pusher.Name, Ref: data.Ref, Sha: data.Sha}
 		webhook = git.Webhook{EventType: eventType, Repo: repo, Push: &push}
 
 	} else {
