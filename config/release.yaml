@@ -46,6 +46,7 @@ data:
   smtpUserSecret: ""
   collectPeriod: "120"
   integrationJobTTL: "120"
+  ingressClass: ""
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -68,14 +69,12 @@ spec:
       - command:
         - /manager
         image: tmaxcloudck/cicd-operator:v0.1.0
+        imagePullPolicy: Always
         name: manager
         resources:
-          limits:
-            cpu: 100m
-            memory: 30Mi
           requests:
             cpu: 100m
-            memory: 20Mi
+            memory: 100Mi
         volumeMounts:
           - mountPath: /logs
             name: operator-log

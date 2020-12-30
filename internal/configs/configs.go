@@ -31,4 +31,7 @@ var (
 
 	ApprovalResultMailTitle   string
 	ApprovalResultMailContent string
+
+	// IngressClass is a class for ingress instance
+	IngressClass string
 )

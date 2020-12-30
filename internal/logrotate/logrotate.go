@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"time"
 )
@@ -23,6 +24,10 @@ var logger = ctrl.Log.WithName("logrotate")
 var logFile *os.File
 
 func LogFile() (*os.File, error) {
+	dir := filepath.Dir(LogFilePath)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return nil, err
+	}
 	file, err := os.OpenFile(LogFilePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(0644))
 	if err != nil {
 		return nil, err
