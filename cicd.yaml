@@ -1,0 +1,74 @@
+# We actually use this file for CI of this repository.
+# Though, it does not have any effect by locating this file in git repository.
+# We applied it to our own k8s cluster.
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: cicd-operator
+spec:
+  git:
+    type: github
+    repository: tmax-cloud/cicd-operator
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: tmax-cloud-bot-token
+          key: token
+  secrets:
+    - name: tmax-hub
+  jobs:
+    preSubmit:
+    - name: test-code
+      image: golang:1.14
+      script: |
+        make test-crd
+        make test-gen
+        make test-verify
+        make test-unit
+      when:
+        branch:
+        - master
+    - name: test-lint
+      image: golangci/golangci-lint:v1.32
+      script: |
+        golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
+      when:
+        branch:
+        - master
+    postSubmit:
+    - name: test-code
+      image: golang:1.14
+      script: |
+        make test-crd
+        make test-gen
+        make test-verify
+        make test-unit
+      when:
+        branch:
+          - master
+    - name: test-lint
+      image: golangci/golangci-lint:v1.32
+      script: |
+        golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
+      when:
+        branch:
+          - master
+    - name: build-push-image
+      image: quay.io/buildah/stable
+      script: |
+        TAG=${CI_HEAD_REF#refs/tags/}
+        IMG=$IMAGE_URL:$TAG
+
+        buildah bud --format docker --storage-driver=vfs -f ./Dockerfile -t $IMG .
+        buildah push --storage-driver=vfs $IMG docker://$IMG
+
+        buildah tag --storage-driver=vfs $IMG $IMAGE_URL:latest
+        buildah push --storage-driver=vfs $IMAGE_URL:latest docker://$IMAGE_URL:latest
+      env:
+      - name: IMAGE_URL
+        value: tmaxcloudck/cicd-operator
+      securityContext:
+        privileged: true
+      when:
+        tag:
+        - v.*
