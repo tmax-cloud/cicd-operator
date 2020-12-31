@@ -52,14 +52,19 @@ func (c *Collector) Start() {
 }
 
 func (c *Collector) reconfigure() error {
+	period := parseGcPeriod()
+	if c.cronSpec == period {
+		return nil
+	}
 	c.cron.Stop()
-	c.cronSpec = parseGcPeriod()
+	c.cronSpec = period
 	c.cron.Remove(c.cronId)
 	id, err := c.cron.AddFunc(c.cronSpec, c.collect)
 	if err != nil {
 		return err
 	}
 	c.cronId = id
+	c.cron.Entry(c.cronId).Job.Run()
 
 	log.Info(fmt.Sprintf("Garbage collector runs %s", c.cronSpec))
 	c.cron.Start()
