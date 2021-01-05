@@ -62,19 +62,25 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	_, receivers, err := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyReceivers, tektonv1beta1.ParamTypeArray)
 	if err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		cond.Reason = "InsufficientParams"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
 	}
 
 	title, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyTitle, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		cond.Reason = "InsufficientParams"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
 	}
 
 	content, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyContent, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		cond.Reason = "InsufficientParams"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
 	}
 
 	isHtmlStr, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyIsHtml, tektonv1beta1.ParamTypeString)

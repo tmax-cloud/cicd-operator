@@ -2456,6 +2456,10 @@ spec:
                   - state
                   type: object
                 type: array
+              message:
+                description: Message is a message for the IntegrationJob (normally
+                  an error string)
+                type: string
               startTime:
                 description: StartTime is actual time the task started
                 format: date-time

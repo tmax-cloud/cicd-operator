@@ -88,6 +88,9 @@ type IntegrationJobStatus struct {
 	// State is a current state of the IntegrationJob
 	State IntegrationJobState `json:"state"`
 
+	// Message is a message for the IntegrationJob (normally an error string)
+	Message string `json:"message,omitempty"`
+
 	// StartTime is actual time the task started
 	StartTime *metav1.Time `json:"startTime,omitempty"`
 
@@ -102,7 +105,7 @@ type IntegrationJobState string
 
 const (
 	IntegrationJobStatePending   = IntegrationJobState("Pending")
-	IntegrationJobStateRunning   = IntegrationJobState("running")
+	IntegrationJobStateRunning   = IntegrationJobState("Running")
 	IntegrationJobStateCompleted = IntegrationJobState("Completed")
 	IntegrationJobStateFailed    = IntegrationJobState("Failed")
 )
