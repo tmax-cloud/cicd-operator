@@ -68,7 +68,9 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 	approval, err := a.newApproval(run)
 	if err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		cond.Reason = "CannotCreateApproval"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
 	}
 
 	if err := a.Client.Get(context.Background(), types.NamespacedName{Name: approval.Name, Namespace: approval.Namespace}, approval); err != nil {
@@ -76,11 +78,15 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 			// Create approval if not exist
 			if err := controllerutil.SetControllerReference(run, approval, a.Scheme); err != nil {
 				log.Error(err, "")
-				return ctrl.Result{}, err
+				cond.Reason = "CannotCreateApproval"
+				cond.Message = err.Error()
+				return ctrl.Result{}, nil
 			}
 			if err := a.Client.Create(ctx, approval); err != nil {
 				log.Error(err, "")
-				return ctrl.Result{}, err
+				cond.Reason = "CannotCreateApproval"
+				cond.Message = err.Error()
+				return ctrl.Result{}, nil
 			}
 
 			return ctrl.Result{}, nil
@@ -102,6 +108,9 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 		case cicdv1.ApprovalResultRejected:
 			cond.Status = corev1.ConditionFalse
 			reason = "Rejected"
+		case cicdv1.ApprovalResultError:
+			cond.Status = corev1.ConditionFalse
+			reason = "Error"
 		}
 		cond.Reason = reason
 		cond.Message = fmt.Sprintf("%s %s this approval, reason: %s, decisionTime: %s", approval.Status.Approver, strings.ToLower(reason), approval.Status.Reason, approval.Status.DecisionTime)

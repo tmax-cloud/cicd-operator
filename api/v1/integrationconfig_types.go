@@ -59,7 +59,7 @@ type IntegrationConfigJobs struct {
 type IntegrationConfigStatus struct {
 	// Conditions of IntegrationConfig
 	Conditions status.Conditions `json:"conditions"`
-	Secrets    string            `json:"secrets"`
+	Secrets    string            `json:"secrets,omitempty"`
 }
 
 // +kubebuilder:object:root=true

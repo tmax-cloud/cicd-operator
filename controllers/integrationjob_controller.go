@@ -62,7 +62,9 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	exit, err := r.handleFinalizer(instance, original)
 	if err != nil {
-		return ctrl.Result{}, err
+		log.Error(err, "")
+		r.patchStatus(instance, original, err.Error())
+		return ctrl.Result{}, nil
 	}
 	if exit {
 		return ctrl.Result{}, nil
@@ -80,7 +82,8 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	config := &cicdv1.IntegrationConfig{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: instance.Spec.ConfigRef.Name, Namespace: instance.Namespace}, config); err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		r.patchStatus(instance, original, err.Error())
+		return ctrl.Result{}, nil
 	}
 
 	// Get PipelineRun
@@ -88,7 +91,8 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: pipelinemanager.Name(instance), Namespace: instance.Namespace}, pr); err != nil {
 		if !errors.IsNotFound(err) {
 			log.Error(err, "")
-			return ctrl.Result{}, err
+			r.patchStatus(instance, original, err.Error())
+			return ctrl.Result{}, nil
 		} else {
 			pr = nil
 		}
@@ -97,13 +101,15 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	// Set default values for IntegrationJob.status
 	if err := instance.Status.SetDefaults(); err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		r.patchStatus(instance, original, err.Error())
+		return ctrl.Result{}, nil
 	}
 
 	// Check PipelineRun's status and update IntegrationJob's status
 	if err := pipelinemanager.ReflectStatus(pr, instance, config, r.Client); err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		r.patchStatus(instance, original, err.Error())
+		return ctrl.Result{}, nil
 	}
 
 	// Update IntegrationJob
@@ -160,6 +166,15 @@ func (r *IntegrationJobReconciler) handleFinalizer(instance, original *cicdv1.In
 	}
 
 	return false, nil
+}
+
+func (r *IntegrationJobReconciler) patchStatus(instance *cicdv1.IntegrationJob, original *cicdv1.IntegrationJob, message string) {
+	instance.Status.State = cicdv1.IntegrationJobStateFailed
+	instance.Status.Message = message
+	p := client.MergeFrom(original)
+	if err := r.Client.Status().Patch(context.Background(), instance, p); err != nil {
+		r.Log.Error(err, "")
+	}
 }
 
 func (r *IntegrationJobReconciler) SetupWithManager(mgr ctrl.Manager) error {

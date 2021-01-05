@@ -66,9 +66,29 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 	original := instance.DeepCopy()
 
+	// New Condition default
+	cond := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionReady)
+	if cond == nil {
+		cond = &status.Condition{
+			Type:   cicdv1.IntegrationConfigConditionReady,
+			Status: corev1.ConditionFalse,
+		}
+	}
+
+	defer func() {
+		instance.Status.Conditions.SetCondition(*cond)
+		p := client.MergeFrom(original)
+		if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
+			log.Error(err, "")
+		}
+	}()
+
 	exit, err := r.handleFinalizer(instance, original)
 	if err != nil {
-		return ctrl.Result{}, err
+		log.Error(err, "")
+		cond.Reason = "CannotHandleFinalizer"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
 	}
 	if exit {
 		return ctrl.Result{}, nil
@@ -86,13 +106,17 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// Git credential secret - referred by tekton
 	if err := r.createGitSecret(instance); err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		cond.Reason = "CannotCreateSecret"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
 	}
 
 	// Service account for running PipelineRuns
 	if err := r.createServiceAccount(instance); err != nil {
 		log.Error(err, "")
-		return ctrl.Result{}, err
+		cond.Reason = "CannotCreateAccount"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
 	}
 
 	// If conditions changed, update status
@@ -139,19 +163,16 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 		gitCli, err := utils.GetGitCli(instance)
 		if err != nil {
 			r.Log.Error(err, "")
-			return false, nil
 		}
 		hookList, err := gitCli.ListWebhook(instance, r.Client)
 		if err != nil {
 			r.Log.Error(err, "")
-			return false, nil
 		}
 		for _, h := range hookList {
 			if h.Url == instance.GetWebhookServerAddress() {
 				r.Log.Info("Deleting webhook " + h.Url)
 				if err := gitCli.DeleteWebhook(instance, h.Id, r.Client); err != nil {
 					r.Log.Error(err, "")
-					return false, nil
 				}
 			}
 		}

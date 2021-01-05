@@ -29,6 +29,7 @@ const (
 	ApprovalResultWaiting  ApprovalResult = "Waiting"
 	ApprovalResultApproved ApprovalResult = "Approved"
 	ApprovalResultRejected ApprovalResult = "Rejected"
+	ApprovalResultError    ApprovalResult = "Error"
 
 	ApprovalConditionSentRequestMail = status.ConditionType("SentRequestMail")
 	ApprovalConditionSentResultMail  = status.ConditionType("SentResultMail")

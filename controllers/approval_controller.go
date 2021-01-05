@@ -109,18 +109,22 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Create Role/RoleBinding if not exists
 	if err := r.createOrUpdateRole(instance); err != nil {
 		log.Error(err, "updating roles")
-		return ctrl.Result{}, err
+		r.patchStatus(instance, original, err.Error())
+		return ctrl.Result{}, nil
 	}
 	if err := r.createOrUpdateRoleBinding(instance); err != nil {
 		log.Error(err, "updating rolebindings")
-		return ctrl.Result{}, err
+		r.patchStatus(instance, original, err.Error())
+		return ctrl.Result{}, nil
 	}
 
 	// Set SentRequestMail
 	if !instance.Spec.SkipSendMail && (sentReqMailCond == nil || sentReqMailCond.Status == corev1.ConditionUnknown) {
 		title, content, err := r.generateMail(instance, &configs.ApprovalRequestMailTitle, &configs.ApprovalRequestMailContent)
 		if err != nil {
-			return ctrl.Result{}, err
+			log.Error(err, "")
+			r.patchStatus(instance, original, err.Error())
+			return ctrl.Result{}, nil
 		}
 		r.sendMail(instance.Spec.Users, title, content, sentReqMailCond)
 	}
@@ -130,7 +134,9 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if sentResMailCond == nil || sentResMailCond.Status == corev1.ConditionUnknown {
 			title, content, err := r.generateMail(instance, &configs.ApprovalResultMailTitle, &configs.ApprovalResultMailContent)
 			if err != nil {
-				return ctrl.Result{}, err
+				log.Error(err, "")
+				r.patchStatus(instance, original, err.Error())
+				return ctrl.Result{}, nil
 			}
 			r.sendMail(instance.Spec.Users, title, content, sentResMailCond)
 		}
@@ -309,6 +315,15 @@ func (r *ApprovalReconciler) sendMail(users []string, title, content string, con
 		cond.Message = ""
 	} else {
 		cond.Status = corev1.ConditionFalse
+	}
+}
+
+func (r *ApprovalReconciler) patchStatus(instance *cicdv1.Approval, original *cicdv1.Approval, message string) {
+	instance.Status.Result = cicdv1.ApprovalResultError
+	instance.Status.Reason = message
+	p := client.MergeFrom(original)
+	if err := r.Client.Status().Patch(context.Background(), instance, p); err != nil {
+		r.Log.Error(err, "")
 	}
 }
 
