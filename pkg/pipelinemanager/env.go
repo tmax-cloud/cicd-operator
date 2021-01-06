@@ -9,11 +9,6 @@ import (
 )
 
 func fillDefaultEnvs(tasks []tektonv1beta1.PipelineTask, job *cicdv1.IntegrationJob) error {
-	defaultEnvs, err := generateDefaultEnvs(job)
-	if err != nil {
-		return err
-	}
-
 	// Index-based loop, because Go creates a copy when iterating
 	for i := range tasks {
 		if tasks[i].TaskSpec == nil {
@@ -21,6 +16,10 @@ func fillDefaultEnvs(tasks []tektonv1beta1.PipelineTask, job *cicdv1.Integration
 		}
 		steps := tasks[i].TaskSpec.Steps
 		for j := range steps {
+			defaultEnvs, err := generateDefaultEnvs(job)
+			if err != nil {
+				return err
+			}
 			// Default values are prepended, not appended - they might be used from the other env.s
 			steps[j].Env = append(defaultEnvs, steps[j].Env...)
 		}
