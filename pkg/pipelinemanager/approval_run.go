@@ -33,9 +33,11 @@ func generateApprovalRunTask(job *cicdv1.IntegrationJob, j cicdv1.Job, task *tek
 		{Name: cicdv1.CustomTaskApprovalParamKeyLink, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: link}},
 	}...)
 
+	approverCm := ""
 	if j.Approval.ApproversConfigMap != nil && j.Approval.ApproversConfigMap.Name != "" {
-		task.Params = append(task.Params, tektonv1beta1.Param{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: j.Approval.ApproversConfigMap.Name}})
+		approverCm = j.Approval.ApproversConfigMap.Name
 	}
+	task.Params = append(task.Params, tektonv1beta1.Param{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: approverCm}})
 
 	return nil
 }
