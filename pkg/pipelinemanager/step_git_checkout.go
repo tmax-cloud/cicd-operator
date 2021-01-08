@@ -1,6 +1,15 @@
 package pipelinemanager
 
-import tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+import (
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
+const (
+	GitCheckoutCpuReq = "100m"
+	GitCheckoutMemReq = "100Mi"
+)
 
 func gitCheckout() tektonv1beta1.Step {
 	step := tektonv1beta1.Step{}
@@ -32,6 +41,14 @@ if [ "$CI_BASE_REF" != "" ]; then
 fi
 git submodule update --init --recursive
 `
+	resources := corev1.ResourceList{
+		"cpu":    resource.MustParse(GitCheckoutCpuReq),
+		"memory": resource.MustParse(GitCheckoutMemReq),
+	}
+	step.Resources = corev1.ResourceRequirements{
+		Limits:   resources,
+		Requests: resources,
+	}
 
 	return step
 }
