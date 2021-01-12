@@ -239,6 +239,19 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 			name = token[1]
 		}
 
+		// Check if exists in RoleBinding
+		subjectExist := false
+		for _, s := range binding.Subjects {
+			if s.APIGroup == apiGroup && s.Kind == kind && s.Namespace == ns && s.Name == name {
+				subjectExist = true
+				break
+			}
+		}
+
+		if subjectExist {
+			continue
+		}
+
 		binding.Subjects = append(binding.Subjects, rbac.Subject{
 			APIGroup:  apiGroup,
 			Kind:      kind,
