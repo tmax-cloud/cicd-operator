@@ -20,7 +20,7 @@ const (
 	ApprovalKind = "approvals"
 )
 
-var log = logf.Log.WithName("approve-apis")
+var logger = logf.Log.WithName("approve-apis")
 
 var k8sClient client.Client
 var k8sCliLock sync.Mutex

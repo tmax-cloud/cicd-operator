@@ -22,7 +22,7 @@ const (
 	paramKeyJobJobName = "jobJobName"
 )
 
-var log = logf.Log.WithName("server")
+var logger = logf.Log.WithName("server")
 
 type Server struct {
 	k8sClient client.Client
@@ -35,7 +35,7 @@ func New(c client.Client, cfg *rest.Config) *Server {
 	// ClientSet
 	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Error(err, "")
+		logger.Error(err, "")
 		os.Exit(1)
 	}
 
@@ -54,9 +54,9 @@ func New(c client.Client, cfg *rest.Config) *Server {
 func (s *Server) Start() {
 	httpAddr := fmt.Sprintf("0.0.0.0:%d", port)
 
-	log.Info(fmt.Sprintf("Server is running on %s", httpAddr))
+	logger.Info(fmt.Sprintf("Server is running on %s", httpAddr))
 	if err := http.ListenAndServe(httpAddr, s.router); err != nil {
-		log.Error(err, "cannot launch http server")
+		logger.Error(err, "cannot launch http server")
 		os.Exit(1)
 	}
 }
