@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"html/template"
@@ -39,6 +40,9 @@ type reportHandler struct {
 }
 
 func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	reqId := utils.RandomString(10)
+	log := logger.WithValues("request", reqId)
+
 	vars := mux.Vars(r)
 
 	ns, nsExist := vars[paramKeyNamespace]
@@ -46,14 +50,14 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	jobJobName, jobJobNameExist := vars[paramKeyJobJobName]
 
 	if !nsExist || !jobNameExist || !jobJobNameExist {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("path is not in form of '%s'", reportPath))
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, path is not in form of '%s'", reqId, reportPath))
 		log.Info("Bad request for path", "path", r.RequestURI)
 		return
 	}
 
 	iJob := &cicdv1.IntegrationJob{}
 	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: jobName, Namespace: ns}, iJob); err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("cannot get IntegrationJob %s/%s", ns, jobName))
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get IntegrationJob %s/%s", reqId, ns, jobName))
 		log.Info("Bad request for path", "path", r.RequestURI)
 		return
 	}
@@ -67,7 +71,7 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if jobStatus == nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("there is no job status %s in IntegrationJob %s/%s", jobJobName, ns, jobName))
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, there is no job status %s in IntegrationJob %s/%s", reqId, jobJobName, ns, jobName))
 		log.Info("Bad request for job", "ns", ns, "job", jobName, "jobJob", jobJobName)
 		return
 	}
@@ -76,7 +80,7 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var podLog string
 	if jobStatus.PodName != "" {
 		var err error
-		podLog, err = h.getPodLogs(jobStatus.PodName, ns)
+		podLog, err = h.getPodLogs(jobStatus.PodName, ns, log)
 		if err != nil {
 			podLog = ErrorLogNotExist
 		}
@@ -85,7 +89,7 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get template
 	templateStr, err := h.getTemplateString()
 	if err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, "cannot get report template")
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get report template", reqId))
 		log.Info("Cannot get report template")
 		return
 	}
@@ -93,14 +97,14 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.New("")
 	tmpl, err = tmpl.Parse(templateStr)
 	if err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, "cannot parse report template")
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot parse report template", reqId))
 		log.Info("Cannot parse report template")
 		return
 	}
 
 	// Publish report
 	if err := tmpl.Execute(w, report{JobName: jobName, JobJobName: jobJobName, JobStatus: jobStatus, Log: podLog}); err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, "cannot execute report template")
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot execute report template", reqId))
 		log.Info("Cannot execute report template")
 		return
 	}
@@ -108,7 +112,7 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // +kubebuilder:rbac:groups="",resources=pods;pods/log,verbs=get;list;watch
 
-func (h *reportHandler) getPodLogs(podName, namespace string) (string, error) {
+func (h *reportHandler) getPodLogs(podName, namespace string, log logr.Logger) (string, error) {
 	var logBuf bytes.Buffer
 
 	pod := &corev1.Pod{}

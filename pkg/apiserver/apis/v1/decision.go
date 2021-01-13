@@ -60,6 +60,9 @@ func rejectHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.ApprovalResult) {
+	reqId := utils.RandomString(10)
+	log := logger.WithValues("request", reqId)
+
 	// Get ns/approvalName
 	vars := mux.Vars(req)
 
@@ -74,35 +77,39 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	userReq := &reqBody{}
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(userReq); err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("body is not in json form or is malformed, err : %s", err.Error()))
+		log.Info(err.Error())
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, body is not in json form or is malformed, err : %s", reqId, err.Error()))
 		return
 	}
 
 	// Get user
 	user, err := getUserName(req.Header)
 	if err != nil {
-		_ = utils.RespondError(w, http.StatusUnauthorized, fmt.Sprintf("forbidden user, err : %s", err.Error()))
+		log.Info(err.Error())
+		_ = utils.RespondError(w, http.StatusUnauthorized, fmt.Sprintf("req: %s, forbidden user, err : %s", reqId, err.Error()))
 		return
 	}
 
 	// Get corresponding Approval object
 	if k8sClient == nil {
-		msg := "k8sClient is not ready"
-		log.Error(fmt.Errorf(msg), "")
-		_ = utils.RespondError(w, http.StatusInternalServerError, msg)
+		msg := fmt.Errorf("req: %s, k8sClient is not ready", reqId)
+		log.Info(msg.Error())
+		_ = utils.RespondError(w, http.StatusInternalServerError, msg.Error())
 		return
 	}
 
 	approval := &cicdv1.Approval{}
 	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: approvalName, Namespace: ns}, approval); err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("no Approval %s/%s is found", ns, approvalName))
+		log.Info(err.Error())
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, no Approval %s/%s is found", reqId, ns, approvalName))
 		return
 	}
 	original := approval.DeepCopy()
 
 	// If Approval is already in approved/rejected status, respond with error
 	if approval.Status.Result == cicdv1.ApprovalResultApproved || approval.Status.Result == cicdv1.ApprovalResultRejected {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("approval %s/%s is already in %s status", ns, approvalName, approval.Status.Result))
+		log.Info("approval is already decided")
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, approval %s/%s is already in %s status", reqId, ns, approvalName, approval.Status.Result))
 		return
 	}
 
@@ -119,7 +126,8 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	}
 
 	if !isApprover {
-		_ = utils.RespondError(w, http.StatusUnauthorized, fmt.Sprintf("approval %s/%s is not requested to you", ns, approvalName))
+		log.Info(fmt.Sprintf("requested user (%s) is not an approver", user))
+		_ = utils.RespondError(w, http.StatusUnauthorized, fmt.Sprintf("req: %s, approval %s/%s is not requested to you", reqId, ns, approvalName))
 		return
 	}
 
