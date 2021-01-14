@@ -24,6 +24,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/controllers/customs"
 	"github.com/tmax-cloud/cicd-operator/internal/logrotate"
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver"
+	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
 	"github.com/tmax-cloud/cicd-operator/pkg/collector"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -174,6 +175,7 @@ func main() {
 	srv := server.New(mgr.GetClient(), mgr.GetConfig())
 	// Add plugins for webhook
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
+	server.AddPlugin([]git.EventType{git.EventTypeIssueComment}, chatops.New(mgr.GetClient()))
 	go srv.Start()
 
 	// Start API aggregation server
