@@ -20,13 +20,13 @@ const (
 
 func Authorize(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if err := authorize(w, req); err != nil {
+		if err := authorize(req); err != nil {
 			_ = utils.RespondError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		if err := reviewAccess(w, req); err != nil {
-			_ = utils.RespondError(w, http.StatusUnauthorized, err.Error())
+		if err := reviewAccess(req); err != nil {
+			_ = utils.RespondError(w, http.StatusForbidden, err.Error())
 			return
 		}
 
@@ -34,15 +34,14 @@ func Authorize(h http.Handler) http.Handler {
 	})
 }
 
-func authorize(w http.ResponseWriter, req *http.Request) error {
+func authorize(req *http.Request) error {
 	if req.TLS == nil || len(req.TLS.PeerCertificates) == 0 {
-		_ = utils.RespondError(w, http.StatusBadRequest, "is not https or there is no peer certificate")
-		return fmt.Errorf("")
+		return fmt.Errorf("is not https or there is no peer certificate")
 	}
 	return nil
 }
 
-func reviewAccess(w http.ResponseWriter, req *http.Request) error {
+func reviewAccess(req *http.Request) error {
 	userName, err := getUserName(req.Header)
 	if err != nil {
 		return err
@@ -67,8 +66,7 @@ func reviewAccess(w http.ResponseWriter, req *http.Request) error {
 	ns, nsExist := vars["namespace"]
 	approvalName, nameExist := vars["approvalName"]
 	if !nsExist || !nameExist {
-		_ = utils.RespondError(w, http.StatusBadRequest, "url is malformed")
-		return fmt.Errorf("")
+		return fmt.Errorf("url is malformed")
 	}
 
 	r := &authorization.SubjectAccessReview{

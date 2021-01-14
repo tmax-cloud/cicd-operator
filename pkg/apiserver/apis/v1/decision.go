@@ -127,7 +127,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 
 	if !isApprover {
 		log.Info(fmt.Sprintf("requested user (%s) is not an approver", user))
-		_ = utils.RespondError(w, http.StatusUnauthorized, fmt.Sprintf("req: %s, approval %s/%s is not requested to you", reqId, ns, approvalName))
+		_ = utils.RespondError(w, http.StatusForbidden, fmt.Sprintf("req: %s, approval %s/%s is not requested to you", reqId, ns, approvalName))
 		return
 	}
 
