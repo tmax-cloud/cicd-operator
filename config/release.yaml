@@ -406,6 +406,7 @@ data:
     Message: {{.Spec.Message}}
 
     Result
+    User: {{.Status.Approver}}
     Result: {{.Status.Result}}
     Reason: {{.Status.Reason}}
     DecisionTime: {{.Status.GetDecisionTimeInZone "Asia/Seoul"}}
