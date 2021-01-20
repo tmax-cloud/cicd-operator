@@ -217,7 +217,7 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 	binding.RoleRef = rbac.RoleRef{
 		APIGroup: rbac.GroupName,
 		Kind:     "Role",
-		Name:     approval.Name,
+		Name:     roleAndBindingName(approval.Name),
 	}
 
 	for _, u := range approval.Spec.Users {
