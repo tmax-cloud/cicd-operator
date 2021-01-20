@@ -9,6 +9,9 @@ var (
 	// ExternalHostName to be used for webhook server (default is ingress host name)
 	ExternalHostName string
 
+	// ReportRedirectUriTemplate is a uri template for report page redirection
+	ReportRedirectUriTemplate string
+
 	// CollectPeriod is a garbage collection period (in hour)
 	CollectPeriod int
 
