@@ -41,6 +41,7 @@ metadata:
 data:
   maxPipelineRun: "5"
   externalHostName: ""
+  reportRedirectUriTemplate: ""
   enableMail: "false"
   smtpHost: ""
   smtpUserSecret: ""

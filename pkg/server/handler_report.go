@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"html/template"
 	"io"
@@ -59,6 +60,27 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: jobName, Namespace: ns}, iJob); err != nil {
 		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get IntegrationJob %s/%s", reqId, ns, jobName))
 		log.Info("Bad request for path", "path", r.RequestURI)
+		return
+	}
+
+	// Redirect if it's enabled
+	if configs.ReportRedirectUriTemplate != "" {
+		tmpl := template.New("")
+		tmpl, err := tmpl.Parse(configs.ReportRedirectUriTemplate)
+		if err != nil {
+			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot parse report redirection uri template", reqId))
+			log.Info("Cannot parse report redirection uri template")
+			return
+		}
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, iJob); err != nil {
+			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot execute report redirection uri template", reqId))
+			log.Info("Cannot execute report redirection uri template")
+			return
+		}
+
+		// Redirect
+		http.Redirect(w, r, buf.String(), http.StatusMovedPermanently)
 		return
 	}
 
