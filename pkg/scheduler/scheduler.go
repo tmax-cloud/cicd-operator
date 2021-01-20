@@ -10,6 +10,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/scheduler/pool"
 	"github.com/tmax-cloud/cicd-operator/pkg/structs"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,12 +114,16 @@ func (s Scheduler) run() {
 		// Generate and create PipelineRun
 		pr, err := pipelinemanager.Generate(jobNode.IntegrationJob)
 		if err != nil {
-			// TODO - update IntegrationJob status - reason: cannot generate PipelineRun
+			if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
+				log.Error(err, "")
+			}
 			log.Error(err, "")
 			return
 		}
 		if err := controllerutil.SetControllerReference(jobNode.IntegrationJob, pr, s.scheme); err != nil {
-			// TODO - update IntegrationJob status - reason: cannot create PipelineRun
+			if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
+				log.Error(err, "")
+			}
 			log.Error(err, "")
 			return
 		}
@@ -126,11 +131,24 @@ func (s Scheduler) run() {
 		log.Info(fmt.Sprintf("Scheduled %s / %s / %s", jobNode.Name, jobNode.Namespace, jobNode.CreationTimestamp))
 		// Create PipelineRun only when there is no Pipeline exists
 		if err := s.k8sClient.Create(context.Background(), pr); err != nil {
-			// TODO - update IntegrationJob status - reason: cannot create PipelineRun
+			if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
+				log.Error(err, "")
+			}
 			log.Error(err, "")
 			return
 		}
 
 		availableCnt--
 	})
+}
+
+func (s *Scheduler) patchJobScheduleFailed(job *cicdv1.IntegrationJob, msg string) error {
+	original := job.DeepCopy()
+
+	job.Status.State = cicdv1.IntegrationJobStateFailed
+	job.Status.Message = msg
+	job.Status.CompletionTime = &metav1.Time{Time: time.Now()}
+
+	p := client.MergeFrom(original)
+	return s.k8sClient.Patch(context.Background(), job, p)
 }

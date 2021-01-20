@@ -212,7 +212,6 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 		"Content-Type":  "application/json",
 	}
 	_, _, err = git.RequestHttp(http.MethodPost, apiUrl, header, commitStatusBody)
-	// TODO - error from gitlab
 	// Cannot transition status via :run from :running
 	if err != nil && strings.Contains(strings.ToLower(err.Error()), "cannot transition status via") {
 		err = nil
