@@ -70,8 +70,10 @@ func WaitIngressReady() error {
 			}
 
 			// If not, set it!
-			// TODO make nip.io configurable
-			hostname := fmt.Sprintf("cicd-webhook.%s.nip.io", ip)
+			hostname := configs.ExternalHostName
+			if configs.ExternalHostName == "" {
+				hostname = fmt.Sprintf("cicd-webhook.%s.nip.io", ip)
+			}
 			ing.Spec.Rules[0].Host = hostname
 
 			if _, err := ingCli.Update(context.Background(), ing, metav1.UpdateOptions{}); err != nil {

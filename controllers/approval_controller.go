@@ -145,13 +145,17 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
+func roleAndBindingName(approvalName string) string {
+	return "cicd-approval-" + approvalName
+}
+
 func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error {
 	notExist := false
 	role := &rbac.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      approval.Name,
+			Name:      roleAndBindingName(approval.Name),
 			Namespace: approval.Namespace,
-			Labels:    map[string]string{}, // TODO
+			Labels:    labelsForRoleAndBinding(approval),
 		},
 	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: role.Name, Namespace: role.Namespace}, role); err != nil {
@@ -195,9 +199,9 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 	notExist := false
 	binding := &rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      approval.Name,
+			Name:      roleAndBindingName(approval.Name),
 			Namespace: approval.Namespace,
-			Labels:    map[string]string{}, // TODO
+			Labels:    labelsForRoleAndBinding(approval),
 		},
 	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}, binding); err != nil {
@@ -278,6 +282,14 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 	}
 
 	return nil
+}
+
+func labelsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
+	return map[string]string{
+		cicdv1.JobLabelPrefix + "approval":       approval.Name,
+		cicdv1.JobLabelPrefix + "integrationJob": approval.Spec.IntegrationJob,
+		cicdv1.JobLabelPrefix + "sender":         approval.Spec.Sender,
+	}
 }
 
 func (r *ApprovalReconciler) generateMail(instance *cicdv1.Approval, titleTemplateCfg, contentTemplateCfg *string) (string, string, error) {
