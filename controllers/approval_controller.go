@@ -325,7 +325,7 @@ func (r *ApprovalReconciler) sendMail(users []string, title, content string, con
 	cond.Reason = "EmailDisabled"
 	if configs.EnableMail {
 		tos := utils.ParseEmailFromUsers(users)
-		if err := mail.Send(tos, title, content, false, r.Client); err != nil {
+		if err := mail.Send(tos, title, content, true, r.Client); err != nil {
 			r.Log.Error(err, "")
 			cond.Reason = "ErrorSendingMail"
 			cond.Message = err.Error()
