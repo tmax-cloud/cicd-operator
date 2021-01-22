@@ -1,0 +1,148 @@
+openapi: 3.0.0
+info:
+  description: |
+    Approval approve/reject
+  version: "0.0.1"
+  title: Approval
+  contact:
+    email: sunghyun_kim3@tmax.co.kr
+tags:
+  - name: Decision
+paths:
+  /apis/cicdapi.tmax.io/v1/namespaces/{namespace}/approvals/{name}/approve:
+    put:
+      tags:
+        - Decision
+      summary: Approve the approval
+      description: Approve the approval
+      parameters:
+        - in: "path"
+          name: namespace
+          description: namespace of the Approval
+          required: true
+          schema:
+            type: "string"
+        - in: "path"
+          name: name
+          description: name of the Approval
+          required: true
+          schema:
+            type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+            example:
+              reason: "Reason for the approval"
+      responses:
+        '201':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                example: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+  /apis/cicdapi.tmax.io/v1/namespaces/{namespace}/approvals/{name}/reject:
+    put:
+      tags:
+        - Decision
+      summary: Reject the approval
+      description: Reject the approval
+      parameters:
+        - in: "path"
+          name: namespace
+          description: namespace of the Approval
+          required: true
+          schema:
+            type: "string"
+        - in: "path"
+          name: name
+          description: name of the Approval
+          required: true
+          schema:
+            type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+            example:
+              reason: "Reason for the approval"
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                example: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+components:
+  schemas:
+    Request:
+      type: object
+      description: Reason
+      properties:
+        reason:
+          type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
