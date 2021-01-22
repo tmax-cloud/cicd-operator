@@ -178,7 +178,7 @@ func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Appro
 	}
 
 	// Sender email can be empty
-	senderEmail, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeySenderEmail, tektonv1beta1.ParamTypeString)
+	senderEmail, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeySenderEmail, tektonv1beta1.ParamTypeString)
 
 	link, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyLink, tektonv1beta1.ParamTypeString)
 	if err != nil {
