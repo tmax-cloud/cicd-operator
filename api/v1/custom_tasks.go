@@ -16,7 +16,8 @@ const (
 	CustomTaskApprovalParamKeyMessage           = "message"
 	CustomTaskApprovalParamKeyIntegrationJob    = "integration-job"
 	CustomTaskApprovalParamKeyIntegrationJobJob = "integration-job-job"
-	CustomTaskApprovalParamKeySender            = "sender"
+	CustomTaskApprovalParamKeySenderName        = "senderName"
+	CustomTaskApprovalParamKeySenderEmail       = "senderEmail"
 	CustomTaskApprovalParamKeyLink              = "link"
 
 	CustomTaskApprovalApproversConfigMapKey = "approvers"

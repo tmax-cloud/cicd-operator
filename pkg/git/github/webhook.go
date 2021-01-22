@@ -22,10 +22,8 @@ type PullRequestWebhook struct {
 type PushWebhook struct {
 	Ref    string `json:"ref"`
 	Repo   Repo   `json:"repository"`
-	Pusher struct {
-		Name string `json:"name"`
-	} `json:"pusher"`
-	Sha string `json:"after"`
+	Sender Sender `json:"sender"`
+	Sha    string `json:"after"`
 }
 
 // Repo structure for webhook event
@@ -39,7 +37,8 @@ type Repo struct {
 }
 
 type Sender struct {
-	ID string `json:"login"`
+	Name string `json:"login"`
+	ID   int    `json:"id"`
 }
 
 type Head struct {

@@ -57,13 +57,18 @@ type ApprovalSpec struct {
 	Message string `json:"message,omitempty"`
 
 	// Sender is a requester (probably be pull-request author or pusher)
-	Sender string `json:"sender,omitempty"`
+	Sender *ApprovalSender `json:"sender,omitempty"`
 
 	// Link is a description link approvers may refer to
 	Link string `json:"link,omitempty"`
 
 	// Users are the list of the users who are requested to approve the Approval
 	Users []string `json:"users"`
+}
+
+type ApprovalSender struct {
+	Name  string `json:"name"`
+	Email string `json:"email,omitempty"`
 }
 
 // ApprovalStatus defines the observed state of Approval

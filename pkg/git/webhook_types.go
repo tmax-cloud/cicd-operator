@@ -29,7 +29,7 @@ type Webhook struct {
 }
 
 type Push struct {
-	Pusher string
+	Sender Sender
 	Ref    string
 	Sha    string
 }
@@ -51,7 +51,9 @@ type Repository struct {
 }
 
 type Sender struct {
-	Name string
+	ID    int
+	Name  string
+	Email string
 }
 
 type Base struct {

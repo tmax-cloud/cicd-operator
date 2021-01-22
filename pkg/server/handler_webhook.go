@@ -49,7 +49,7 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gitCli, err := utils.GetGitCli(config)
+	gitCli, err := utils.GetGitCli(config, h.k8sClient)
 	if err != nil {
 		log.Info("Cannot initialize git cli", "error", err.Error())
 		_ = utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("req: %s, err: %s", reqId, err.Error()))
@@ -57,7 +57,7 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert webhook
-	wh, err := gitCli.ParseWebhook(config, r.Header, body)
+	wh, err := gitCli.ParseWebhook(r.Header, body)
 	if err != nil {
 		_ = utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("req: %s, cannot parse webhook body", reqId))
 		log.Info("Cannot parse webhook", "error", err.Error())

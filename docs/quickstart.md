@@ -23,6 +23,8 @@ The contents are as follows.
     Scope:
     * repo
     * admin:repo_hook
+    * read:user
+    * user:email
 
 - For GitLab
     - Create a new bot account
@@ -30,6 +32,7 @@ The contents are as follows.
       `https://gitlab.com/-/profile/personal_access_tokens`  
       Scope:
       * api
+      * read_user
 
 2. Copy generated token and store it as a secret
 ```yaml

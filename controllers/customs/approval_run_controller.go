@@ -172,10 +172,13 @@ func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Appro
 		return nil, err
 	}
 
-	sender, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeySender, tektonv1beta1.ParamTypeString)
+	sender, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeySenderName, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		return nil, err
 	}
+
+	// Sender email can be empty
+	senderEmail, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeySenderEmail, tektonv1beta1.ParamTypeString)
 
 	link, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyLink, tektonv1beta1.ParamTypeString)
 	if err != nil {
@@ -193,9 +196,12 @@ func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Appro
 			Users:          approvers,
 			IntegrationJob: jobName,
 			JobName:        jobJobName,
-			Sender:         sender,
-			Message:        msg,
-			Link:           link,
+			Sender: &cicdv1.ApprovalSender{
+				Name:  sender,
+				Email: senderEmail,
+			},
+			Message: msg,
+			Link:    link,
 		},
 	}, nil
 }

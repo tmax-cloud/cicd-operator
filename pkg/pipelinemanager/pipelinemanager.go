@@ -268,7 +268,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 	}
 
 	// Set remote git's commit status for each job
-	gitCli, err := utils.GetGitCli(cfg)
+	gitCli, err := utils.GetGitCli(cfg, client)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 				msg = msg[:139]
 			}
 			log.Info(fmt.Sprintf("Setting commit status %s to %s", j.State, cfg.Spec.Git.Repository))
-			if err := gitCli.SetCommitStatus(job, cfg, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name), client); err != nil {
+			if err := gitCli.SetCommitStatus(job, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name)); err != nil {
 				log.Error(err, "")
 			}
 		}

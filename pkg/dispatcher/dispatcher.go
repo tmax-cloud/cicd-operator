@@ -76,7 +76,10 @@ func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jo
 				Refs: cicdv1.IntegrationJobRefs{
 					Repository: webhook.Repo.Name,
 					Link:       webhook.Repo.URL,
-					Sender:     pr.Sender.Name,
+					Sender: &cicdv1.IntegrationJobSender{
+						Name:  pr.Sender.Name,
+						Email: pr.Sender.Email,
+					},
 					Base: cicdv1.IntegrationJobRefsBase{
 						Ref:  pr.Base.Ref,
 						Link: webhook.Repo.URL,
@@ -116,7 +119,10 @@ func handlePush(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId str
 			Refs: cicdv1.IntegrationJobRefs{
 				Repository: webhook.Repo.Name,
 				Link:       webhook.Repo.URL,
-				Sender:     push.Pusher,
+				Sender: &cicdv1.IntegrationJobSender{
+					Name:  push.Sender.Name,
+					Email: push.Sender.Email,
+				},
 				Base: cicdv1.IntegrationJobRefsBase{
 					Ref:  push.Ref,
 					Link: webhook.Repo.URL,

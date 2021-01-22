@@ -23,9 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/gitlab"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -160,18 +157,18 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 	// Deletion check-up
 	if instance.DeletionTimestamp != nil && idx >= 0 {
 		// Delete webhook
-		gitCli, err := utils.GetGitCli(instance)
+		gitCli, err := utils.GetGitCli(instance, r.Client)
 		if err != nil {
 			r.Log.Error(err, "")
 		}
-		hookList, err := gitCli.ListWebhook(instance, r.Client)
+		hookList, err := gitCli.ListWebhook()
 		if err != nil {
 			r.Log.Error(err, "")
 		}
 		for _, h := range hookList {
 			if h.Url == instance.GetWebhookServerAddress() {
 				r.Log.Info("Deleting webhook " + h.Url)
-				if err := gitCli.DeleteWebhook(instance, h.Id, r.Client); err != nil {
+				if err := gitCli.DeleteWebhook(h.Id); err != nil {
 					r.Log.Error(err, "")
 				}
 			}
@@ -226,21 +223,15 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 		webhookRegistered.Reason = ""
 		webhookRegistered.Message = ""
 
-		var gitCli git.Client
-		switch instance.Spec.Git.Type {
-		case cicdv1.GitTypeGitHub:
-			gitCli = &github.Client{}
-		case cicdv1.GitTypeGitLab:
-			gitCli = &gitlab.Client{}
-		default:
+		gitCli, err := utils.GetGitCli(instance, r.Client)
+		if err != nil {
 			webhookRegistered.Reason = "invalidGitType"
 			webhookRegistered.Message = fmt.Sprintf("git type %s is not supported", instance.Spec.Git.Type)
-		}
-		if gitCli != nil {
+		} else {
 			addr := instance.GetWebhookServerAddress()
 			isUnique := true
 			r.Log.Info("Registering webhook " + addr)
-			entries, err := gitCli.ListWebhook(instance, r.Client)
+			entries, err := gitCli.ListWebhook()
 			if err != nil {
 				webhookRegistered.Reason = "webhookRegisterFailed"
 				webhookRegistered.Message = err.Error()
@@ -254,7 +245,7 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 				}
 			}
 			if isUnique {
-				if err := gitCli.RegisterWebhook(instance, addr, r.Client); err != nil {
+				if err := gitCli.RegisterWebhook(addr); err != nil {
 					webhookRegistered.Reason = "webhookRegisterFailed"
 					webhookRegistered.Message = err.Error()
 				} else {

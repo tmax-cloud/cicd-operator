@@ -55,7 +55,7 @@ type IntegrationJobRefs struct {
 	Link string `json:"link"`
 
 	// Sender is a git user who triggered the webhook
-	Sender string `json:"sender"`
+	Sender *IntegrationJobSender `json:"sender"`
 
 	// Base is a base pointer for base commit for the pull request
 	// If Pull is nil (i.e., is push event), Base works as Head
@@ -63,6 +63,11 @@ type IntegrationJobRefs struct {
 
 	// Pull represents pull request head commit
 	Pull *IntegrationJobRefsPull `json:"pull,omitempty"`
+}
+
+type IntegrationJobSender struct {
+	Name  string `json:"name"`
+	Email string `json:"email,omitempty"`
 }
 
 type IntegrationJobRefsBase struct {

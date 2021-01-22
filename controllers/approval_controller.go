@@ -126,7 +126,7 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			r.patchStatus(instance, original, err.Error())
 			return ctrl.Result{}, nil
 		}
-		r.sendMail(instance.Spec.Users, title, content, sentReqMailCond)
+		r.sendMail(utils.ParseEmailFromUsers(instance.Spec.Users), title, content, sentReqMailCond)
 	}
 
 	// Set SentResultMail - only if is decided
@@ -138,7 +138,9 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				r.patchStatus(instance, original, err.Error())
 				return ctrl.Result{}, nil
 			}
-			r.sendMail(instance.Spec.Users, title, content, sentResMailCond)
+			if instance.Spec.Sender != nil {
+				r.sendMail([]string{instance.Spec.Sender.Email}, title, content, sentResMailCond)
+			}
 		}
 	}
 
@@ -285,11 +287,15 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 }
 
 func labelsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
-	return map[string]string{
+	result := map[string]string{
 		cicdv1.JobLabelPrefix + "approval":       approval.Name,
 		cicdv1.JobLabelPrefix + "integrationJob": approval.Spec.IntegrationJob,
-		cicdv1.JobLabelPrefix + "sender":         approval.Spec.Sender,
 	}
+
+	if approval.Spec.Sender != nil {
+		result[cicdv1.JobLabelPrefix+"sender"] = approval.Spec.Sender.Name
+	}
+	return result
 }
 
 func (r *ApprovalReconciler) generateMail(instance *cicdv1.Approval, titleTemplateCfg, contentTemplateCfg *string) (string, string, error) {
@@ -324,8 +330,7 @@ func (r *ApprovalReconciler) sendMail(users []string, title, content string, con
 	sentMail := false
 	cond.Reason = "EmailDisabled"
 	if configs.EnableMail {
-		tos := utils.ParseEmailFromUsers(users)
-		if err := mail.Send(tos, title, content, true, r.Client); err != nil {
+		if err := mail.Send(users, title, content, true, r.Client); err != nil {
 			r.Log.Error(err, "")
 			cond.Reason = "ErrorSendingMail"
 			cond.Message = err.Error()
