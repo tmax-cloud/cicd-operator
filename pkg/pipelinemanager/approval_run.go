@@ -29,7 +29,8 @@ func generateApprovalRunTask(job *cicdv1.IntegrationJob, j cicdv1.Job, task *tek
 		{Name: cicdv1.CustomTaskApprovalParamKeyMessage, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: msg}},
 		{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: job.Name}},
 		{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJobJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: j.Name}},
-		{Name: cicdv1.CustomTaskApprovalParamKeySender, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: sender}},
+		{Name: cicdv1.CustomTaskApprovalParamKeySenderName, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: sender.Name}},
+		{Name: cicdv1.CustomTaskApprovalParamKeySenderEmail, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: sender.Email}},
 		{Name: cicdv1.CustomTaskApprovalParamKeyLink, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: link}},
 	}...)
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -20,12 +21,12 @@ func FileExists(path string) bool {
 	return !info.IsDir()
 }
 
-func GetGitCli(cfg *cicdv1.IntegrationConfig) (git.Client, error) {
+func GetGitCli(cfg *cicdv1.IntegrationConfig, cli client.Client) (git.Client, error) {
 	switch cfg.Spec.Git.Type {
 	case cicdv1.GitTypeGitHub:
-		return &github.Client{}, nil
+		return &github.Client{IntegrationConfig: cfg, K8sClient: cli}, nil
 	case cicdv1.GitTypeGitLab:
-		return &gitlab.Client{}, nil
+		return &gitlab.Client{IntegrationConfig: cfg, K8sClient: cli}, nil
 	default:
 		return nil, fmt.Errorf("git type %s is not supported", cfg.Spec.Git.Type)
 	}

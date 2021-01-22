@@ -400,17 +400,17 @@ data:
     Message: {{.Spec.Message}}
   result-title: "[CI/CD] Approval '{{.Name}}' is {{.Status.Result}}"
   result-content: |
-    IntegrationJob: {{.Spec.IntegrationJob}}
-    JobName: {{.Spec.JobName}}
-    Link: {{.Spec.Link}}
-    Sender: {{.Spec.Sender}}
-    Message: {{.Spec.Message}}
+    IntegrationJob: {{.Spec.IntegrationJob}}<br/>
+    JobName: {{.Spec.JobName}}<br/>
+    Link: {{.Spec.Link}}<br/>
+    Sender: {{.Spec.Sender}}<br/>
+    Message: {{.Spec.Message}}<br/><br/>
 
-    Result
-    User: {{.Status.Approver}}
-    Result: {{.Status.Result}}
-    Reason: {{.Status.Reason}}
-    DecisionTime: {{.Status.GetDecisionTimeInZone "Asia/Seoul"}}
+    Result<br/>
+    User: {{.Status.Approver}}<br/>
+    Result: {{.Status.Result}}<br/>
+    Reason: {{.Status.Reason}}<br/>
+    DecisionTime: {{.Status.GetDecisionTimeInZone "Asia/Seoul"}}<br/>
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -546,7 +546,14 @@ spec:
               sender:
                 description: Sender is a requester (probably be pull-request author
                   or pusher)
-                type: string
+                properties:
+                  email:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
               skipSendMail:
                 description: SkipSendMail describes whether or not to send mail for
                   request/result for approvers
@@ -6879,7 +6886,14 @@ spec:
                     type: string
                   sender:
                     description: Sender is a git user who triggered the webhook
-                    type: string
+                    properties:
+                      email:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
                 required:
                 - base
                 - link

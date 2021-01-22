@@ -4,18 +4,19 @@ package gitlab
 // Should contain json tag for each field, to be unmarshalled properly
 type MergeRequestWebhook struct {
 	Kind            string          `json:"kind"`
-	Sender          Sender          `json:"user"`
+	User            User            `json:"user"`
 	ObjectAttribute ObjectAttribute `json:"object_attributes"`
 	Project         Project         `json:"project"`
 }
 
 // Structure for push webhook event
 type PushWebhook struct {
-	Kind    string  `json:"object_kind"`
-	Ref     string  `json:"ref"`
-	Project Project `json:"project"`
-	User    string  `json:"user_name"`
-	Sha     string  `json:"after"`
+	Kind     string  `json:"object_kind"`
+	Ref      string  `json:"ref"`
+	Project  Project `json:"project"`
+	UserName string  `json:"user_name"`
+	UserId   int     `json:"user_id"`
+	Sha      string  `json:"after"`
 }
 
 type Project struct {
@@ -23,8 +24,9 @@ type Project struct {
 	WebUrl string `json:"web_url"`
 }
 
-type Sender struct {
-	ID string `json:"username"`
+type User struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 type ObjectAttribute struct {

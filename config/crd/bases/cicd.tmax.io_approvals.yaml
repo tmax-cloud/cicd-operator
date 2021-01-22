@@ -74,7 +74,14 @@ spec:
               sender:
                 description: Sender is a requester (probably be pull-request author
                   or pusher)
-                type: string
+                properties:
+                  email:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
               skipSendMail:
                 description: SkipSendMail describes whether or not to send mail for
                   request/result for approvers

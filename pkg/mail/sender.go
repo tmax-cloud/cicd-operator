@@ -16,6 +16,11 @@ func Send(to []string, subject string, content string, isHtml bool, c client.Cli
 	if !configs.EnableMail {
 		return fmt.Errorf("email is disabled")
 	}
+
+	if len(to) < 1 {
+		return nil
+	}
+
 	server, err := serverInfo(c)
 	if err != nil {
 		return err

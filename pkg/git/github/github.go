@@ -15,6 +15,8 @@ import (
 )
 
 type Client struct {
+	IntegrationConfig *cicdv1.IntegrationConfig
+	K8sClient         client.Client
 }
 
 type CommitStatusBody struct {
@@ -24,10 +26,10 @@ type CommitStatusBody struct {
 	Context     string `json:"context"`
 }
 
-func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, header http.Header, jsonString []byte) (git.Webhook, error) {
+func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
 	var webhook git.Webhook
 	var signature = strings.Replace(header.Get("x-hub-signature"), "sha1=", "", 1)
-	if err := Validate(integrationConfig.Status.Secrets, signature, jsonString); err != nil {
+	if err := Validate(c.IntegrationConfig.Status.Secrets, signature, jsonString); err != nil {
 		return webhook, err
 	}
 	var eventType = git.EventType(header.Get("x-github-event"))
@@ -39,7 +41,15 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		if err = json.Unmarshal(jsonString, &data); err != nil {
 			return git.Webhook{}, err
 		}
-		sender := git.Sender{Name: data.Sender.ID}
+
+		fmt.Println(string(jsonString))
+		// Get sender email
+		sender := git.Sender{Name: data.Sender.Name, ID: data.Sender.ID}
+		userInfo, err := c.GetUserInfo(data.Sender.Name)
+		if err == nil {
+			sender.Email = userInfo.Email
+		}
+
 		base := git.Base{Ref: data.PullRequest.Base.Ref}
 		head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
 		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
@@ -56,7 +66,14 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 		if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
 			return git.Webhook{}, err
 		}
-		push := git.Push{Pusher: data.Pusher.Name, Ref: data.Ref, Sha: data.Sha}
+		push := git.Push{Sender: git.Sender{Name: data.Sender.Name, ID: data.Sender.ID}, Ref: data.Ref, Sha: data.Sha}
+
+		// Get sender email
+		userInfo, err := c.GetUserInfo(data.Sender.Name)
+		if err == nil {
+			push.Sender.Email = userInfo.Email
+		}
+
 		webhook = git.Webhook{EventType: eventType, Repo: repo, Push: &push}
 
 	} else {
@@ -65,10 +82,10 @@ func (c *Client) ParseWebhook(integrationConfig *cicdv1.IntegrationConfig, heade
 	return webhook, nil
 }
 
-func (c *Client) ListWebhook(integrationConfig *cicdv1.IntegrationConfig, client client.Client) ([]git.WebhookEntry, error) {
-	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
+func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
+	var apiUrl = c.IntegrationConfig.Spec.Git.GetApiUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/hooks"
 
-	token, err := integrationConfig.GetToken(client)
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
 	if err != nil {
 		return nil, err
 	}
@@ -91,10 +108,10 @@ func (c *Client) ListWebhook(integrationConfig *cicdv1.IntegrationConfig, client
 	return result, nil
 }
 
-func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, url string, client client.Client) error {
+func (c *Client) RegisterWebhook(url string) error {
 	var registrationBody RegistrationWebhookBody
 	var registrationConfig RegistrationWebhookBodyConfig
-	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks"
+	var apiUrl = c.IntegrationConfig.Spec.Git.GetApiUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/hooks"
 
 	registrationBody.Name = "web"
 	registrationBody.Active = true
@@ -102,11 +119,11 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	registrationConfig.Url = url
 	registrationConfig.ContentType = "json"
 	registrationConfig.InsecureSsl = "0"
-	registrationConfig.Secret = integrationConfig.Status.Secrets
+	registrationConfig.Secret = c.IntegrationConfig.Status.Secrets
 
 	registrationBody.Config = registrationConfig
 
-	token, err := integrationConfig.GetToken(client)
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
 	if err != nil {
 		return err
 	}
@@ -119,9 +136,9 @@ func (c *Client) RegisterWebhook(integrationConfig *cicdv1.IntegrationConfig, ur
 	return nil
 }
 
-func (c *Client) DeleteWebhook(integrationConfig *cicdv1.IntegrationConfig, id int, client client.Client) error {
-	var apiUrl = integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationConfig.Spec.Git.Repository + "/hooks/" + strconv.Itoa(id)
-	token, err := integrationConfig.GetToken(client)
+func (c *Client) DeleteWebhook(id int) error {
+	var apiUrl = c.IntegrationConfig.Spec.Git.GetApiUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/hooks/" + strconv.Itoa(id)
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
 	if err != nil {
 		return err
 	}
@@ -134,7 +151,7 @@ func (c *Client) DeleteWebhook(integrationConfig *cicdv1.IntegrationConfig, id i
 	return nil
 }
 
-func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrationConfig *cicdv1.IntegrationConfig, context string, state git.CommitStatusState, description, targetUrl string, client client.Client) error {
+func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state git.CommitStatusState, description, targetUrl string) error {
 	var commitStatusBody CommitStatusBody
 	var sha string
 	if integrationJob.Spec.Refs.Pull == nil {
@@ -142,14 +159,14 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 	} else {
 		sha = integrationJob.Spec.Refs.Pull.Sha
 	}
-	apiUrl := integrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationJob.Spec.Refs.Repository + "/statuses/" + sha
+	apiUrl := c.IntegrationConfig.Spec.Git.GetApiUrl() + "/repos/" + integrationJob.Spec.Refs.Repository + "/statuses/" + sha
 
 	commitStatusBody.State = string(state)
 	commitStatusBody.TargetURL = targetUrl
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
 
-	token, err := integrationConfig.GetToken(client)
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
 	if err != nil {
 		return err
 	}
@@ -163,6 +180,35 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, integrat
 	}
 
 	return nil
+}
+
+func (c *Client) GetUserInfo(userName string) (*git.User, error) {
+	// userName is string!
+	apiUrl := fmt.Sprintf("%s/users/%s", c.IntegrationConfig.Spec.Git.GetApiUrl(), userName)
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
+	if err != nil {
+		return nil, err
+	}
+	header := map[string]string{
+		"Authorization": "token " + token,
+		"Accept":        "application/vnd.github.v3+json",
+	}
+
+	result, _, err := git.RequestHttp(http.MethodGet, apiUrl, header, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var userInfo UserInfo
+	if err := json.Unmarshal(result, &userInfo); err != nil {
+		return nil, err
+	}
+
+	return &git.User{
+		ID:    userInfo.ID,
+		Name:  userInfo.UserName,
+		Email: userInfo.Email,
+	}, nil
 }
 
 func IsValidPayload(secret, headerHash string, payload []byte) bool {

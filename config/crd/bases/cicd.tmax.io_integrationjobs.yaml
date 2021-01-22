@@ -1935,7 +1935,14 @@ spec:
                     type: string
                   sender:
                     description: Sender is a git user who triggered the webhook
-                    type: string
+                    properties:
+                      email:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
                 required:
                 - base
                 - link
