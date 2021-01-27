@@ -16,12 +16,14 @@ import (
 	"time"
 )
 
+// EmailRunHandler handles email custom task
 type EmailRunHandler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
+// Handle sends email to the receivers
 func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := a.Log.WithValues("EmailRun", run.Namespace)
@@ -83,14 +85,14 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
-	isHtmlStr, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyIsHtml, tektonv1beta1.ParamTypeString)
+	isHTMLStr, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyIsHTML, tektonv1beta1.ParamTypeString)
 
-	isHtml := false
-	if isHtmlStr == "true" {
-		isHtml = true
+	isHTML := false
+	if isHTMLStr == "true" {
+		isHTML = true
 	}
 
-	if err := mail.Send(receivers, title, content, isHtml, a.Client); err != nil {
+	if err := mail.Send(receivers, title, content, isHTML, a.Client); err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
 		cond.Reason = "EmailError"

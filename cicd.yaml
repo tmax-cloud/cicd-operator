@@ -31,7 +31,7 @@ spec:
     - name: test-lint
       image: golangci/golangci-lint:v1.32
       script: |
-        golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
+        golangci-lint run ./... -v -E gofmt -E golint -E gocyclo -E misspell --timeout 1h0m0s
       when:
         branch:
         - master

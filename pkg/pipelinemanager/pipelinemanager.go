@@ -19,9 +19,11 @@ import (
 var log = logf.Log.WithName("pipeline-manager")
 
 const (
+	// DefaultWorkingDir is a default value for 'working directory' of a container (tekton's step)
 	DefaultWorkingDir = "/tekton/home/integ-source"
 )
 
+// Generate generates (but not creates) a PipelineRun object
 func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
 
@@ -109,7 +111,7 @@ func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.Pipe
 
 func generateCustomTaskRef(kind string) *tektonv1beta1.TaskRef {
 	return &tektonv1beta1.TaskRef{
-		APIVersion: cicdv1.CustomTaskApiVersion,
+		APIVersion: cicdv1.CustomTaskAPIVersion,
 		Kind:       tektonv1beta1.TaskKind(kind),
 	}
 }
@@ -138,19 +140,21 @@ func generateSteps(j cicdv1.Job) ([]tektonv1beta1.Step, error) {
 func generateLabel(j *cicdv1.IntegrationJob) map[string]string {
 	label := map[string]string{
 		cicdv1.RunLabelJob:   j.Name,
-		cicdv1.RunLabelJobId: j.Spec.Id,
+		cicdv1.RunLabelJobID: j.Spec.ID,
 		//cicdv1.RunLabelRepository: j.Spec.Refs.Repository,
 		//cicdv1.RunLabelSender: j.Spec.Refs.Sender,
 	}
 
 	if j.Spec.Refs.Pull != nil {
-		label[cicdv1.RunLabelPullRequest] = strconv.Itoa(j.Spec.Refs.Pull.Id)
+		label[cicdv1.RunLabelPullRequest] = strconv.Itoa(j.Spec.Refs.Pull.ID)
 		label[cicdv1.RunLabelPullRequestSha] = j.Spec.Refs.Pull.Sha
 	}
 
 	return label
 }
 
+// ReflectStatus reflects PipelineRun's status into IntegrationJob's status
+// It also set commit status for remote git server
 func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig, client client.Client) error {
 	// If PR is nil but IntegrationJob's status is running, set as error
 	// Also, schedule next pipelineRun
@@ -193,81 +197,75 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 		// Reflect status of each task(job)
 		// Be sure job.Status.Jobs[i] is set sequentially
 		for i, j := range job.Spec.Jobs {
-			isTaskRun := false
-			isRun := false
-			var runPodName string
-			var runStartTime *metav1.Time
-			var runCompletionTime *metav1.Time
-			var runReason string
-			var runMessage string
-
-			state := cicdv1.CommitStatusStatePending
-			// Find in TaskRun first
-			for _, runStatus := range pr.Status.TaskRuns {
-				if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
-					rStatus := runStatus.Status
-					runPodName = rStatus.PodName
-					runStartTime = rStatus.StartTime.DeepCopy()
-					runCompletionTime = rStatus.CompletionTime.DeepCopy()
-					if len(rStatus.Conditions) > 0 {
-						runMessage = rStatus.Conditions[0].Message
-						runReason = rStatus.Conditions[0].Reason
-					}
-					job.Status.Jobs[i].Containers = nil
-					for _, s := range rStatus.Steps {
-						stepStatus := s.DeepCopy()
-						job.Status.Jobs[i].Containers = append(job.Status.Jobs[i].Containers, *stepStatus)
-					}
-					switch tektonv1beta1.TaskRunReason(runReason) {
-					case tektonv1beta1.TaskRunReasonSuccessful:
-						state = cicdv1.CommitStatusStateSuccess
-					case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
-						state = cicdv1.CommitStatusStateFailure
-					}
-					isTaskRun = true
-					break
-				}
-			}
-			// Now find in Run
-			if !isTaskRun {
-				for _, runStatus := range pr.Status.Runs {
-					if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
-						rStatus := runStatus.Status
-						runStartTime = rStatus.StartTime.DeepCopy()
-						runCompletionTime = rStatus.CompletionTime.DeepCopy()
-						if len(rStatus.Conditions) > 0 {
-							runMessage = rStatus.Conditions[0].Message
-							switch rStatus.Conditions[0].Status {
-							case corev1.ConditionTrue:
-								state = cicdv1.CommitStatusStateSuccess
-							case corev1.ConditionFalse:
-								state = cicdv1.CommitStatusStateFailure
-							}
-						}
-						isRun = true
-						break
-					}
-				}
-			}
+			runStatus := getJobRunStatus(pr, j)
 
 			// Only update if taskRun's status exists
-			if isRun || isTaskRun {
+			if runStatus != nil {
 				// If something is changed, commit status should be posted
-				stateChanged[i] = job.Status.Jobs[i].State != state ||
-					job.Status.Jobs[i].Message != runMessage ||
-					!job.Status.Jobs[i].StartTime.Equal(runStartTime) ||
-					!job.Status.Jobs[i].CompletionTime.Equal(runCompletionTime)
-
-				job.Status.Jobs[i].PodName = runPodName
-				job.Status.Jobs[i].State = state
-				job.Status.Jobs[i].Message = runMessage
-				job.Status.Jobs[i].StartTime = runStartTime
-				job.Status.Jobs[i].CompletionTime = runCompletionTime
+				stateChanged[i] = !job.Status.Jobs[i].Equals(runStatus)
+				runStatus.DeepCopyInto(&job.Status.Jobs[i])
 			}
 		}
 	}
 
 	// Set remote git's commit status for each job
+	if err := updateGitCommitStatus(cfg, client, job, stateChanged); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j cicdv1.Job) *cicdv1.JobStatus {
+	jobStatus := &cicdv1.JobStatus{Name: j.Name, State: cicdv1.CommitStatusStatePending}
+	// Find in TaskRun first
+	for _, runStatus := range pr.Status.TaskRuns {
+		if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
+			rStatus := runStatus.Status
+			jobStatus.PodName = rStatus.PodName
+			jobStatus.StartTime = rStatus.StartTime.DeepCopy()
+			jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
+			if len(rStatus.Conditions) > 0 {
+				jobStatus.Message = rStatus.Conditions[0].Message
+				switch tektonv1beta1.TaskRunReason(rStatus.Conditions[0].Reason) {
+				case tektonv1beta1.TaskRunReasonSuccessful:
+					jobStatus.State = cicdv1.CommitStatusStateSuccess
+				case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
+					jobStatus.State = cicdv1.CommitStatusStateFailure
+				}
+			}
+			jobStatus.Containers = nil
+			for _, s := range rStatus.Steps {
+				stepStatus := s.DeepCopy()
+				jobStatus.Containers = append(jobStatus.Containers, *stepStatus)
+			}
+			break
+		}
+	}
+	// Now find in Run
+	if jobStatus.PodName == "" {
+		for _, runStatus := range pr.Status.Runs {
+			if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
+				rStatus := runStatus.Status
+				jobStatus.StartTime = rStatus.StartTime.DeepCopy()
+				jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
+				if len(rStatus.Conditions) > 0 {
+					jobStatus.Message = rStatus.Conditions[0].Message
+					switch rStatus.Conditions[0].Status {
+					case corev1.ConditionTrue:
+						jobStatus.State = cicdv1.CommitStatusStateSuccess
+					case corev1.ConditionFalse:
+						jobStatus.State = cicdv1.CommitStatusStateFailure
+					}
+				}
+				break
+			}
+		}
+	}
+	return jobStatus
+}
+
+func updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, client client.Client, job *cicdv1.IntegrationJob, stateChanged []bool) error {
 	gitCli, err := utils.GetGitCli(cfg, client)
 	if err != nil {
 		return err
@@ -290,6 +288,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 	return nil
 }
 
+// Name is a PipelineRun's name for the IntegrationJob j
 func Name(j *cicdv1.IntegrationJob) string {
 	return j.Name // TODO - should we add postfix or something? Job:PipelineRun=1:1...
 }

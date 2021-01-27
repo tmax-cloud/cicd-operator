@@ -13,95 +13,85 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Client is a gitlab client struct
 type Client struct {
 	IntegrationConfig *cicdv1.IntegrationConfig
 	K8sClient         client.Client
 }
 
-type CommitStatusBody struct {
-	State       string `json:"state"`
-	TargetURL   string `json:"target_url"`
-	Description string `json:"description"`
-	Context     string `json:"context"`
-}
-
-func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
-	var webhook git.Webhook
+// ParseWebhook parses a webhook body for gitlab
+func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (*git.Webhook, error) {
 	if err := Validate(c.IntegrationConfig.Status.Secrets, header.Get("x-gitlab-token")); err != nil {
-		return webhook, err
+		return nil, err
 	}
-
-	var eventType git.EventType
-
-	var err error
 
 	eventFromHeader := header.Get("x-gitlab-event")
 	if eventFromHeader == "Merge Request Hook" {
-		eventType = git.EventTypePullRequest
+		return c.parsePullRequestWebhook(jsonString)
 	} else if eventFromHeader == "Push Hook" || eventFromHeader == "Tag Push Hook" {
-		eventType = git.EventTypePush
+		return c.parsePushWebhook(jsonString)
 	}
 
-	if eventType == git.EventTypePullRequest {
-		var data MergeRequestWebhook
-
-		if err = json.Unmarshal(jsonString, &data); err != nil {
-			return git.Webhook{}, err
-		}
-		sender := git.Sender{Name: data.User.Name, Email: data.User.Email}
-		base := git.Base{Ref: data.ObjectAttribute.BaseRef}
-		head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
-		repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebUrl}
-		action := git.PullRequestAction(data.ObjectAttribute.Action)
-		switch string(action) {
-		case "close":
-			action = git.PullRequestActionClose
-		case "open":
-			action = git.PullRequestActionOpen
-		case "reopen":
-			action = git.PullRequestActionReOpen
-		case "update":
-			action = git.PullRequestActionSynchronize
-		}
-		state := git.PullRequestState(data.ObjectAttribute.State)
-		switch string(state) {
-		case "opened":
-			state = git.PullRequestStateOpen
-		case "closed":
-			state = git.PullRequestStateClosed
-		}
-		pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Project.WebUrl, Base: base, Head: head, State: state, Action: action}
-		webhook = git.Webhook{EventType: eventType, Repo: repo, PullRequest: &pullRequest}
-
-	} else if eventType == git.EventTypePush {
-		var data PushWebhook
-
-		if err = json.Unmarshal(jsonString, &data); err != nil {
-			return git.Webhook{}, err
-		}
-		repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebUrl}
-		if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
-			return git.Webhook{}, err
-		}
-		push := git.Push{Sender: git.Sender{Name: data.UserName, ID: data.UserId}, Ref: data.Ref, Sha: data.Sha}
-
-		// Get sender email
-		userInfo, err := c.GetUserInfo(strconv.Itoa(data.UserId))
-		if err == nil {
-			push.Sender.Email = userInfo.Email
-		}
-
-		webhook = git.Webhook{EventType: eventType, Repo: repo, Push: &push}
-
-	} else {
-		return webhook, nil
-	}
-	return webhook, nil
+	return nil, nil
 }
 
+func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error) {
+	var data MergeRequestWebhook
+
+	if err := json.Unmarshal(jsonString, &data); err != nil {
+		return nil, err
+	}
+	sender := git.Sender{Name: data.User.Name, Email: data.User.Email}
+	base := git.Base{Ref: data.ObjectAttribute.BaseRef}
+	head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
+	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
+	action := git.PullRequestAction(data.ObjectAttribute.Action)
+	switch string(action) {
+	case "close":
+		action = git.PullRequestActionClose
+	case "open":
+		action = git.PullRequestActionOpen
+	case "reopen":
+		action = git.PullRequestActionReOpen
+	case "update":
+		action = git.PullRequestActionSynchronize
+	}
+	state := git.PullRequestState(data.ObjectAttribute.State)
+	switch string(state) {
+	case "opened":
+		state = git.PullRequestStateOpen
+	case "closed":
+		state = git.PullRequestStateClosed
+	}
+	pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Project.WebURL, Base: base, Head: head, State: state, Action: action}
+	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest}, nil
+}
+
+func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
+	var data PushWebhook
+
+	if err := json.Unmarshal(jsonString, &data); err != nil {
+		return nil, err
+	}
+	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
+	if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
+		return nil, nil
+	}
+	push := git.Push{Sender: git.Sender{Name: data.UserName, ID: data.UserID}, Ref: data.Ref, Sha: data.Sha}
+
+	// Get sender email
+	userInfo, err := c.GetUserInfo(strconv.Itoa(data.UserID))
+	if err == nil {
+		push.Sender.Email = userInfo.Email
+	}
+
+	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Push: &push}, nil
+}
+
+// ListWebhook lists registered webhooks
 func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 	encodedRepoPath := url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
-	apiURL := c.IntegrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks"
+	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks"
 
 	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
 	if err != nil {
@@ -112,7 +102,7 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 		"PRIVATE-TOKEN": token,
 		"Content-Type":  "application/json",
 	}
-	data, _, err := git.RequestHttp(http.MethodGet, apiURL, header, nil)
+	data, _, err := git.RequestHTTP(http.MethodGet, apiURL, header, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -124,16 +114,17 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 
 	var result []git.WebhookEntry
 	for _, e := range entries {
-		result = append(result, git.WebhookEntry{Id: e.Id, Url: e.Url})
+		result = append(result, git.WebhookEntry{ID: e.ID, URL: e.URL})
 	}
 
 	return result, nil
 }
 
+// RegisterWebhook registers our webhook server to the remote git server
 func (c *Client) RegisterWebhook(uri string) error {
 	var registrationBody RegistrationWebhookBody
 	EncodedRepoPath := url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
-	apiURL := c.IntegrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
+	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + EncodedRepoPath + "/hooks"
 
 	//enable hooks from every events
 	registrationBody.EnableSSLVerification = false
@@ -160,7 +151,7 @@ func (c *Client) RegisterWebhook(uri string) error {
 		"PRIVATE-TOKEN": token,
 		"Content-Type":  "application/json",
 	}
-	_, _, err = git.RequestHttp(http.MethodPost, apiURL, header, registrationBody)
+	_, _, err = git.RequestHTTP(http.MethodPost, apiURL, header, registrationBody)
 	if err != nil {
 		return err
 	}
@@ -168,9 +159,10 @@ func (c *Client) RegisterWebhook(uri string) error {
 	return nil
 }
 
+// DeleteWebhook deletes registered webhook
 func (c *Client) DeleteWebhook(id int) error {
 	encodedRepoPath := url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
-	apiURL := c.IntegrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks/" + strconv.Itoa(id)
+	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks/" + strconv.Itoa(id)
 
 	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
 	if err != nil {
@@ -182,7 +174,7 @@ func (c *Client) DeleteWebhook(id int) error {
 		"Content-Type":  "application/json",
 	}
 
-	_, _, err = git.RequestHttp(http.MethodDelete, apiURL, header, nil)
+	_, _, err = git.RequestHTTP(http.MethodDelete, apiURL, header, nil)
 	if err != nil {
 		return err
 	}
@@ -190,7 +182,8 @@ func (c *Client) DeleteWebhook(id int) error {
 	return nil
 }
 
-func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state git.CommitStatusState, description, targetUrl string) error {
+// SetCommitStatus sets commit status for the specific commit
+func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state git.CommitStatusState, description, targetURL string) error {
 	var commitStatusBody CommitStatusBody
 	var urlEncodePath = url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
 	var sha string
@@ -199,7 +192,7 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 	} else {
 		sha = integrationJob.Spec.Refs.Pull.Sha
 	}
-	apiUrl := c.IntegrationConfig.Spec.Git.GetApiUrl() + "/api/v4/projects/" + urlEncodePath + "/statuses/" + sha
+	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + urlEncodePath + "/statuses/" + sha
 	switch cicdv1.CommitStatusState(state) {
 	case cicdv1.CommitStatusStatePending:
 		commitStatusBody.State = "running"
@@ -208,7 +201,7 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 	default:
 		commitStatusBody.State = string(state)
 	}
-	commitStatusBody.TargetURL = targetUrl
+	commitStatusBody.TargetURL = targetURL
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
 
@@ -220,7 +213,7 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 		"PRIVATE-TOKEN": token,
 		"Content-Type":  "application/json",
 	}
-	_, _, err = git.RequestHttp(http.MethodPost, apiUrl, header, commitStatusBody)
+	_, _, err = git.RequestHTTP(http.MethodPost, apiURL, header, commitStatusBody)
 	// Cannot transition status via :run from :running
 	if err != nil && strings.Contains(strings.ToLower(err.Error()), "cannot transition status via") {
 		err = nil
@@ -232,9 +225,10 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 	return nil
 }
 
-func (c *Client) GetUserInfo(userId string) (*git.User, error) {
-	// userId is int!
-	apiUrl := fmt.Sprintf("%s/api/v4/users/%s", c.IntegrationConfig.Spec.Git.GetApiUrl(), userId)
+// GetUserInfo gets a user's information
+func (c *Client) GetUserInfo(userID string) (*git.User, error) {
+	// userID is int!
+	apiURL := fmt.Sprintf("%s/api/v4/users/%s", c.IntegrationConfig.Spec.Git.GetAPIUrl(), userID)
 	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
 	if err != nil {
 		return nil, err
@@ -244,7 +238,7 @@ func (c *Client) GetUserInfo(userId string) (*git.User, error) {
 		"Content-Type":  "application/json",
 	}
 
-	result, _, err := git.RequestHttp(http.MethodGet, apiUrl, header, nil)
+	result, _, err := git.RequestHTTP(http.MethodGet, apiURL, header, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -266,6 +260,7 @@ func (c *Client) GetUserInfo(userId string) (*git.User, error) {
 	}, err
 }
 
+// Validate validates the webhook payload
 func Validate(secret, headerToken string) error {
 	if secret != headerToken {
 		return fmt.Errorf("invalid request : X-Gitlab-Token does not match secret")

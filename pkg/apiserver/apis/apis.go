@@ -11,20 +11,23 @@ import (
 	"github.com/tmax-cloud/cicd-operator/internal/wrapper"
 )
 
+// APIGroup and versions
 const (
-	ApiGroup   = "cicdapi.tmax.io"
-	ApiVersion = "v1"
+	APIGroup   = "cicdapi.tmax.io"
+	APIVersion = "v1"
 )
 
-var AddApiFuncs []func(*wrapper.RouterWrapper, client.Client) error
+// AddAPIFuncs adds add functions
+var AddAPIFuncs []func(*wrapper.RouterWrapper, client.Client) error
 
+// AddApis registers apis api for service discovery
 func AddApis(parent *wrapper.RouterWrapper, cli client.Client) error {
 	apiWrapper := wrapper.New("/apis", nil, apisHandler)
 	if err := parent.Add(apiWrapper); err != nil {
 		return err
 	}
 
-	for _, f := range AddApiFuncs {
+	for _, f := range AddAPIFuncs {
 		if err := f(apiWrapper, cli); err != nil {
 			return err
 		}
@@ -35,13 +38,13 @@ func AddApis(parent *wrapper.RouterWrapper, cli client.Client) error {
 
 func apisHandler(w http.ResponseWriter, _ *http.Request) {
 	groupVersion := metav1.GroupVersionForDiscovery{
-		GroupVersion: fmt.Sprintf("%s/%s", ApiGroup, ApiVersion),
-		Version:      ApiVersion,
+		GroupVersion: fmt.Sprintf("%s/%s", APIGroup, APIVersion),
+		Version:      APIVersion,
 	}
 
 	group := metav1.APIGroup{}
 	group.Kind = "APIGroup"
-	group.Name = ApiGroup
+	group.Name = APIGroup
 	group.PreferredVersion = groupVersion
 	group.Versions = append(group.Versions, groupVersion)
 	group.ServerAddressByClientCIDRs = append(group.ServerAddressByClientCIDRs, metav1.ServerAddressByClientCIDR{

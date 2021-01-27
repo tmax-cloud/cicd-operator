@@ -5,12 +5,14 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 )
 
+// Plugin is a webhook plugin interface, which handles git webhook payloads
 type Plugin interface {
-	Handle(git.Webhook, *cicdv1.IntegrationConfig) error
+	Handle(*git.Webhook, *cicdv1.IntegrationConfig) error
 }
 
 var plugins = map[git.EventType][]Plugin{}
 
+// AddPlugin adds handler for specific events
 func AddPlugin(events []git.EventType, p Plugin) {
 	for _, ev := range events {
 		addPlugin(ev, p)
@@ -25,6 +27,6 @@ func addPlugin(ev git.EventType, p Plugin) {
 	plugins[ev] = append(plugins[ev], p)
 }
 
-func GetPlugins(ev git.EventType) []Plugin {
+func getPlugins(ev git.EventType) []Plugin {
 	return plugins[ev]
 }

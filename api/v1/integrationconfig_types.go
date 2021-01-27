@@ -29,6 +29,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Condition keys for IntegrationConfig
+const (
+	IntegrationConfigConditionWebhookRegistered = status.ConditionType("webhook-registered")
+	IntegrationConfigConditionReady             = status.ConditionType("ready")
+)
+
 // IntegrationConfigSpec defines the desired state of IntegrationConfig
 type IntegrationConfigSpec struct {
 	// Git config for target repository
@@ -47,6 +53,7 @@ type IntegrationConfigSpec struct {
 	// TODO
 }
 
+// IntegrationConfigJobs categorizes jobs into two types (pre-submit and post-submit)
 type IntegrationConfigJobs struct {
 	// PreSubmit jobs are for pull-request events
 	PreSubmit []Job `json:"preSubmit,omitempty"`
@@ -88,15 +95,15 @@ func init() {
 	SchemeBuilder.Register(&IntegrationConfig{}, &IntegrationConfigList{})
 }
 
+// GetToken fetches git access token from IntegrationConfig
 func (i *IntegrationConfig) GetToken(c client.Client) (string, error) {
 	tokenStruct := i.Spec.Git.Token
 	// Get from value
 	if tokenStruct.ValueFrom == nil {
 		if tokenStruct.Value != "" {
 			return tokenStruct.Value, nil
-		} else {
-			return "", fmt.Errorf("token is empty")
 		}
+		return "", fmt.Errorf("token is empty")
 	}
 
 	// Get from secret
@@ -113,20 +120,17 @@ func (i *IntegrationConfig) GetToken(c client.Client) (string, error) {
 	return string(token), nil
 }
 
+// GetServiceAccountName returns the name of the related ServiceAccount
 func GetServiceAccountName(configName string) string {
 	return fmt.Sprintf("%s-sa", configName)
 }
 
+// GetSecretName returns the name of related secret
 func GetSecretName(configName string) string {
 	return configName
 }
 
-// Returns Server address which webhook events will be received
+// GetWebhookServerAddress returns Server address which webhook events will be received
 func (i *IntegrationConfig) GetWebhookServerAddress() string {
 	return fmt.Sprintf("http://%s/webhook/%s/%s", configs.ExternalHostName, i.Namespace, i.Name)
 }
-
-const (
-	IntegrationConfigConditionWebhookRegistered = status.ConditionType("webhook-registered")
-	IntegrationConfigConditionReady             = status.ConditionType("ready")
-)

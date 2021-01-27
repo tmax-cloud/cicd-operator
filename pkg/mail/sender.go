@@ -12,7 +12,8 @@ import (
 	"strings"
 )
 
-func Send(to []string, subject string, content string, isHtml bool, c client.Client) error {
+// Send actually sends email using SMTP call
+func Send(to []string, subject string, content string, isHTML bool, c client.Client) error {
 	if !configs.EnableMail {
 		return fmt.Errorf("email is disabled")
 	}
@@ -40,7 +41,7 @@ func Send(to []string, subject string, content string, isHtml bool, c client.Cli
 	}
 
 	cType := "text/plain"
-	if isHtml {
+	if isHTML {
 		cType = "text/html"
 	}
 

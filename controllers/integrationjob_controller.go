@@ -45,6 +45,7 @@ type IntegrationJobReconciler struct {
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/status,verbs=get
 
+// Reconcile reconciles IntegrationJob
 func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("integrationjob", req.NamespacedName)
@@ -93,9 +94,8 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			log.Error(err, "")
 			r.patchStatus(instance, original, err.Error())
 			return ctrl.Result{}, nil
-		} else {
-			pr = nil
 		}
+		pr = nil
 	}
 
 	// Set default values for IntegrationJob.status
@@ -127,14 +127,14 @@ func (r *IntegrationJobReconciler) handleFinalizer(instance, original *cicdv1.In
 	found := false
 	idx := -1
 	for i, f := range instance.Finalizers {
-		if f == Finalizer {
+		if f == finalizer {
 			found = true
 			idx = i
 			break
 		}
 	}
 	if !found {
-		instance.Finalizers = append(instance.Finalizers, Finalizer)
+		instance.Finalizers = append(instance.Finalizers, finalizer)
 		p := client.MergeFrom(original)
 		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
 			return false, err
@@ -177,6 +177,7 @@ func (r *IntegrationJobReconciler) patchStatus(instance *cicdv1.IntegrationJob, 
 	}
 }
 
+// SetupWithManager sets IntegrationJobReconciler to the manager
 func (r *IntegrationJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cicdv1.IntegrationJob{}).

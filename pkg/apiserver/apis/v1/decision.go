@@ -21,7 +21,8 @@ import (
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="authorization.k8s.io",resources=subjectaccessreviews,verbs=get;list;watch;create;update;patch
 
-func AddApproveApis(parent *wrapper.RouterWrapper, cli client.Client) error {
+// addApproveApis adds approve api
+func addApproveApis(parent *wrapper.RouterWrapper, cli client.Client) error {
 	approveWrapper := wrapper.New("/approve", []string{http.MethodPut}, approveHandler)
 	if err := parent.Add(approveWrapper); err != nil {
 		return err
@@ -36,7 +37,8 @@ func AddApproveApis(parent *wrapper.RouterWrapper, cli client.Client) error {
 	return nil
 }
 
-func AddRejectApis(parent *wrapper.RouterWrapper, cli client.Client) error {
+// addRejectApis adds reject api
+func addRejectApis(parent *wrapper.RouterWrapper, cli client.Client) error {
 	approveWrapper := wrapper.New("/reject", []string{http.MethodPut}, rejectHandler)
 	if err := parent.Add(approveWrapper); err != nil {
 		return err
@@ -60,8 +62,8 @@ func rejectHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.ApprovalResult) {
-	reqId := utils.RandomString(10)
-	log := logger.WithValues("request", reqId)
+	reqID := utils.RandomString(10)
+	log := logger.WithValues("request", reqID)
 
 	// Get ns/approvalName
 	vars := mux.Vars(req)
@@ -78,7 +80,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(userReq); err != nil {
 		log.Info(err.Error())
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, body is not in json form or is malformed, err : %s", reqId, err.Error()))
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, body is not in json form or is malformed, err : %s", reqID, err.Error()))
 		return
 	}
 
@@ -86,13 +88,13 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	user, err := getUserName(req.Header)
 	if err != nil {
 		log.Info(err.Error())
-		_ = utils.RespondError(w, http.StatusUnauthorized, fmt.Sprintf("req: %s, forbidden user, err : %s", reqId, err.Error()))
+		_ = utils.RespondError(w, http.StatusUnauthorized, fmt.Sprintf("req: %s, forbidden user, err : %s", reqID, err.Error()))
 		return
 	}
 
 	// Get corresponding Approval object
 	if k8sClient == nil {
-		msg := fmt.Errorf("req: %s, k8sClient is not ready", reqId)
+		msg := fmt.Errorf("req: %s, k8sClient is not ready", reqID)
 		log.Info(msg.Error())
 		_ = utils.RespondError(w, http.StatusInternalServerError, msg.Error())
 		return
@@ -101,7 +103,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	approval := &cicdv1.Approval{}
 	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: approvalName, Namespace: ns}, approval); err != nil {
 		log.Info(err.Error())
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, no Approval %s/%s is found", reqId, ns, approvalName))
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, no Approval %s/%s is found", reqID, ns, approvalName))
 		return
 	}
 	original := approval.DeepCopy()
@@ -109,7 +111,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	// If Approval is already in approved/rejected status, respond with error
 	if approval.Status.Result == cicdv1.ApprovalResultApproved || approval.Status.Result == cicdv1.ApprovalResultRejected {
 		log.Info("approval is already decided")
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, approval %s/%s is already in %s status", reqId, ns, approvalName, approval.Status.Result))
+		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, approval %s/%s is already in %s status", reqID, ns, approvalName, approval.Status.Result))
 		return
 	}
 
@@ -127,7 +129,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 
 	if !isApprover {
 		log.Info(fmt.Sprintf("requested user (%s) is not an approver", user))
-		_ = utils.RespondError(w, http.StatusForbidden, fmt.Sprintf("req: %s, approval %s/%s is not requested to you", reqId, ns, approvalName))
+		_ = utils.RespondError(w, http.StatusForbidden, fmt.Sprintf("req: %s, approval %s/%s is not requested to you", reqID, ns, approvalName))
 		return
 	}
 

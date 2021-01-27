@@ -19,6 +19,7 @@ type JobPool struct {
 	lock         sync.Mutex
 }
 
+// NewJobPool is a constructor for a JobPool
 func NewJobPool(ch chan struct{}, compareFunc structs.CompareFunc) *JobPool {
 	return &JobPool{
 		jobMap:       jobMap{},
@@ -29,28 +30,31 @@ func NewJobPool(ch chan struct{}, compareFunc structs.CompareFunc) *JobPool {
 	}
 }
 
+// Lock locks JobPool
 func (j *JobPool) Lock() {
 	j.lock.Lock()
 }
 
+// Unlock unlocks JobPool
 func (j *JobPool) Unlock() {
 	j.lock.Unlock()
 }
 
+// SyncJob syncs JobPool with an incoming IntegrationJob job, considering its status
 func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 	// If job state is not set, return
 	if job.Status.State == "" {
 		return
 	}
 
-	nodeId := getNodeID(job)
+	nodeID := getNodeID(job)
 
 	oldStatus := v1.IntegrationJobState("")
 	newStatus := job.Status.State
 
 	// Make / fetch node pointer
 	var node *JobNode
-	candidate, exist := j.jobMap[nodeId]
+	candidate, exist := j.jobMap[nodeID]
 	if exist {
 		node = candidate
 		oldStatus = candidate.Status.State
@@ -60,13 +64,13 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 			IntegrationJob: job.DeepCopy(),
 		}
 	}
-	j.jobMap[nodeId] = node
+	j.jobMap[nodeID] = node
 
 	// If there's deletion timestamp, dismiss it
 	if node.DeletionTimestamp != nil {
 		j.Pending.Delete(node)
 		j.Running.Delete(node)
-		delete(j.jobMap, nodeId)
+		delete(j.jobMap, nodeID)
 		j.sendSchedule()
 		return
 	}
@@ -105,7 +109,7 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 		if newStatus == v1.IntegrationJobStatePending {
 			j.Pending.Add(node)
 		} else {
-			delete(j.jobMap, nodeId)
+			delete(j.jobMap, nodeID)
 		}
 		j.sendSchedule()
 		return
@@ -123,6 +127,7 @@ type JobNode struct {
 	*v1.IntegrationJob
 }
 
+// Equals implements Item's method
 func (f *JobNode) Equals(another structs.Item) bool {
 	fj, ok := another.(*JobNode)
 	if !ok {
@@ -134,6 +139,7 @@ func (f *JobNode) Equals(another structs.Item) bool {
 	return f.Name == fj.Name && f.Namespace == fj.Namespace
 }
 
+// DeepCopy implements Item's method
 func (f *JobNode) DeepCopy() structs.Item {
 	return &JobNode{
 		IntegrationJob: f.IntegrationJob.DeepCopy(),

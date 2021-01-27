@@ -11,10 +11,9 @@ import (
 	"time"
 )
 
-// Collector collects garbage (old IntegrationJobs, PipelineRuns...)
-
 var log = logf.Log.WithName("garbage-collector")
 
+// Collector collects garbage (old IntegrationJobs, PipelineRuns...)
 type Collector struct {
 	client client.Client
 
@@ -22,9 +21,10 @@ type Collector struct {
 
 	cron     *cron.Cron
 	cronSpec string
-	cronId   cron.EntryID
+	cronID   cron.EntryID
 }
 
+// New is a constructor of Collector
 func New(c client.Client, ch chan struct{}) (*Collector, error) {
 	gc := &Collector{
 		client:          c,
@@ -36,10 +36,11 @@ func New(c client.Client, ch chan struct{}) (*Collector, error) {
 	if err != nil {
 		return nil, err
 	}
-	gc.cronId = id
+	gc.cronID = id
 	return gc, nil
 }
 
+// Start starts the Collector
 func (c *Collector) Start() {
 	log.Info("Starting garbage collector")
 	c.cron.Start()
@@ -58,13 +59,13 @@ func (c *Collector) reconfigure() error {
 	}
 	c.cron.Stop()
 	c.cronSpec = period
-	c.cron.Remove(c.cronId)
+	c.cron.Remove(c.cronID)
 	id, err := c.cron.AddFunc(c.cronSpec, c.collect)
 	if err != nil {
 		return err
 	}
-	c.cronId = id
-	c.cron.Entry(c.cronId).Job.Run()
+	c.cronID = id
+	c.cron.Entry(c.cronID).Job.Run()
 
 	log.Info(fmt.Sprintf("Garbage collector runs %s", c.cronSpec))
 	c.cron.Start()

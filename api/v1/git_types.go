@@ -6,14 +6,16 @@ import (
 	"net/url"
 )
 
+// Default hosts for remote git servers
 const (
-	GithubDefaultApiUrl = "https://api.github.com"
+	GithubDefaultAPIUrl = "https://api.github.com"
 	GithubDefaultHost   = "https://github.com"
 
-	GitlabDefaultApiUrl = "https://gitlab.com"
+	GitlabDefaultAPIUrl = "https://gitlab.com"
 	GitlabDefaultHost   = "https://gitlab.com"
 )
 
+// GitConfig is a git repository where the IntegrationConfig to be configured
 type GitConfig struct {
 	// Type for git remote server
 	// +kubebuilder:validation:Enum=github;gitlab
@@ -23,21 +25,21 @@ type GitConfig struct {
 	// +kubebuilder:validation:Pattern=.+/.+
 	Repository string `json:"repository"`
 
-	// ApiUrl for api server (e.g., https://api.github.com for github type),
+	// APIUrl for api server (e.g., https://api.github.com for github type),
 	// for the case where the git repository is self-hosted (should contain specific protocol otherwise webhook server returns error)
-	ApiUrl string `json:"apiUrl,omitempty"`
+	APIUrl string `json:"apiUrl,omitempty"`
 
 	// Token
 	Token GitToken `json:"token"`
 }
 
-// Get Git host
+// GetGitHost gets git host
 func (config *GitConfig) GetGitHost() (string, error) {
-	gitUrl := config.GetApiUrl()
-	if gitUrl == GithubDefaultApiUrl {
-		gitUrl = GithubDefaultHost
+	gitURL := config.GetAPIUrl()
+	if gitURL == GithubDefaultAPIUrl {
+		gitURL = GithubDefaultHost
 	}
-	gitU, err := url.Parse(gitUrl)
+	gitU, err := url.Parse(gitURL)
 	if err != nil {
 		return "", err
 	}
@@ -45,16 +47,17 @@ func (config *GitConfig) GetGitHost() (string, error) {
 	return fmt.Sprintf("%s://%s", gitU.Scheme, gitU.Host), nil
 }
 
-// Returns ApiUrl for api server
-func (config *GitConfig) GetApiUrl() string {
-	if config.Type == GitTypeGitHub && config.ApiUrl == "" {
-		return GithubDefaultApiUrl
-	} else if config.Type == GitTypeGitLab && config.ApiUrl == "" {
-		return GitlabDefaultApiUrl
+// GetAPIUrl returns APIUrl for api server
+func (config *GitConfig) GetAPIUrl() string {
+	if config.Type == GitTypeGitHub && config.APIUrl == "" {
+		return GithubDefaultAPIUrl
+	} else if config.Type == GitTypeGitLab && config.APIUrl == "" {
+		return GitlabDefaultAPIUrl
 	}
-	return config.ApiUrl
+	return config.APIUrl
 }
 
+// GitToken is a token for accessing the remote git server
 type GitToken struct {
 	// Value is un-encrypted plain string of git token, not recommended
 	Value string `json:"value,omitempty"`
@@ -63,12 +66,15 @@ type GitToken struct {
 	ValueFrom *GitTokenFrom `json:"valueFrom,omitempty"`
 }
 
+// GitTokenFrom refers to the secret for the access token
 type GitTokenFrom struct {
 	SecretKeyRef corev1.SecretKeySelector `json:"secretKeyRef"`
 }
 
+// GitType is a type of remote git server
 type GitType string
 
+// Git Types
 const (
 	GitTypeGitHub = GitType("github")
 	GitTypeGitLab = GitType("gitlab")

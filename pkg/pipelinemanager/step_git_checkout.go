@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	GitCheckoutCpuReq = "100m"
-	GitCheckoutMemReq = "100Mi"
+	gitCheckoutCPUReq = "100m"
+	gitCheckoutMemReq = "100Mi"
 )
 
 func gitCheckout() tektonv1beta1.Step {
@@ -42,8 +42,8 @@ fi
 git submodule update --init --recursive
 `
 	resources := corev1.ResourceList{
-		"cpu":    resource.MustParse(GitCheckoutCpuReq),
-		"memory": resource.MustParse(GitCheckoutMemReq),
+		"cpu":    resource.MustParse(gitCheckoutCPUReq),
+		"memory": resource.MustParse(gitCheckoutMemReq),
 	}
 	step.Resources = corev1.ResourceRequirements{
 		Limits:   resources,

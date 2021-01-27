@@ -18,12 +18,9 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver/apis"
 )
 
-const (
-	Port = 34335
-)
-
 var log = logf.Log.WithName("approve-server")
 
+// Server is an api server
 type Server struct {
 	Wrapper *wrapper.RouterWrapper
 	Client  client.Client
@@ -32,6 +29,7 @@ type Server struct {
 // +kubebuilder:rbac:groups=apiregistration.k8s.io,resources=apiservices,resourceNames=v1.cicdapi.tmax.io,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,namespace=kube-system,resourceNames=extension-apiserver-authentication,verbs=get;list;watch
 
+// New is a constructor of server
 func New(scheme *runtime.Scheme) *Server {
 	server := &Server{}
 	server.Wrapper = wrapper.New("/", nil, server.rootHandler)
@@ -59,6 +57,7 @@ func New(scheme *runtime.Scheme) *Server {
 	return server
 }
 
+// Start starts the server
 func (s *Server) Start() {
 	addr := "0.0.0.0:34335"
 	log.Info(fmt.Sprintf("API aggregation server is running on %s", addr))
@@ -70,7 +69,7 @@ func (s *Server) Start() {
 	}
 
 	httpServer := &http.Server{Addr: addr, Handler: s.Wrapper.Router, TLSConfig: cfg}
-	if err := httpServer.ListenAndServeTLS(path.Join(CertDir, "tls.crt"), path.Join(CertDir, "tls.key")); err != nil {
+	if err := httpServer.ListenAndServeTLS(path.Join(certDir, "tls.crt"), path.Join(certDir, "tls.key")); err != nil {
 		log.Error(err, "cannot launch server")
 		os.Exit(1)
 	}

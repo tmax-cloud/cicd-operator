@@ -23,6 +23,7 @@ import (
 
 var log = logf.Log.WithName("job-scheduler")
 
+// New is a constructor for a Scheduler
 func New(c client.Client, s *runtime.Scheme) *Scheduler {
 	log.Info("New scheduler")
 	sch := &Scheduler{
@@ -35,6 +36,8 @@ func New(c client.Client, s *runtime.Scheme) *Scheduler {
 	return sch
 }
 
+// Scheduler watches IntegrationJobs and creates corresponding PipelineRuns, considering how many pipeline runs are
+// running (in a jobPool)
 type Scheduler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
@@ -47,6 +50,7 @@ type Scheduler struct {
 	caller chan struct{}
 }
 
+// Notify notifies scheduler to sync
 func (s Scheduler) Notify(job *cicdv1.IntegrationJob) {
 	s.jobPool.Lock()
 	s.jobPool.SyncJob(job)
@@ -68,18 +72,7 @@ func (s Scheduler) run() {
 	availableCnt := configs.MaxPipelineRun - s.jobPool.Running.Len()
 
 	// Check if running jobs are actually running (has pipelineRun, pipelineRun is running)
-	s.jobPool.Running.ForEach(func(item structs.Item) {
-		j, ok := item.(*pool.JobNode)
-		if !ok {
-			return
-		}
-		pr := &tektonv1beta1.PipelineRun{}
-		err := s.k8sClient.Get(context.Background(), types.NamespacedName{Name: pipelinemanager.Name(j.IntegrationJob), Namespace: j.Namespace}, pr)
-		// If PipelineRun is not found or is already completed, is not actually running
-		if (err != nil && errors.IsNotFound(err)) || (err == nil && pr.Status.CompletionTime != nil) {
-			availableCnt++
-		}
-	})
+	s.jobPool.Running.ForEach(s.filterOutRunning(&availableCnt))
 
 	// If the number of running jobs is greater or equals to the max pipeline run, no scheduling is allowed
 	if availableCnt <= 0 {
@@ -88,8 +81,27 @@ func (s Scheduler) run() {
 	}
 
 	// Schedule if available
-	s.jobPool.Pending.ForEach(func(item structs.Item) {
-		if availableCnt <= 0 {
+	s.jobPool.Pending.ForEach(s.schedulePending(&availableCnt))
+}
+
+func (s *Scheduler) filterOutRunning(availableCnt *int) func(structs.Item) {
+	return func(item structs.Item) {
+		j, ok := item.(*pool.JobNode)
+		if !ok {
+			return
+		}
+		pr := &tektonv1beta1.PipelineRun{}
+		err := s.k8sClient.Get(context.Background(), types.NamespacedName{Name: pipelinemanager.Name(j.IntegrationJob), Namespace: j.Namespace}, pr)
+		// If PipelineRun is not found or is already completed, is not actually running
+		if (err != nil && errors.IsNotFound(err)) || (err == nil && pr.Status.CompletionTime != nil) {
+			*availableCnt = *availableCnt + 1
+		}
+	}
+}
+
+func (s *Scheduler) schedulePending(availableCnt *int) func(structs.Item) {
+	return func(item structs.Item) {
+		if *availableCnt <= 0 {
 			return
 		}
 		jobNode, ok := item.(*pool.JobNode)
@@ -107,7 +119,7 @@ func (s Scheduler) run() {
 			}
 		} else {
 			// PipelineRun already exists...
-			availableCnt--
+			*availableCnt = *availableCnt - 1
 			return
 		}
 
@@ -138,8 +150,8 @@ func (s Scheduler) run() {
 			return
 		}
 
-		availableCnt--
-	})
+		*availableCnt = *availableCnt - 1
+	}
 }
 
 func (s *Scheduler) patchJobScheduleFailed(job *cicdv1.IntegrationJob, msg string) error {

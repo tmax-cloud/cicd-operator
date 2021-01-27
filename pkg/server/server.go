@@ -4,7 +4,9 @@ package server
 
 import (
 	"fmt"
+	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
+	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"net/http"
@@ -24,11 +26,13 @@ const (
 
 var logger = logf.Log.WithName("server")
 
+// Server is a HTTP server for git webhook API and report page
 type Server struct {
 	k8sClient client.Client
 	router    *mux.Router
 }
 
+// New is a constructor of a Server
 func New(c client.Client, cfg *rest.Config) *Server {
 	r := mux.NewRouter()
 
@@ -51,6 +55,7 @@ func New(c client.Client, cfg *rest.Config) *Server {
 	}
 }
 
+// Start starts the Server
 func (s *Server) Start() {
 	httpAddr := fmt.Sprintf("0.0.0.0:%d", port)
 
@@ -59,4 +64,9 @@ func (s *Server) Start() {
 		logger.Error(err, "cannot launch http server")
 		os.Exit(1)
 	}
+}
+
+func logAndRespond(w http.ResponseWriter, log logr.Logger, code int, respMsg, logMsg string) {
+	_ = utils.RespondError(w, code, respMsg)
+	log.Info(logMsg)
 }

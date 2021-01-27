@@ -29,12 +29,11 @@ import (
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"strconv"
-	"strings"
 )
 
 const (
-	ConfigNameConfig        = "cicd-config"
-	ConfigNameEmailTemplate = "email-template"
+	configNameConfig        = "cicd-config"
+	configNameEmailTemplate = "email-template"
 )
 
 // ConfigReconciler reconciles a Approval object
@@ -48,6 +47,7 @@ type ConfigReconciler struct {
 	Init bool
 }
 
+// Start starts the config map reconciler
 func (r *ConfigReconciler) Start() {
 	var err error
 	r.client, err = newConfigMapClient()
@@ -57,13 +57,13 @@ func (r *ConfigReconciler) Start() {
 	}
 
 	// Get first to check the ConfigMap's existence
-	_, err = r.client.Get(context.Background(), ConfigNameConfig, metav1.GetOptions{})
+	_, err = r.client.Get(context.Background(), configNameConfig, metav1.GetOptions{})
 	if err != nil {
 		r.Log.Error(err, "")
 		os.Exit(1)
 	}
 
-	_, err = r.client.Get(context.Background(), ConfigNameEmailTemplate, metav1.GetOptions{})
+	_, err = r.client.Get(context.Background(), configNameEmailTemplate, metav1.GetOptions{})
 	if err != nil {
 		r.Log.Error(err, "")
 		os.Exit(1)
@@ -116,6 +116,7 @@ type operatorConfig struct {
 	BoolDefault bool
 }
 
+// Reconcile reconciles ConfigMap
 func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 	r.Log.Info("Config is changed")
 
@@ -124,11 +125,11 @@ func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 	}
 
 	switch cm.Name {
-	case ConfigNameConfig:
+	case configNameConfig:
 		if err := r.reconcileConfig(cm); err != nil {
 			return err
 		}
-	case ConfigNameEmailTemplate:
+	case configNameEmailTemplate:
 		if err := r.reconcileEmailTemplate(cm); err != nil {
 			return err
 		}
@@ -147,7 +148,7 @@ func (r *ConfigReconciler) reconcileConfig(cm *corev1.ConfigMap) error {
 		"maxPipelineRun":            {Type: cfgTypeInt, IntVal: &configs.MaxPipelineRun, IntDefault: 5},         // Max PipelineRun count
 		"enableMail":                {Type: cfgTypeBool, BoolVal: &configs.EnableMail, BoolDefault: false},      // Enable Mail
 		"externalHostName":          {Type: cfgTypeString, StringVal: &configs.ExternalHostName},                // External Hostname
-		"reportRedirectUriTemplate": {Type: cfgTypeString, StringVal: &configs.ReportRedirectUriTemplate},       // RedirectUriTemplate for report access
+		"reportRedirectUriTemplate": {Type: cfgTypeString, StringVal: &configs.ReportRedirectURITemplate},       // RedirectUriTemplate for report access
 		"smtpHost":                  {Type: cfgTypeString, StringVal: &configs.SMTPHost},                        // SMTP Host
 		"smtpUserSecret":            {Type: cfgTypeString, StringVal: &configs.SMTPUserSecret},                  // SMTP Cred
 		"collectPeriod":             {Type: cfgTypeInt, IntVal: &configs.CollectPeriod, IntDefault: 120},        // GC period
@@ -184,56 +185,41 @@ func (r *ConfigReconciler) reconcileEmailTemplate(cm *corev1.ConfigMap) error {
 func getVars(data map[string]string, vars map[string]operatorConfig) {
 	for key, c := range vars {
 		v, exist := data[key]
-		// If not set, set as default
-		if !exist {
-			switch c.Type {
-			case cfgTypeString:
-				if c.StringVal == nil {
-					continue
-				}
-				if c.StringDefault != "" {
-					*c.StringVal = c.StringDefault
-				}
-			case cfgTypeInt:
-				if c.IntVal == nil {
-					continue
-				}
-				*c.IntVal = c.IntDefault
-			case cfgTypeBool:
-				if c.BoolVal == nil {
-					continue
-				}
-				*c.BoolVal = c.BoolDefault
+		switch c.Type {
+		case cfgTypeString:
+			if c.StringVal == nil {
+				continue
 			}
-		} else {
-			// If set, set value
-			switch c.Type {
-			case cfgTypeString:
-				if c.StringVal == nil {
-					continue
-				}
-				if v != "" {
-					*c.StringVal = v
-				}
-			case cfgTypeInt:
-				if c.IntVal == nil {
-					continue
-				}
+			if exist {
+				*c.StringVal = v
+			} else {
+				*c.StringVal = c.StringDefault
+			}
+		case cfgTypeInt:
+			if c.IntVal == nil {
+				continue
+			}
+			if exist {
 				i, err := strconv.Atoi(v)
 				if err != nil {
 					continue
 				}
 				*c.IntVal = i
-			case cfgTypeBool:
-				if c.BoolVal == nil {
+			} else {
+				*c.IntVal = c.IntDefault
+			}
+		case cfgTypeBool:
+			if c.BoolVal == nil {
+				continue
+			}
+			if exist {
+				b, err := strconv.ParseBool(v)
+				if err != nil {
 					continue
 				}
-				switch strings.ToLower(v) {
-				case "true":
-					*c.BoolVal = true
-				case "false":
-					*c.BoolVal = false
-				}
+				*c.BoolVal = b
+			} else {
+				*c.BoolVal = c.BoolDefault
 			}
 		}
 	}

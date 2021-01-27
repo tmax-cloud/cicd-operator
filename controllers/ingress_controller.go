@@ -18,6 +18,7 @@ import (
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
 
+// WaitIngressReady waits until ingress is ready (i.e., loadbalancer ip is set)
 func WaitIngressReady() error {
 	log := ctrl.Log.WithName("ingress-controller")
 

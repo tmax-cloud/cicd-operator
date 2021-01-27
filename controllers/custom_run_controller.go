@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// KindHandler is an interface of custom task handlers
 type KindHandler interface {
 	Handle(run *tektonv1alpha1.Run) (ctrl.Result, error)
 }
@@ -41,6 +42,7 @@ type CustomRunReconciler struct {
 	HandlerChildren map[string][]runtime.Object
 }
 
+// AddKindHandler registers custom task handlers
 func (r *CustomRunReconciler) AddKindHandler(kind string, handler KindHandler, children ...runtime.Object) {
 	r.KindHandlerMap[kind] = handler
 	r.HandlerChildren[kind] = append(r.HandlerChildren[kind], children...)
@@ -49,6 +51,7 @@ func (r *CustomRunReconciler) AddKindHandler(kind string, handler KindHandler, c
 // +kubebuilder:rbac:groups=tekton.dev,resources=runs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=tekton.dev,resources=runs/status,verbs=get;update;patch
 
+// Reconcile reconciles Run object
 func (r *CustomRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("customRuns", req.NamespacedName)
@@ -64,7 +67,7 @@ func (r *CustomRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// Filter only cicd.tmax.io/v1
-	if run.Spec.Ref == nil || run.Spec.Ref.APIVersion != cicdv1.CustomTaskApiVersion {
+	if run.Spec.Ref == nil || run.Spec.Ref.APIVersion != cicdv1.CustomTaskAPIVersion {
 		return ctrl.Result{}, nil
 	}
 
@@ -77,6 +80,7 @@ func (r *CustomRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager sets CustomRunReconciler to the manager
 func (r *CustomRunReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&tektonv1alpha1.Run{})

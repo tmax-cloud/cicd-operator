@@ -22,10 +22,10 @@ import (
 var reportPath = fmt.Sprintf("/report/{%s}/{%s}/{%s}", paramKeyNamespace, paramKeyJobName, paramKeyJobJobName)
 
 const (
-	TemplateConfigMapName = "report-template"
-	TemplateConfigMapKey  = "template"
+	templateConfigMapName = "report-template"
+	templateConfigMapKey  = "template"
 
-	ErrorLogNotExist = "log does not exist... maybe the pod does not exist"
+	errorLogNotExist = "log does not exist... maybe the pod does not exist"
 )
 
 type report struct {
@@ -41,8 +41,8 @@ type reportHandler struct {
 }
 
 func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	reqId := utils.RandomString(10)
-	log := logger.WithValues("request", reqId)
+	reqID := utils.RandomString(10)
+	log := logger.WithValues("request", reqID)
 
 	vars := mux.Vars(r)
 
@@ -51,31 +51,31 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	jobJobName, jobJobNameExist := vars[paramKeyJobJobName]
 
 	if !nsExist || !jobNameExist || !jobJobNameExist {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, path is not in form of '%s'", reqId, reportPath))
-		log.Info("Bad request for path", "path", r.RequestURI)
+		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, path is not in form of '%s'", reqID, reportPath),
+			fmt.Sprintf("Bad request for path, path: %s", r.RequestURI))
 		return
 	}
 
 	iJob := &cicdv1.IntegrationJob{}
 	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: jobName, Namespace: ns}, iJob); err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get IntegrationJob %s/%s", reqId, ns, jobName))
-		log.Info("Bad request for path", "path", r.RequestURI)
+		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get IntegrationJob %s/%s", reqID, ns, jobName),
+			fmt.Sprintf("Bad request for path, path: %s", r.RequestURI))
 		return
 	}
 
 	// Redirect if it's enabled
-	if configs.ReportRedirectUriTemplate != "" {
+	if configs.ReportRedirectURITemplate != "" {
 		tmpl := template.New("")
-		tmpl, err := tmpl.Parse(configs.ReportRedirectUriTemplate)
+		tmpl, err := tmpl.Parse(configs.ReportRedirectURITemplate)
 		if err != nil {
-			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot parse report redirection uri template", reqId))
-			log.Info("Cannot parse report redirection uri template")
+			logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot parse report redirection uri template", reqID),
+				"Cannot parse report redirection uri template")
 			return
 		}
 		var buf bytes.Buffer
 		if err := tmpl.Execute(&buf, iJob); err != nil {
-			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot execute report redirection uri template", reqId))
-			log.Info("Cannot execute report redirection uri template")
+			logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot execute report redirection uri template", reqID),
+				"Cannot execute report redirection uri template")
 			return
 		}
 
@@ -93,41 +93,38 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if jobStatus == nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, there is no job status %s in IntegrationJob %s/%s", reqId, jobJobName, ns, jobName))
-		log.Info("Bad request for job", "ns", ns, "job", jobName, "jobJob", jobJobName)
+		logAndRespond(w, log, http.StatusBadRequest,
+			fmt.Sprintf("req: %s, there is no job status %s in IntegrationJob %s/%s", reqID, jobJobName, ns, jobName),
+			fmt.Sprintf("Bad request for job, ns: %s, job: %s, jobJob: %s", ns, jobName, jobJobName))
 		return
 	}
 
 	// Get Job-Job Log
-	var podLog string
-	if jobStatus.PodName != "" {
-		var err error
-		podLog, err = h.getPodLogs(jobStatus.PodName, ns, log)
-		if err != nil {
-			podLog = ErrorLogNotExist
-		}
+	podLog, err := h.getPodLogs(jobStatus.PodName, ns, log)
+	if err != nil {
+		podLog = errorLogNotExist
 	}
 
 	// Get template
 	templateStr, err := h.getTemplateString()
 	if err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get report template", reqId))
-		log.Info("Cannot get report template")
+		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get report template", reqID),
+			"Cannot get report template")
 		return
 	}
 
 	tmpl := template.New("")
 	tmpl, err = tmpl.Parse(templateStr)
 	if err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot parse report template", reqId))
-		log.Info("Cannot parse report template")
+		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot parse report template", reqID),
+			"Cannot parse report template")
 		return
 	}
 
 	// Publish report
 	if err := tmpl.Execute(w, report{JobName: jobName, JobJobName: jobJobName, JobStatus: jobStatus, Log: podLog}); err != nil {
-		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot execute report template", reqId))
-		log.Info("Cannot execute report template")
+		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot execute report template", reqID),
+			"Cannot execute report template")
 		return
 	}
 }
@@ -136,6 +133,10 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *reportHandler) getPodLogs(podName, namespace string, log logr.Logger) (string, error) {
 	var logBuf bytes.Buffer
+
+	if len(podName) == 0 || len(namespace) == 0 {
+		return "", fmt.Errorf("podName and namespace should not be empty")
+	}
 
 	pod := &corev1.Pod{}
 	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: podName, Namespace: namespace}, pod); err != nil {
@@ -177,11 +178,11 @@ func (h *reportHandler) getTemplateString() (string, error) {
 		return "", err
 	}
 	cm := &corev1.ConfigMap{}
-	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: TemplateConfigMapName, Namespace: ns}, cm); err != nil {
+	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: templateConfigMapName, Namespace: ns}, cm); err != nil {
 		return "", err
 	}
 
-	templateString, templateFound := cm.Data[TemplateConfigMapKey]
+	templateString, templateFound := cm.Data[templateConfigMapKey]
 	if !templateFound {
 		return "", err
 	}

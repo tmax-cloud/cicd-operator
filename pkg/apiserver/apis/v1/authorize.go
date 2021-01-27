@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	UserHeader   = "X-Remote-User"
-	GroupHeader  = "X-Remote-Group"
-	ExtrasHeader = "X-Remote-Extra-"
+	userHeader   = "X-Remote-User"
+	groupHeader  = "X-Remote-Group"
+	extrasHeader = "X-Remote-Extra-"
 )
 
-func Authorize(h http.Handler) http.Handler {
+func authorize(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if err := authorize(req); err != nil {
-			_ = utils.RespondError(w, http.StatusUnauthorized, err.Error())
+		if req.TLS == nil || len(req.TLS.PeerCertificates) == 0 {
+			_ = utils.RespondError(w, http.StatusUnauthorized, "is not https or there is no peer certificate")
 			return
 		}
 
@@ -32,13 +32,6 @@ func Authorize(h http.Handler) http.Handler {
 
 		h.ServeHTTP(w, req)
 	})
-}
-
-func authorize(req *http.Request) error {
-	if req.TLS == nil || len(req.TLS.PeerCertificates) == 0 {
-		return fmt.Errorf("is not https or there is no peer certificate")
-	}
-	return nil
 }
 
 func reviewAccess(req *http.Request) error {
@@ -77,9 +70,9 @@ func reviewAccess(req *http.Request) error {
 			ResourceAttributes: &authorization.ResourceAttributes{
 				Name:        approvalName,
 				Namespace:   ns,
-				Group:       ApiGroup,
-				Version:     ApiVersion,
-				Resource:    ApprovalKind,
+				Group:       APIGroup,
+				Version:     APIVersion,
+				Resource:    approvalKind,
 				Subresource: subResource,
 				Verb:        "update",
 			},
@@ -111,28 +104,28 @@ func reviewAccess(req *http.Request) error {
 
 func getUserName(header http.Header) (string, error) {
 	for k, v := range header {
-		if k == UserHeader {
+		if k == userHeader {
 			return v[0], nil
 		}
 	}
-	return "", fmt.Errorf("no header %s", UserHeader)
+	return "", fmt.Errorf("no header %s", userHeader)
 }
 
 func getUserGroup(header http.Header) ([]string, error) {
 	for k, v := range header {
-		if k == UserHeader {
+		if k == userHeader {
 			return v, nil
 		}
 	}
-	return nil, fmt.Errorf("no header %s", GroupHeader)
+	return nil, fmt.Errorf("no header %s", groupHeader)
 }
 
 func getUserExtras(header http.Header) map[string]authorization.ExtraValue {
 	extras := map[string]authorization.ExtraValue{}
 
 	for k, v := range header {
-		if strings.HasPrefix(k, ExtrasHeader) {
-			extras[strings.TrimPrefix(k, ExtrasHeader)] = v
+		if strings.HasPrefix(k, extrasHeader) {
+			extras[strings.TrimPrefix(k, extrasHeader)] = v
 		}
 	}
 
