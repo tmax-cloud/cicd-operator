@@ -46,7 +46,7 @@ func ParseApproversList(str string) ([]string, error) {
 			if re.MatchString(trimmed) {
 				approvers = append(approvers, trimmed)
 			} else {
-				return nil, fmt.Errorf("comma-seperated approver %s is not in form of <user-name>[=<email>](optional)", approver)
+				return nil, fmt.Errorf("comma-separated approver %s is not in form of <user-name>[=<email>](optional)", approver)
 			}
 		}
 	}

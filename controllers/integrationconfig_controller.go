@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
@@ -35,7 +36,9 @@ import (
 )
 
 const (
-	Finalizer = "cicd.tmax.io/finalizer"
+	Finalizer         = "cicd.tmax.io/finalizer"
+	GitSecretHostKey  = "tekton.dev/git-0"
+	GitSecretUserName = "tmax-cicd-bot"
 )
 
 // IntegrationConfigReconciler reconciles a IntegrationConfig object
@@ -263,7 +266,6 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 
 // Set ready condition, return if it's changed or not
 func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationConfig) bool {
-	readyConditionChanged := false
 	ready := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionReady)
 	if ready == nil {
 		ready = &status.Condition{
@@ -277,7 +279,7 @@ func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationC
 	if instance.Status.Secrets != "" && webhookRegistered != nil && webhookRegistered.Status == corev1.ConditionTrue {
 		ready.Status = corev1.ConditionTrue
 	}
-	readyConditionChanged = instance.Status.Conditions.SetCondition(*ready)
+	readyConditionChanged := instance.Status.Conditions.SetCondition(*ready)
 
 	return readyConditionChanged
 }
@@ -287,7 +289,12 @@ func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationC
 // (ref: https://github.com/tektoncd/pipeline/blob/master/docs/auth.md#configuring-basic-auth-authentication-for-git)
 func (r *IntegrationConfigReconciler) createGitSecret(instance *cicdv1.IntegrationConfig) error {
 	// Get and check if values are set right
-	secret := &corev1.Secret{}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cicdv1.GetSecretName(instance.Name),
+			Namespace: instance.Namespace,
+		},
+	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: cicdv1.GetSecretName(instance.Name), Namespace: instance.Namespace}, secret); err != nil {
 		if !errors.IsNotFound(err) {
 			return err
@@ -295,77 +302,62 @@ func (r *IntegrationConfigReconciler) createGitSecret(instance *cicdv1.Integrati
 	}
 	original := secret.DeepCopy()
 
-	secret.Name = cicdv1.GetSecretName(instance.Name)
-	secret.Namespace = instance.Namespace
-
-	// Check if we can skip to create Secret
-	doSkip := true
-
-	// check and set annotation
-	gitHostKey := "tekton.dev/git-0"
-	gitHostVal, err := instance.Spec.Git.GetGitHost()
+	// Update content of the git secret
+	needPatch, err := r.updateGitSecret(instance, secret)
 	if err != nil {
 		return err
 	}
-	if secret.Annotations == nil {
-		doSkip = false
-		secret.Annotations = map[string]string{}
-	} else {
-		curGitHostVal, gitHostExist := secret.Annotations[gitHostKey]
-		if !gitHostExist || gitHostVal != curGitHostVal {
-			doSkip = false
-		}
+
+	// Skip create/update if everything is set right
+	if !needPatch {
+		return nil
 	}
-	secret.Annotations[gitHostKey] = gitHostVal
+
+	if err := utils.CreateOrPatchObject(secret, original, instance, r.Client, r.Scheme); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Update content of git secret (only content. not applying to etcd)
+func (r *IntegrationConfigReconciler) updateGitSecret(instance *cicdv1.IntegrationConfig, secret *corev1.Secret) (bool, error) {
+	needPatch := false
+
+	// check and set annotation
+	gitHostVal, err := instance.Spec.Git.GetGitHost()
+	if err != nil {
+		return false, err
+	}
+	if secret.Annotations == nil {
+		needPatch = true
+		secret.Annotations = map[string]string{}
+	} else if gitHostVal != secret.Annotations[GitSecretHostKey] {
+		needPatch = true
+	}
+	secret.Annotations[GitSecretHostKey] = gitHostVal
 
 	// check and set type
 	if secret.Type != corev1.SecretTypeBasicAuth {
-		doSkip = false
+		needPatch = true
 	}
 	secret.Type = corev1.SecretTypeBasicAuth
 
 	// check and set token
-	username := "tmax-cicd-bot"
 	token, err := instance.GetToken(r.Client)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if secret.Data == nil {
-		doSkip = false
+		needPatch = true
 		secret.Data = map[string][]byte{}
-	} else {
-		curUsername, usernameExist := secret.Data[corev1.BasicAuthUsernameKey]
-		curPassword, passwordExist := secret.Data[corev1.BasicAuthPasswordKey]
-
-		if !usernameExist || string(curUsername) != username || !passwordExist || string(curPassword) != token {
-			doSkip = false
-		}
+	} else if string(secret.Data[corev1.BasicAuthUsernameKey]) != GitSecretUserName || string(secret.Data[corev1.BasicAuthPasswordKey]) != token {
+		needPatch = true
 	}
-	secret.Data[corev1.BasicAuthUsernameKey] = []byte(username)
+	secret.Data[corev1.BasicAuthUsernameKey] = []byte(GitSecretUserName)
 	secret.Data[corev1.BasicAuthPasswordKey] = []byte(token)
 
-	// Skip create/update if everything is set right
-	if doSkip {
-		return nil
-	}
-
-	if err := controllerutil.SetControllerReference(instance, secret, r.Scheme); err != nil {
-		return err
-	}
-
-	// Update if resourceVersion exists, but create if not
-	if secret.ResourceVersion != "" {
-		p := client.MergeFrom(original)
-		if err := r.Client.Patch(context.Background(), secret, p); err != nil {
-			return err
-		}
-	} else {
-		if err := r.Client.Create(context.Background(), secret); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return needPatch, nil
 }
 
 // Create service account for pipeline run

@@ -127,6 +127,13 @@ type JobStatus struct {
 	Containers []tektonv1beta1.StepState `json:"containers,omitempty"`
 }
 
+func (j *JobStatus) Equals(i *JobStatus) bool {
+	return j.State == i.State &&
+		j.Message == i.Message &&
+		j.StartTime.Equal(i.StartTime) &&
+		j.CompletionTime.Equal(i.CompletionTime)
+}
+
 type CommitStatusState string
 
 const (

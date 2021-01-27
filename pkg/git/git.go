@@ -11,7 +11,7 @@ type Client interface {
 	ListWebhook() ([]WebhookEntry, error)
 	RegisterWebhook(url string) error
 	DeleteWebhook(id int) error
-	ParseWebhook(http.Header, []byte) (Webhook, error)
+	ParseWebhook(http.Header, []byte) (*Webhook, error)
 
 	// Commit Status
 	SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state CommitStatusState, description, targetUrl string) error

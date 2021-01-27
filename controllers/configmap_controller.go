@@ -29,7 +29,6 @@ import (
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"strconv"
-	"strings"
 )
 
 const (
@@ -184,56 +183,41 @@ func (r *ConfigReconciler) reconcileEmailTemplate(cm *corev1.ConfigMap) error {
 func getVars(data map[string]string, vars map[string]operatorConfig) {
 	for key, c := range vars {
 		v, exist := data[key]
-		// If not set, set as default
-		if !exist {
-			switch c.Type {
-			case cfgTypeString:
-				if c.StringVal == nil {
-					continue
-				}
-				if c.StringDefault != "" {
-					*c.StringVal = c.StringDefault
-				}
-			case cfgTypeInt:
-				if c.IntVal == nil {
-					continue
-				}
-				*c.IntVal = c.IntDefault
-			case cfgTypeBool:
-				if c.BoolVal == nil {
-					continue
-				}
-				*c.BoolVal = c.BoolDefault
+		switch c.Type {
+		case cfgTypeString:
+			if c.StringVal == nil {
+				continue
 			}
-		} else {
-			// If set, set value
-			switch c.Type {
-			case cfgTypeString:
-				if c.StringVal == nil {
-					continue
-				}
-				if v != "" {
-					*c.StringVal = v
-				}
-			case cfgTypeInt:
-				if c.IntVal == nil {
-					continue
-				}
+			if exist {
+				*c.StringVal = v
+			} else {
+				*c.StringVal = c.StringDefault
+			}
+		case cfgTypeInt:
+			if c.IntVal == nil {
+				continue
+			}
+			if exist {
 				i, err := strconv.Atoi(v)
 				if err != nil {
 					continue
 				}
 				*c.IntVal = i
-			case cfgTypeBool:
-				if c.BoolVal == nil {
+			} else {
+				*c.IntVal = c.IntDefault
+			}
+		case cfgTypeBool:
+			if c.BoolVal == nil {
+				continue
+			}
+			if exist {
+				b, err := strconv.ParseBool(v)
+				if err != nil {
 					continue
 				}
-				switch strings.ToLower(v) {
-				case "true":
-					*c.BoolVal = true
-				case "false":
-					*c.BoolVal = false
-				}
+				*c.BoolVal = b
+			} else {
+				*c.BoolVal = c.BoolDefault
 			}
 		}
 	}

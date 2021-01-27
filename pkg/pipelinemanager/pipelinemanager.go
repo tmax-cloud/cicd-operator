@@ -193,81 +193,75 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 		// Reflect status of each task(job)
 		// Be sure job.Status.Jobs[i] is set sequentially
 		for i, j := range job.Spec.Jobs {
-			isTaskRun := false
-			isRun := false
-			var runPodName string
-			var runStartTime *metav1.Time
-			var runCompletionTime *metav1.Time
-			var runReason string
-			var runMessage string
-
-			state := cicdv1.CommitStatusStatePending
-			// Find in TaskRun first
-			for _, runStatus := range pr.Status.TaskRuns {
-				if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
-					rStatus := runStatus.Status
-					runPodName = rStatus.PodName
-					runStartTime = rStatus.StartTime.DeepCopy()
-					runCompletionTime = rStatus.CompletionTime.DeepCopy()
-					if len(rStatus.Conditions) > 0 {
-						runMessage = rStatus.Conditions[0].Message
-						runReason = rStatus.Conditions[0].Reason
-					}
-					job.Status.Jobs[i].Containers = nil
-					for _, s := range rStatus.Steps {
-						stepStatus := s.DeepCopy()
-						job.Status.Jobs[i].Containers = append(job.Status.Jobs[i].Containers, *stepStatus)
-					}
-					switch tektonv1beta1.TaskRunReason(runReason) {
-					case tektonv1beta1.TaskRunReasonSuccessful:
-						state = cicdv1.CommitStatusStateSuccess
-					case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
-						state = cicdv1.CommitStatusStateFailure
-					}
-					isTaskRun = true
-					break
-				}
-			}
-			// Now find in Run
-			if !isTaskRun {
-				for _, runStatus := range pr.Status.Runs {
-					if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
-						rStatus := runStatus.Status
-						runStartTime = rStatus.StartTime.DeepCopy()
-						runCompletionTime = rStatus.CompletionTime.DeepCopy()
-						if len(rStatus.Conditions) > 0 {
-							runMessage = rStatus.Conditions[0].Message
-							switch rStatus.Conditions[0].Status {
-							case corev1.ConditionTrue:
-								state = cicdv1.CommitStatusStateSuccess
-							case corev1.ConditionFalse:
-								state = cicdv1.CommitStatusStateFailure
-							}
-						}
-						isRun = true
-						break
-					}
-				}
-			}
+			runStatus := getJobRunStatus(pr, j)
 
 			// Only update if taskRun's status exists
-			if isRun || isTaskRun {
+			if runStatus != nil {
 				// If something is changed, commit status should be posted
-				stateChanged[i] = job.Status.Jobs[i].State != state ||
-					job.Status.Jobs[i].Message != runMessage ||
-					!job.Status.Jobs[i].StartTime.Equal(runStartTime) ||
-					!job.Status.Jobs[i].CompletionTime.Equal(runCompletionTime)
-
-				job.Status.Jobs[i].PodName = runPodName
-				job.Status.Jobs[i].State = state
-				job.Status.Jobs[i].Message = runMessage
-				job.Status.Jobs[i].StartTime = runStartTime
-				job.Status.Jobs[i].CompletionTime = runCompletionTime
+				stateChanged[i] = !job.Status.Jobs[i].Equals(runStatus)
+				runStatus.DeepCopyInto(&job.Status.Jobs[i])
 			}
 		}
 	}
 
 	// Set remote git's commit status for each job
+	if err := updateGitCommitStatus(cfg, client, job, stateChanged); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j cicdv1.Job) *cicdv1.JobStatus {
+	jobStatus := &cicdv1.JobStatus{Name: j.Name, State: cicdv1.CommitStatusStatePending}
+	// Find in TaskRun first
+	for _, runStatus := range pr.Status.TaskRuns {
+		if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
+			rStatus := runStatus.Status
+			jobStatus.PodName = rStatus.PodName
+			jobStatus.StartTime = rStatus.StartTime.DeepCopy()
+			jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
+			if len(rStatus.Conditions) > 0 {
+				jobStatus.Message = rStatus.Conditions[0].Message
+				switch tektonv1beta1.TaskRunReason(rStatus.Conditions[0].Reason) {
+				case tektonv1beta1.TaskRunReasonSuccessful:
+					jobStatus.State = cicdv1.CommitStatusStateSuccess
+				case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
+					jobStatus.State = cicdv1.CommitStatusStateFailure
+				}
+			}
+			jobStatus.Containers = nil
+			for _, s := range rStatus.Steps {
+				stepStatus := s.DeepCopy()
+				jobStatus.Containers = append(jobStatus.Containers, *stepStatus)
+			}
+			break
+		}
+	}
+	// Now find in Run
+	if jobStatus.PodName == "" {
+		for _, runStatus := range pr.Status.Runs {
+			if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
+				rStatus := runStatus.Status
+				jobStatus.StartTime = rStatus.StartTime.DeepCopy()
+				jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
+				if len(rStatus.Conditions) > 0 {
+					jobStatus.Message = rStatus.Conditions[0].Message
+					switch rStatus.Conditions[0].Status {
+					case corev1.ConditionTrue:
+						jobStatus.State = cicdv1.CommitStatusStateSuccess
+					case corev1.ConditionFalse:
+						jobStatus.State = cicdv1.CommitStatusStateFailure
+					}
+				}
+				break
+			}
+		}
+	}
+	return jobStatus
+}
+
+func updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, client client.Client, job *cicdv1.IntegrationJob, stateChanged []bool) error {
 	gitCli, err := utils.GetGitCli(cfg, client)
 	if err != nil {
 		return err

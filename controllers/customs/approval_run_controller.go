@@ -68,8 +68,7 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 	approval, err := a.newApproval(run)
 	if err != nil {
 		log.Error(err, "")
-		cond.Reason = "CannotCreateApproval"
-		cond.Message = err.Error()
+		a.setApprovalRunStatus(cond, corev1.ConditionFalse, "CannotCreateApproval", err.Error())
 		return ctrl.Result{}, nil
 	}
 
@@ -78,39 +77,29 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 			// Create approval if not exist
 			if err := controllerutil.SetControllerReference(run, approval, a.Scheme); err != nil {
 				log.Error(err, "")
-				cond.Reason = "CannotCreateApproval"
-				cond.Message = err.Error()
+				a.setApprovalRunStatus(cond, corev1.ConditionFalse, "CannotCreateApproval", err.Error())
 				return ctrl.Result{}, nil
 			}
 			if err := a.Client.Create(ctx, approval); err != nil {
 				log.Error(err, "")
-				cond.Reason = "CannotCreateApproval"
-				cond.Message = err.Error()
+				a.setApprovalRunStatus(cond, corev1.ConditionFalse, "CannotCreateApproval", err.Error())
 				return ctrl.Result{}, nil
 			}
 
 			return ctrl.Result{}, nil
 		} else {
-			cond.Status = corev1.ConditionFalse
-			cond.Reason = "ErrorGettingApproval"
-			cond.Message = err.Error()
+			a.setApprovalRunStatus(cond, corev1.ConditionFalse, "ErrorGettingApproval", err.Error())
 			return ctrl.Result{}, nil
 		}
 	}
 
 	// Reflect approval status to Run
 	if approval.Status.DecisionTime != nil {
-		var reason string
-		switch approval.Status.Result {
-		case cicdv1.ApprovalResultApproved:
+		var reason = string(approval.Status.Result)
+		if approval.Status.Result == cicdv1.ApprovalResultApproved {
 			cond.Status = corev1.ConditionTrue
-			reason = "Approved"
-		case cicdv1.ApprovalResultRejected:
+		} else {
 			cond.Status = corev1.ConditionFalse
-			reason = "Rejected"
-		case cicdv1.ApprovalResultError:
-			cond.Status = corev1.ConditionFalse
-			reason = "Error"
 		}
 		cond.Reason = reason
 		cond.Message = fmt.Sprintf("%s %s this approval, reason: %s, decisionTime: %s", approval.Status.Approver, strings.ToLower(reason), approval.Status.Reason, approval.Status.DecisionTime)
@@ -120,6 +109,16 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (a *ApprovalRunHandler) setApprovalRunStatus(cond *apis.Condition, status corev1.ConditionStatus, reason, message string) {
+	if cond == nil {
+		return
+	}
+
+	cond.Status = status
+	cond.Reason = reason
+	cond.Message = message
 }
 
 func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Approval, error) {

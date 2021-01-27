@@ -6,7 +6,7 @@ import (
 )
 
 type Plugin interface {
-	Handle(git.Webhook, *cicdv1.IntegrationConfig) error
+	Handle(*git.Webhook, *cicdv1.IntegrationConfig) error
 }
 
 var plugins = map[git.EventType][]Plugin{}

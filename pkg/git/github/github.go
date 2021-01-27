@@ -26,60 +26,60 @@ type CommitStatusBody struct {
 	Context     string `json:"context"`
 }
 
-func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (git.Webhook, error) {
-	var webhook git.Webhook
+func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (*git.Webhook, error) {
 	var signature = strings.Replace(header.Get("x-hub-signature"), "sha1=", "", 1)
 	if err := Validate(c.IntegrationConfig.Status.Secrets, signature, jsonString); err != nil {
-		return webhook, err
+		return nil, err
 	}
-	var eventType = git.EventType(header.Get("x-github-event"))
-
-	var err error
+	eventType := git.EventType(header.Get("x-github-event"))
 	if eventType == git.EventTypePullRequest {
-		var data PullRequestWebhook
-
-		if err = json.Unmarshal(jsonString, &data); err != nil {
-			return git.Webhook{}, err
-		}
-
-		fmt.Println(string(jsonString))
-		// Get sender email
-		sender := git.Sender{Name: data.Sender.Name, ID: data.Sender.ID}
-		userInfo, err := c.GetUserInfo(data.Sender.Name)
-		if err == nil {
-			sender.Email = userInfo.Email
-		}
-
-		base := git.Base{Ref: data.PullRequest.Base.Ref}
-		head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
-		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
-		pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action)}
-		webhook = git.Webhook{EventType: eventType, Repo: repo, PullRequest: &pullRequest}
-
+		return c.parsePullRequestWebhook(jsonString)
 	} else if eventType == git.EventTypePush {
-		var data PushWebhook
-
-		if err = json.Unmarshal(jsonString, &data); err != nil {
-			return git.Webhook{}, err
-		}
-		repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
-		if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
-			return git.Webhook{}, err
-		}
-		push := git.Push{Sender: git.Sender{Name: data.Sender.Name, ID: data.Sender.ID}, Ref: data.Ref, Sha: data.Sha}
-
-		// Get sender email
-		userInfo, err := c.GetUserInfo(data.Sender.Name)
-		if err == nil {
-			push.Sender.Email = userInfo.Email
-		}
-
-		webhook = git.Webhook{EventType: eventType, Repo: repo, Push: &push}
-
-	} else {
-		return webhook, nil
+		return c.parsePushWebhook(jsonString)
 	}
-	return webhook, nil
+	return nil, nil
+}
+
+func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error) {
+	var data PullRequestWebhook
+
+	if err := json.Unmarshal(jsonString, &data); err != nil {
+		return nil, err
+	}
+
+	// Get sender email
+	sender := git.Sender{Name: data.Sender.Name, ID: data.Sender.ID}
+	userInfo, err := c.GetUserInfo(data.Sender.Name)
+	if err == nil {
+		sender.Email = userInfo.Email
+	}
+
+	base := git.Base{Ref: data.PullRequest.Base.Ref}
+	head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
+	repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
+	pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.Htmlurl, Base: base, Head: head, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action)}
+	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest}, nil
+}
+
+func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
+	var data PushWebhook
+
+	if err := json.Unmarshal(jsonString, &data); err != nil {
+		return nil, err
+	}
+	repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.Htmlurl}
+	if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
+		return nil, nil
+	}
+	push := git.Push{Sender: git.Sender{Name: data.Sender.Name, ID: data.Sender.ID}, Ref: data.Ref, Sha: data.Sha}
+
+	// Get sender email
+	userInfo, err := c.GetUserInfo(data.Sender.Name)
+	if err == nil {
+		push.Sender.Email = userInfo.Email
+	}
+
+	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Push: &push}, nil
 }
 
 func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {

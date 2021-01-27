@@ -4,7 +4,9 @@ package server
 
 import (
 	"fmt"
+	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
+	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"net/http"
@@ -59,4 +61,9 @@ func (s *Server) Start() {
 		logger.Error(err, "cannot launch http server")
 		os.Exit(1)
 	}
+}
+
+func logAndRespond(w http.ResponseWriter, log logr.Logger, code int, respMsg, logMsg string) {
+	_ = utils.RespondError(w, code, respMsg)
+	log.Info(logMsg)
 }

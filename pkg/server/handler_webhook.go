@@ -64,6 +64,10 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if wh == nil {
+		return
+	}
+
 	// Call plugin functions
 	plugins := GetPlugins(wh.EventType)
 	for _, p := range plugins {

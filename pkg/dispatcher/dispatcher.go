@@ -20,7 +20,7 @@ type Dispatcher struct {
 	Client client.Client
 }
 
-func (d Dispatcher) Handle(webhook git.Webhook, config *cicdv1.IntegrationConfig) error {
+func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	var job *cicdv1.IntegrationJob
 	pr := webhook.PullRequest
 	push := webhook.Push
@@ -55,7 +55,7 @@ func (d Dispatcher) Handle(webhook git.Webhook, config *cicdv1.IntegrationConfig
 	return nil
 }
 
-func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
+func handlePullRequest(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobId string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
 	pr := webhook.PullRequest
 	var job *cicdv1.IntegrationJob
 	if pr.Action == git.PullRequestActionOpen || pr.Action == git.PullRequestActionSynchronize || pr.Action == git.PullRequestActionReOpen {
@@ -100,7 +100,7 @@ func handlePullRequest(webhook git.Webhook, config *cicdv1.IntegrationConfig, jo
 	return job
 }
 
-func handlePush(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
+func handlePush(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobId string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
 	push := webhook.Push
 	job := &cicdv1.IntegrationJob{
 		ObjectMeta: metav1.ObjectMeta{
@@ -134,7 +134,7 @@ func handlePush(webhook git.Webhook, config *cicdv1.IntegrationConfig, jobId str
 	return job
 }
 
-func filterJobs(webhook git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1.Job, error) {
+func filterJobs(webhook *git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1.Job, error) {
 	var jobs []cicdv1.Job
 
 	var cand []cicdv1.Job
@@ -155,7 +155,7 @@ func filterJobs(webhook git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1
 	return jobs, nil
 }
 
-func filter(cand []cicdv1.Job, webhook git.Webhook) ([]cicdv1.Job, error) {
+func filter(cand []cicdv1.Job, webhook *git.Webhook) ([]cicdv1.Job, error) {
 	var filteredJobs []cicdv1.Job
 	var incomingBranch string
 	var incomingTag string
@@ -194,45 +194,33 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) ([]cicdv1.Job, error) {
 		tags := job.When.Tag
 		skipTags := job.When.SkipTag
 
+		// Always run if no tag/skipTag is specified
+		if tags == nil && skipTags == nil {
+			filteredJobs = append(filteredJobs, job)
+		}
+
+		if incomingTag == "" {
+			continue
+		}
+
 		if tags != nil && skipTags == nil {
-			isValidJob := false
-			if incomingTag != "" {
-				for _, tag := range tags {
-					re, err := regexp.Compile(tag)
-					if err != nil {
-						return nil, err
-					}
-					if re.MatchString(incomingTag) {
-						isValidJob = true
-						break
-					}
+			for _, tag := range tags {
+				if match := matchString(incomingTag, tag); match {
+					filteredJobs = append(filteredJobs, job)
+					break
 				}
-			}
-			if isValidJob {
-				filteredJobs = append(filteredJobs, job)
 			}
 		} else if skipTags != nil && tags == nil {
 			isInValidJob := false
-			if incomingTag != "" {
-				for _, tag := range skipTags {
-					re, err := regexp.Compile(tag)
-					if err != nil {
-						return nil, err
-					}
-					if re.MatchString(incomingTag) {
-						isInValidJob = true
-						break
-					}
+			for _, tag := range skipTags {
+				if match := matchString(incomingTag, tag); match {
+					isInValidJob = true
+					break
 				}
-			} else {
-				isInValidJob = true
 			}
 			if !isInValidJob {
 				filteredJobs = append(filteredJobs, job)
 			}
-
-		} else if tags == nil && skipTags == nil {
-			filteredJobs = append(filteredJobs, job)
 		}
 	}
 	return filteredJobs, nil
@@ -249,46 +237,42 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) ([]cicdv1.Job, err
 		branches := job.When.Branch
 		skipBranches := job.When.SkipBranch
 
+		// Always run if no branch/skipBranch is specified
+		if branches == nil && skipBranches == nil {
+			filteredJobs = append(filteredJobs, job)
+		}
+
+		if incomingBranch == "" {
+			continue
+		}
+
 		if branches != nil && skipBranches == nil {
-			isValidJob := false
-			if incomingBranch != "" {
-				for _, branch := range branches {
-					re, err := regexp.Compile(branch)
-					if err != nil {
-						return nil, err
-					}
-					if re.MatchString(incomingBranch) {
-						isValidJob = true
-						break
-					}
+			for _, branch := range branches {
+				if match := matchString(incomingBranch, branch); match {
+					filteredJobs = append(filteredJobs, job)
+					break
 				}
-			}
-			if isValidJob {
-				filteredJobs = append(filteredJobs, job)
 			}
 		} else if skipBranches != nil && branches == nil {
 			isInValidJob := false
-			if incomingBranch != "" {
-				for _, branch := range skipBranches {
-					re, err := regexp.Compile(branch)
-					if err != nil {
-						return nil, err
-					}
-					if re.MatchString(incomingBranch) {
-						isInValidJob = true
-						break
-					}
+			for _, branch := range skipBranches {
+				if match := matchString(incomingBranch, branch); match {
+					isInValidJob = true
+					break
 				}
-			} else {
-				isInValidJob = true
 			}
 			if !isInValidJob {
 				filteredJobs = append(filteredJobs, job)
 			}
-
-		} else if branches == nil && skipBranches == nil {
-			filteredJobs = append(filteredJobs, job)
 		}
 	}
 	return filteredJobs, nil
+}
+
+func matchString(incoming, target string) bool {
+	re, err := regexp.Compile(target)
+	if err != nil {
+		return false
+	}
+	return re.MatchString(incoming)
 }
