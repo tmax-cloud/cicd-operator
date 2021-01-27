@@ -22,12 +22,14 @@ import (
 	"time"
 )
 
+// ApprovalRunHandler handles approval custom task
 type ApprovalRunHandler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
+// Handle generates Approval
 func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := a.Log.WithValues("ApprovalRun", run.Namespace)
@@ -87,10 +89,9 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 			}
 
 			return ctrl.Result{}, nil
-		} else {
-			a.setApprovalRunStatus(cond, corev1.ConditionFalse, "ErrorGettingApproval", err.Error())
-			return ctrl.Result{}, nil
 		}
+		a.setApprovalRunStatus(cond, corev1.ConditionFalse, "ErrorGettingApproval", err.Error())
+		return ctrl.Result{}, nil
 	}
 
 	// Reflect approval status to Run

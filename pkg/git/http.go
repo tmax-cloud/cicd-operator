@@ -8,7 +8,8 @@ import (
 	"net/http"
 )
 
-func RequestHttp(method string, uri string, header map[string]string, data interface{}) ([]byte, http.Header, error) {
+// RequestHTTP requests api call
+func RequestHTTP(method string, uri string, header map[string]string, data interface{}) ([]byte, http.Header, error) {
 	var jsonBytes []byte
 	var err error
 

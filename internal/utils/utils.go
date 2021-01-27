@@ -13,6 +13,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git/gitlab"
 )
 
+// FileExists checks if the file exists in path
 func FileExists(path string) bool {
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
@@ -21,6 +22,7 @@ func FileExists(path string) bool {
 	return !info.IsDir()
 }
 
+// GetGitCli generates git client, depending on the git type in the cfg
 func GetGitCli(cfg *cicdv1.IntegrationConfig, cli client.Client) (git.Client, error) {
 	switch cfg.Spec.Git.Type {
 	case cicdv1.GitTypeGitHub:
@@ -32,6 +34,7 @@ func GetGitCli(cfg *cicdv1.IntegrationConfig, cli client.Client) (git.Client, er
 	}
 }
 
+// ParseApproversList parses user/email from line-separated and comma-separated approvers list
 func ParseApproversList(str string) ([]string, error) {
 	var approvers []string
 
@@ -54,6 +57,7 @@ func ParseApproversList(str string) ([]string, error) {
 	return approvers, nil
 }
 
+// ParseEmailFromUsers parses email from approvers list
 func ParseEmailFromUsers(users []string) []string {
 	var emails []string
 

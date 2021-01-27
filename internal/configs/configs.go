@@ -9,30 +9,33 @@ var (
 	// ExternalHostName to be used for webhook server (default is ingress host name)
 	ExternalHostName string
 
-	// ReportRedirectUriTemplate is a uri template for report page redirection
-	ReportRedirectUriTemplate string
+	// ReportRedirectURITemplate is a uri template for report page redirection
+	ReportRedirectURITemplate string
 
 	// CollectPeriod is a garbage collection period (in hour)
 	CollectPeriod int
 
-	// JobTTL is a garbage collection threshold (in hour).
+	// IntegrationJobTTL is a garbage collection threshold (in hour).
 	// If IntegrationJob's .status.completionTime + TTL < now, it's collected
 	IntegrationJobTTL int
 
-	// EnableMail
+	// EnableMail is whether to enable mail feature or not
 	EnableMail bool
 
-	// SMTPHost string
+	// SMTPHost is a host (IP:PORT) of the SMTP server
 	SMTPHost string
 
-	// SMTPUserSecret string
+	// SMTPUserSecret is a credential secret for the SMTP server (should be basic type)
 	SMTPUserSecret string
 
-	// Email templates
-	ApprovalRequestMailTitle   string
+	// ApprovalRequestMailTitle is a title for the approval request mail
+	ApprovalRequestMailTitle string
+	// ApprovalRequestMailContent is a content of the approval request mail
 	ApprovalRequestMailContent string
 
-	ApprovalResultMailTitle   string
+	// ApprovalResultMailTitle is a title for the approval result mail
+	ApprovalResultMailTitle string
+	// ApprovalResultMailContent is a content of the approval result mail
 	ApprovalResultMailContent string
 
 	// IngressClass is a class for ingress instance

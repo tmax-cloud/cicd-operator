@@ -38,7 +38,7 @@ jobs:
       - uses: golangci/golangci-lint-action@v2.2.1
         with:
           version: v1.29
-          args: -v -E gofmt --timeout 1h0m0s
+          args: -v -E gofmt -E golint -E gocyclo -E misspell --timeout 1h0m0s
   deploy-release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [test_gen, test_verify, test_unit, test_lint, test_crd]

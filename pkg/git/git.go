@@ -6,6 +6,7 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
 
+// Client is a git client interface
 type Client interface {
 	// Webhooks
 	ListWebhook() ([]WebhookEntry, error)
@@ -14,14 +15,16 @@ type Client interface {
 	ParseWebhook(http.Header, []byte) (*Webhook, error)
 
 	// Commit Status
-	SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state CommitStatusState, description, targetUrl string) error
+	SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state CommitStatusState, description, targetURL string) error
 
 	// Users
 	GetUserInfo(user string) (*User, error)
 }
 
+// CommitStatusState is a commit status type
 type CommitStatusState string
 
+// User is a body of user info
 type User struct {
 	ID    int
 	Name  string

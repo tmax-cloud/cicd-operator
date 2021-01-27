@@ -23,14 +23,19 @@ import (
 	"time"
 )
 
+// ApprovalResult is a result of the Approval
 type ApprovalResult string
 
+// Results
 const (
 	ApprovalResultWaiting  ApprovalResult = "Waiting"
 	ApprovalResultApproved ApprovalResult = "Approved"
 	ApprovalResultRejected ApprovalResult = "Rejected"
 	ApprovalResultError    ApprovalResult = "Error"
+)
 
+// Condition keys for Approval
+const (
 	ApprovalConditionSentRequestMail = status.ConditionType("SentRequestMail")
 	ApprovalConditionSentResultMail  = status.ConditionType("SentResultMail")
 )
@@ -66,6 +71,7 @@ type ApprovalSpec struct {
 	Users []string `json:"users"`
 }
 
+// ApprovalSender is a git user who triggered the approval
 type ApprovalSender struct {
 	Name  string `json:"name"`
 	Email string `json:"email,omitempty"`
@@ -117,6 +123,7 @@ func init() {
 	SchemeBuilder.Register(&Approval{}, &ApprovalList{})
 }
 
+// GetDecisionTimeInZone converts the time into the specific time zone
 func (a *ApprovalStatus) GetDecisionTimeInZone(zone string) (*time.Time, error) {
 	if a.DecisionTime == nil {
 		return nil, fmt.Errorf("decision time is nil")

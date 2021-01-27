@@ -4,6 +4,7 @@ import (
 	"sync"
 )
 
+// Item is an interface for the nodes to be stored in a queue
 type Item interface {
 	DeepCopy() Item
 	Equals(Item) bool
@@ -20,8 +21,11 @@ func newNode(item Item) *node {
 	return &node{item: item.DeepCopy()}
 }
 
+// CompareFunc is a function to sort nodes in a queue
 type CompareFunc func(a Item, b Item) bool
 
+// SortedUniqueList is a kind of priority queues, whose nodes are sorted
+// Also, uniqueness of the node is guaranteed
 type SortedUniqueList struct {
 	nodes *node
 	lock  sync.Mutex
@@ -29,6 +33,7 @@ type SortedUniqueList struct {
 	compareFunc CompareFunc
 }
 
+// Add a node to the SortedUniqueList
 func (q *SortedUniqueList) Add(item Item) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -74,6 +79,7 @@ func (q *SortedUniqueList) Add(item Item) {
 	}
 }
 
+// First retrieves the first node in the queue
 func (q *SortedUniqueList) First() Item {
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -87,8 +93,10 @@ func (q *SortedUniqueList) First() Item {
 	return n.item
 }
 
+// IteratorFunc is a function to be used for each item in the queue
 type IteratorFunc func(Item)
 
+// ForEach runs IteratorFunc for each item in the queue
 func (q *SortedUniqueList) ForEach(iteratorFunc IteratorFunc) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -101,6 +109,7 @@ func (q *SortedUniqueList) ForEach(iteratorFunc IteratorFunc) {
 	}
 }
 
+// Delete deletes a node from the queue
 func (q *SortedUniqueList) Delete(i Item) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -123,6 +132,7 @@ func (q *SortedUniqueList) Delete(i Item) {
 	}
 }
 
+// Len returns the length of the queue
 func (q *SortedUniqueList) Len() int {
 	i := 0
 	q.ForEach(func(_ Item) {
@@ -131,6 +141,7 @@ func (q *SortedUniqueList) Len() int {
 	return i
 }
 
+// NewSortedUniqueQueue is a constructor for the SortedUniqueList
 func NewSortedUniqueQueue(compareFunc CompareFunc) *SortedUniqueList {
 	return &SortedUniqueList{lock: sync.Mutex{}, compareFunc: compareFunc}
 }

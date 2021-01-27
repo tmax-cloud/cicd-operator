@@ -8,20 +8,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type HandleFunc func(http.ResponseWriter, *http.Request)
-
+// RouterWrapper wraps router with tree structure
 type RouterWrapper struct {
 	Router *mux.Router
 
 	SubPath string
 	Methods []string
-	Handler HandleFunc
+	Handler http.HandlerFunc
 
 	Children []*RouterWrapper
 	Parent   *RouterWrapper
 }
 
-func New(path string, methods []string, handler HandleFunc) *RouterWrapper {
+// New is a constructor for the RouterWrapper
+func New(path string, methods []string, handler http.HandlerFunc) *RouterWrapper {
 	return &RouterWrapper{
 		SubPath: path,
 		Methods: methods,
@@ -29,6 +29,7 @@ func New(path string, methods []string, handler HandleFunc) *RouterWrapper {
 	}
 }
 
+// Add adds child as a child (child node of a tree) of w
 func (w *RouterWrapper) Add(child *RouterWrapper) error {
 	if child == nil {
 		return fmt.Errorf("child is nil")
@@ -60,11 +61,11 @@ func (w *RouterWrapper) Add(child *RouterWrapper) error {
 	return nil
 }
 
+// FullPath builds full path string of the api
 func (w *RouterWrapper) FullPath() string {
 	if w.Parent == nil {
 		return w.SubPath
-	} else {
-		re := regexp.MustCompile(`/{2,}`)
-		return re.ReplaceAllString(w.Parent.FullPath()+w.SubPath, "/")
 	}
+	re := regexp.MustCompile(`/{2,}`)
+	return re.ReplaceAllString(w.Parent.FullPath()+w.SubPath, "/")
 }

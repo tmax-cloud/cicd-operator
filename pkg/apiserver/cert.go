@@ -21,26 +21,27 @@ import (
 )
 
 const (
+	// APIServiceName is a name of APIService object
 	APIServiceName = "v1.cicdapi.tmax.io"
-	ServiceName    = "cicd-webhook"
+	serviceName    = "cicd-webhook"
 
-	CertDir = "/tmp/approval-api"
+	certDir = "/tmp/approval-api"
 
-	K8sConfigMapName = "extension-apiserver-authentication"
-	K8sConfigMapKey  = "requestheader-client-ca-file"
+	k8sConfigMapName = "extension-apiserver-authentication"
+	k8sConfigMapKey  = "requestheader-client-ca-file"
 )
 
 // Create and Store certificates for webhook server
-// server key / server cert is stored as file in CertDir
+// server key / server cert is stored as file in certDir
 // CA bundle is stored in ValidatingWebhookConfigurations
 func createCert(ctx context.Context, client client.Client) error {
 	// Make directory recursively
-	if err := os.MkdirAll(CertDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(certDir, os.ModePerm); err != nil {
 		return err
 	}
 
 	// Get service name and namespace
-	svc := ServiceName
+	svc := serviceName
 	ns, err := utils.Namespace()
 	if err != nil {
 		return err
@@ -53,13 +54,13 @@ func createCert(ctx context.Context, client client.Client) error {
 	}
 
 	// Write certs to file
-	keyPath := path.Join(CertDir, "tls.key")
+	keyPath := path.Join(certDir, "tls.key")
 	err = ioutil.WriteFile(keyPath, tlsKey, 0644)
 	if err != nil {
 		return err
 	}
 
-	crtPath := path.Join(CertDir, "tls.crt")
+	crtPath := path.Join(certDir, "tls.crt")
 	err = ioutil.WriteFile(crtPath, tlsCrt, 0644)
 	if err != nil {
 		return err
@@ -92,13 +93,13 @@ func tlsConfig(ctx context.Context, client client.Client) (*tls.Config, error) {
 
 func getCAPool(ctx context.Context, client client.Client) (*x509.CertPool, error) {
 	cm := &corev1.ConfigMap{}
-	if err := client.Get(ctx, types.NamespacedName{Name: K8sConfigMapName, Namespace: metav1.NamespaceSystem}, cm); err != nil {
+	if err := client.Get(ctx, types.NamespacedName{Name: k8sConfigMapName, Namespace: metav1.NamespaceSystem}, cm); err != nil {
 		return nil, err
 	}
 
-	clientCA, ok := cm.Data[K8sConfigMapKey]
+	clientCA, ok := cm.Data[k8sConfigMapKey]
 	if !ok {
-		return nil, fmt.Errorf("no key [%s] found in configmap %s/%s", K8sConfigMapKey, metav1.NamespaceSystem, K8sConfigMapName)
+		return nil, fmt.Errorf("no key [%s] found in configmap %s/%s", k8sConfigMapKey, metav1.NamespaceSystem, k8sConfigMapName)
 	}
 
 	certs, err := cert.ParseCertsPEM([]byte(clientCA))

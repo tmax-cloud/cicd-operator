@@ -26,11 +26,13 @@ const (
 
 var logger = logf.Log.WithName("server")
 
+// Server is a HTTP server for git webhook API and report page
 type Server struct {
 	k8sClient client.Client
 	router    *mux.Router
 }
 
+// New is a constructor of a Server
 func New(c client.Client, cfg *rest.Config) *Server {
 	r := mux.NewRouter()
 
@@ -53,6 +55,7 @@ func New(c client.Client, cfg *rest.Config) *Server {
 	}
 }
 
+// Start starts the Server
 func (s *Server) Start() {
 	httpAddr := fmt.Sprintf("0.0.0.0:%d", port)
 

@@ -6,13 +6,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// JobType is a type of Job
 type JobType string
 
 const (
-	JobTypePreSubmit  = JobType("preSubmit")
+	// JobTypePreSubmit is a pre-submit type (pull-request or merge-request)
+	JobTypePreSubmit = JobType("preSubmit")
+	// JobTypePostSubmit is a post-submit type (push or tag-push)
 	JobTypePostSubmit = JobType("postSubmit")
 )
 
+// CommitStatusState is a state of git commit status
+type CommitStatusState string
+
+// Job's commit state
+const (
+	CommitStatusStateSuccess = CommitStatusState("success")
+	CommitStatusStateFailure = CommitStatusState("failure")
+	CommitStatusStateError   = CommitStatusState("error")
+	CommitStatusStatePending = CommitStatusState("pending")
+)
+
+// Job is a specification of the job to be executed for specific events
+// Same level of task of tekton
 type Job struct {
 	corev1.Container `json:",inline"`
 
@@ -39,6 +55,7 @@ type Job struct {
 	Email *JobEmail `json:"email,omitempty"`
 }
 
+// TektonTask refers to an existing tekton task, rather than using job's script or command
 type TektonTask struct {
 	// TaskRef refers to the existing Task in local cluster or to the tekton catalog github repo.
 	TaskRef JobTaskRef `json:"taskRef"`
@@ -53,6 +70,7 @@ type TektonTask struct {
 	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
 }
 
+// JobTaskRef refers to the tekton task, both local and in catalog
 type JobTaskRef struct {
 	// Name for local Tasks
 	Name string `json:"name,omitempty"`
@@ -89,10 +107,12 @@ type JobEmail struct {
 	// Content of the email
 	Content string `json:"content"`
 
-	// IsHtml describes if it's html content
-	IsHtml bool `json:"isHtml,omitempty"`
+	// IsHTML describes if it's html content
+	IsHTML bool `json:"isHtml,omitempty"`
 }
 
+// JobWhen describes when the Job should be executed
+// All fields should be regular expressions
 type JobWhen struct {
 	Branch     []string `json:"branch,omitempty"`
 	SkipBranch []string `json:"skipBranch,omitempty"`
@@ -127,18 +147,10 @@ type JobStatus struct {
 	Containers []tektonv1beta1.StepState `json:"containers,omitempty"`
 }
 
+// Equals checks if i is equal to j
 func (j *JobStatus) Equals(i *JobStatus) bool {
 	return j.State == i.State &&
 		j.Message == i.Message &&
 		j.StartTime.Equal(i.StartTime) &&
 		j.CompletionTime.Equal(i.CompletionTime)
 }
-
-type CommitStatusState string
-
-const (
-	CommitStatusStateSuccess = CommitStatusState("success")
-	CommitStatusStateFailure = CommitStatusState("failure")
-	CommitStatusStateError   = CommitStatusState("error")
-	CommitStatusStatePending = CommitStatusState("pending")
-)

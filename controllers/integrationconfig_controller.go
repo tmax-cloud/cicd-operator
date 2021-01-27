@@ -36,9 +36,9 @@ import (
 )
 
 const (
-	Finalizer         = "cicd.tmax.io/finalizer"
-	GitSecretHostKey  = "tekton.dev/git-0"
-	GitSecretUserName = "tmax-cicd-bot"
+	finalizer         = "cicd.tmax.io/finalizer"
+	gitSecretHostKey  = "tekton.dev/git-0"
+	gitSecretUserName = "tmax-cicd-bot"
 )
 
 // IntegrationConfigReconciler reconciles a IntegrationConfig object
@@ -52,6 +52,7 @@ type IntegrationConfigReconciler struct {
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 
+// Reconcile reconciles IntegrationConfig
 func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("integrationconfig", req.NamespacedName)
@@ -131,6 +132,7 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager sets IntegrationConfigReconciler to the manager
 func (r *IntegrationConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cicdv1.IntegrationConfig{}).
@@ -142,14 +144,14 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 	found := false
 	idx := -1
 	for i, f := range instance.Finalizers {
-		if f == Finalizer {
+		if f == finalizer {
 			found = true
 			idx = i
 			break
 		}
 	}
 	if !found {
-		instance.Finalizers = append(instance.Finalizers, Finalizer)
+		instance.Finalizers = append(instance.Finalizers, finalizer)
 		p := client.MergeFrom(original)
 		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
 			return false, err
@@ -169,9 +171,9 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 			r.Log.Error(err, "")
 		}
 		for _, h := range hookList {
-			if h.Url == instance.GetWebhookServerAddress() {
-				r.Log.Info("Deleting webhook " + h.Url)
-				if err := gitCli.DeleteWebhook(h.Id); err != nil {
+			if h.URL == instance.GetWebhookServerAddress() {
+				r.Log.Info("Deleting webhook " + h.URL)
+				if err := gitCli.DeleteWebhook(h.ID); err != nil {
 					r.Log.Error(err, "")
 				}
 			}
@@ -240,7 +242,7 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 				webhookRegistered.Message = err.Error()
 			}
 			for _, e := range entries {
-				if addr == e.Url {
+				if addr == e.URL {
 					webhookRegistered.Reason = "webhookRegisterFailed"
 					webhookRegistered.Message = "same webhook has already registered"
 					isUnique = false
@@ -332,10 +334,10 @@ func (r *IntegrationConfigReconciler) updateGitSecret(instance *cicdv1.Integrati
 	if secret.Annotations == nil {
 		needPatch = true
 		secret.Annotations = map[string]string{}
-	} else if gitHostVal != secret.Annotations[GitSecretHostKey] {
+	} else if gitHostVal != secret.Annotations[gitSecretHostKey] {
 		needPatch = true
 	}
-	secret.Annotations[GitSecretHostKey] = gitHostVal
+	secret.Annotations[gitSecretHostKey] = gitHostVal
 
 	// check and set type
 	if secret.Type != corev1.SecretTypeBasicAuth {
@@ -351,10 +353,10 @@ func (r *IntegrationConfigReconciler) updateGitSecret(instance *cicdv1.Integrati
 	if secret.Data == nil {
 		needPatch = true
 		secret.Data = map[string][]byte{}
-	} else if string(secret.Data[corev1.BasicAuthUsernameKey]) != GitSecretUserName || string(secret.Data[corev1.BasicAuthPasswordKey]) != token {
+	} else if string(secret.Data[corev1.BasicAuthUsernameKey]) != gitSecretUserName || string(secret.Data[corev1.BasicAuthPasswordKey]) != token {
 		needPatch = true
 	}
-	secret.Data[corev1.BasicAuthUsernameKey] = []byte(GitSecretUserName)
+	secret.Data[corev1.BasicAuthUsernameKey] = []byte(gitSecretUserName)
 	secret.Data[corev1.BasicAuthPasswordKey] = []byte(token)
 
 	return needPatch, nil

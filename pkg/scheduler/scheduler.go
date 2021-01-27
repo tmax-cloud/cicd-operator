@@ -23,6 +23,7 @@ import (
 
 var log = logf.Log.WithName("job-scheduler")
 
+// New is a constructor for a Scheduler
 func New(c client.Client, s *runtime.Scheme) *Scheduler {
 	log.Info("New scheduler")
 	sch := &Scheduler{
@@ -35,6 +36,8 @@ func New(c client.Client, s *runtime.Scheme) *Scheduler {
 	return sch
 }
 
+// Scheduler watches IntegrationJobs and creates corresponding PipelineRuns, considering how many pipeline runs are
+// running (in a jobPool)
 type Scheduler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
@@ -47,6 +50,7 @@ type Scheduler struct {
 	caller chan struct{}
 }
 
+// Notify notifies scheduler to sync
 func (s Scheduler) Notify(job *cicdv1.IntegrationJob) {
 	s.jobPool.Lock()
 	s.jobPool.SyncJob(job)

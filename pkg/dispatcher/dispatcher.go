@@ -15,11 +15,11 @@ import (
 
 // Dispatcher dispatches IntegrationJob when webhook is called
 // A kind of 'plugin' for webhook handler
-
 type Dispatcher struct {
 	Client client.Client
 }
 
+// Handle handles pull-request and push events
 func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	var job *cicdv1.IntegrationJob
 	pr := webhook.PullRequest
@@ -28,7 +28,7 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 		return fmt.Errorf("pull request and push struct is nil")
 	}
 
-	jobId := utils.RandomString(20)
+	jobID := utils.RandomString(20)
 
 	jobs, err := filterJobs(webhook, config)
 	if err != nil {
@@ -39,9 +39,9 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 	}
 
 	if webhook.EventType == git.EventTypePullRequest {
-		job = handlePullRequest(webhook, config, jobId, jobs)
+		job = handlePullRequest(webhook, config, jobID, jobs)
 	} else if webhook.EventType == git.EventTypePush {
-		job = handlePush(webhook, config, jobId, jobs)
+		job = handlePush(webhook, config, jobID, jobs)
 	}
 
 	if job == nil {
@@ -55,13 +55,13 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 	return nil
 }
 
-func handlePullRequest(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobId string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
+func handlePullRequest(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobID string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
 	pr := webhook.PullRequest
 	var job *cicdv1.IntegrationJob
 	if pr.Action == git.PullRequestActionOpen || pr.Action == git.PullRequestActionSynchronize || pr.Action == git.PullRequestActionReOpen {
 		job = &cicdv1.IntegrationJob{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s", config.Name, pr.Head.Sha[:5], jobId[:5]),
+				Name:      fmt.Sprintf("%s-%s-%s", config.Name, pr.Head.Sha[:5], jobID[:5]),
 				Namespace: config.Namespace,
 				Labels:    map[string]string{}, // TODO
 			},
@@ -70,7 +70,7 @@ func handlePullRequest(webhook *git.Webhook, config *cicdv1.IntegrationConfig, j
 					Name: config.Name,
 					Type: cicdv1.JobTypePreSubmit,
 				},
-				Id:         jobId,
+				ID:         jobID,
 				Jobs:       jobs,
 				Workspaces: config.Spec.Workspaces,
 				Refs: cicdv1.IntegrationJobRefs{
@@ -85,7 +85,7 @@ func handlePullRequest(webhook *git.Webhook, config *cicdv1.IntegrationConfig, j
 						Link: webhook.Repo.URL,
 					},
 					Pull: &cicdv1.IntegrationJobRefsPull{
-						Id:   pr.ID,
+						ID:   pr.ID,
 						Ref:  pr.Head.Ref,
 						Sha:  pr.Head.Sha,
 						Link: pr.URL,
@@ -100,11 +100,11 @@ func handlePullRequest(webhook *git.Webhook, config *cicdv1.IntegrationConfig, j
 	return job
 }
 
-func handlePush(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobId string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
+func handlePush(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobID string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
 	push := webhook.Push
 	job := &cicdv1.IntegrationJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-%s", config.Name, push.Sha[:5], jobId[:5]),
+			Name:      fmt.Sprintf("%s-%s-%s", config.Name, push.Sha[:5], jobID[:5]),
 			Namespace: config.Namespace,
 			Labels:    map[string]string{}, // TODO
 		},
@@ -113,7 +113,7 @@ func handlePush(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobId st
 				Name: config.Name,
 				Type: cicdv1.JobTypePostSubmit,
 			},
-			Id:         jobId,
+			ID:         jobID,
 			Jobs:       jobs,
 			Workspaces: config.Spec.Workspaces,
 			Refs: cicdv1.IntegrationJobRefs{

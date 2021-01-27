@@ -19,9 +19,11 @@ import (
 var log = logf.Log.WithName("pipeline-manager")
 
 const (
+	// DefaultWorkingDir is a default value for 'working directory' of a container (tekton's step)
 	DefaultWorkingDir = "/tekton/home/integ-source"
 )
 
+// Generate generates (but not creates) a PipelineRun object
 func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
 
@@ -109,7 +111,7 @@ func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.Pipe
 
 func generateCustomTaskRef(kind string) *tektonv1beta1.TaskRef {
 	return &tektonv1beta1.TaskRef{
-		APIVersion: cicdv1.CustomTaskApiVersion,
+		APIVersion: cicdv1.CustomTaskAPIVersion,
 		Kind:       tektonv1beta1.TaskKind(kind),
 	}
 }
@@ -138,19 +140,21 @@ func generateSteps(j cicdv1.Job) ([]tektonv1beta1.Step, error) {
 func generateLabel(j *cicdv1.IntegrationJob) map[string]string {
 	label := map[string]string{
 		cicdv1.RunLabelJob:   j.Name,
-		cicdv1.RunLabelJobId: j.Spec.Id,
+		cicdv1.RunLabelJobID: j.Spec.ID,
 		//cicdv1.RunLabelRepository: j.Spec.Refs.Repository,
 		//cicdv1.RunLabelSender: j.Spec.Refs.Sender,
 	}
 
 	if j.Spec.Refs.Pull != nil {
-		label[cicdv1.RunLabelPullRequest] = strconv.Itoa(j.Spec.Refs.Pull.Id)
+		label[cicdv1.RunLabelPullRequest] = strconv.Itoa(j.Spec.Refs.Pull.ID)
 		label[cicdv1.RunLabelPullRequestSha] = j.Spec.Refs.Pull.Sha
 	}
 
 	return label
 }
 
+// ReflectStatus reflects PipelineRun's status into IntegrationJob's status
+// It also set commit status for remote git server
 func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig, client client.Client) error {
 	// If PR is nil but IntegrationJob's status is running, set as error
 	// Also, schedule next pipelineRun
@@ -284,6 +288,7 @@ func updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, client client.Client, 
 	return nil
 }
 
+// Name is a PipelineRun's name for the IntegrationJob j
 func Name(j *cicdv1.IntegrationJob) string {
 	return j.Name // TODO - should we add postfix or something? Job:PipelineRun=1:1...
 }

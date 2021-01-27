@@ -1,7 +1,6 @@
 package github
 
-// Webhook is a github-specific webhook body
-// Should contain json tag for each field, to be unmarshalled properly
+// PullRequestWebhook is a github-specific pull-request event webhook body
 type PullRequestWebhook struct {
 	Action string `json:"action"`
 	Number int    `json:"number"`
@@ -18,7 +17,7 @@ type PullRequestWebhook struct {
 	Repo Repo `json:"repository"`
 }
 
-// Structure for push webhook event
+// PushWebhook is a github-specific push event webhook body
 type PushWebhook struct {
 	Ref    string `json:"ref"`
 	Repo   Repo   `json:"repository"`
@@ -29,27 +28,31 @@ type PushWebhook struct {
 // Repo structure for webhook event
 type Repo struct {
 	Name    string `json:"full_name"`
-	Htmlurl string `json:"html_url"`
+	HTMLURL string `json:"html_url"`
 	Owner   struct {
 		ID string `json:"login"`
 	} `json:"owner"`
 	Private bool `json:"private"`
 }
 
+// Sender is a sender of the event
 type Sender struct {
 	Name string `json:"login"`
 	ID   int    `json:"id"`
 }
 
+// Head is a reference of the head branch
 type Head struct {
 	Ref string `json:"ref"`
 	Sha string `json:"sha"`
 }
 
+// Base is a reference of the base branch
 type Base struct {
 	Ref string `json:"ref"`
 }
 
+// RegistrationWebhookBody is a request body for registering webhook to remote git server
 type RegistrationWebhookBody struct {
 	Name   string                        `json:"name"`
 	Active bool                          `json:"active"`
@@ -57,16 +60,18 @@ type RegistrationWebhookBody struct {
 	Config RegistrationWebhookBodyConfig `json:"config"`
 }
 
+// RegistrationWebhookBodyConfig is a config for the webhook
 type RegistrationWebhookBodyConfig struct {
-	Url         string `json:"url"`
+	URL         string `json:"url"`
 	ContentType string `json:"content_type"`
 	InsecureSsl string `json:"insecure_ssl"`
 	Secret      string `json:"secret"`
 }
 
+// WebhookEntry is a body of list of registered webhooks
 type WebhookEntry struct {
-	Id     int `json:"id"`
+	ID     int `json:"id"`
 	Config struct {
-		Url string `json:"url"`
+		URL string `json:"url"`
 	} `json:"config"`
 }

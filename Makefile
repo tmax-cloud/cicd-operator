@@ -139,7 +139,7 @@ test-verify: save-sha-mod verify compare-sha-mod
 
 # Test code lint
 test-lint:
-	golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
+	golangci-lint run ./... -v -E gofmt -E golint -E gocyclo -E misspell --timeout 1h0m0s
 
 # Unit test
 test-unit:

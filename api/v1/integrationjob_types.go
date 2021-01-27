@@ -23,13 +23,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// IntegrationJobState is a state of the IntegrationJob
+type IntegrationJobState string
+
+// IntegrationJob's states
+const (
+	IntegrationJobStatePending   = IntegrationJobState("Pending")
+	IntegrationJobStateRunning   = IntegrationJobState("Running")
+	IntegrationJobStateCompleted = IntegrationJobState("Completed")
+	IntegrationJobStateFailed    = IntegrationJobState("Failed")
+)
+
 // IntegrationJobSpec defines the desired state of IntegrationJob
 type IntegrationJobSpec struct {
 	// ConfigRef refers to the corresponding IntegrationConfig
 	ConfigRef IntegrationJobConfigRef `json:"configRef"`
 
-	// Id is a unique random string for the IntegrationJob
-	Id string `json:"id"`
+	// ID is a unique random string for the IntegrationJob
+	ID string `json:"id"`
 
 	// Workspaces list
 	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
@@ -41,11 +52,13 @@ type IntegrationJobSpec struct {
 	Refs IntegrationJobRefs `json:"refs"`
 }
 
+// IntegrationJobConfigRef refers to the IntegrationConfig
 type IntegrationJobConfigRef struct {
 	Name string  `json:"name"`
 	Type JobType `json:"type"`
 }
 
+// IntegrationJobRefs describes the git event
 type IntegrationJobRefs struct {
 	// Repository name of git repository (in <org>/<repo> form, e.g., tmax-cloud/cicd-operator)
 	// +kubebuilder:validation:Pattern=.+/.+
@@ -65,25 +78,29 @@ type IntegrationJobRefs struct {
 	Pull *IntegrationJobRefsPull `json:"pull,omitempty"`
 }
 
+// IntegrationJobSender is a git user who triggered the IntegrationJob
 type IntegrationJobSender struct {
 	Name  string `json:"name"`
 	Email string `json:"email,omitempty"`
 }
 
+// IntegrationJobRefsBase refers to the base commit
 type IntegrationJobRefsBase struct {
 	Ref  string `json:"ref"`
 	Link string `json:"link"`
 	Sha  string `json:"sha"`
 }
 
+// IntegrationJobRefsPull refers to the pull request
 type IntegrationJobRefsPull struct {
-	Id     int                          `json:"id"`
+	ID     int                          `json:"id"`
 	Ref    string                       `json:"ref"`
 	Sha    string                       `json:"sha"`
 	Link   string                       `json:"link"`
 	Author IntegrationJobRefsPullAuthor `json:"author"`
 }
 
+// IntegrationJobRefsPullAuthor is an author of the pull request
 type IntegrationJobRefsPullAuthor struct {
 	Name string `json:"name"`
 }
@@ -105,15 +122,6 @@ type IntegrationJobStatus struct {
 	// Jobs are status list for each Job in the IntegrationJob
 	Jobs []JobStatus `json:"jobs,omitempty"`
 }
-
-type IntegrationJobState string
-
-const (
-	IntegrationJobStatePending   = IntegrationJobState("Pending")
-	IntegrationJobStateRunning   = IntegrationJobState("Running")
-	IntegrationJobStateCompleted = IntegrationJobState("Completed")
-	IntegrationJobStateFailed    = IntegrationJobState("Failed")
-)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -144,6 +152,7 @@ func init() {
 	SchemeBuilder.Register(&IntegrationJob{}, &IntegrationJobList{})
 }
 
+// SetDefaults sets default values for the status
 func (s *IntegrationJobStatus) SetDefaults() error {
 	if s.State == "" {
 		s.State = IntegrationJobStatePending
@@ -151,7 +160,7 @@ func (s *IntegrationJobStatus) SetDefaults() error {
 	return nil
 }
 
-// Returns Server address for reports (IntegrationJob details)
+// GetReportServerAddress returns Server address for reports (IntegrationJob details)
 func (i *IntegrationJob) GetReportServerAddress(jobName string) string {
 	return fmt.Sprintf("http://%s/report/%s/%s/%s", configs.ExternalHostName, i.Namespace, i.Name, jobName)
 }

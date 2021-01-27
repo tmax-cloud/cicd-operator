@@ -23,14 +23,13 @@ func Namespace() (string, error) {
 			return "", fmt.Errorf("could not read file %s", nsPath)
 		}
 		return string(nsBytes), nil
-	} else {
-		// Not running in k8s cluster (may be running locally)
-		ns := os.Getenv("NAMESPACE")
-		if ns == "" {
-			ns = "cicd-system"
-		}
-		return ns, nil
 	}
+	// Not running in k8s cluster (may be running locally)
+	ns := os.Getenv("NAMESPACE")
+	if ns == "" {
+		ns = "cicd-system"
+	}
+	return ns, nil
 }
 
 // AuthClient is a K8s client for Authorization

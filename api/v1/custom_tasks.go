@@ -2,12 +2,13 @@ package v1
 
 import "fmt"
 
+// API group and version for the custom tasks
 const (
 	CustomTaskGroup   = "cicd.tmax.io"
 	CustomTaskVersion = "v1"
 )
 
-// Approval
+// Approval custom tasks
 const (
 	CustomTaskKindApproval = "ApprovalTask"
 
@@ -23,14 +24,15 @@ const (
 	CustomTaskApprovalApproversConfigMapKey = "approvers"
 )
 
-// Email
+// Email custom tasks
 const (
 	CustomTaskKindEmail = "EmailTask"
 
 	CustomTaskEmailParamKeyReceivers = "receivers"
 	CustomTaskEmailParamKeyTitle     = "title"
 	CustomTaskEmailParamKeyContent   = "content"
-	CustomTaskEmailParamKeyIsHtml    = "isHtml"
+	CustomTaskEmailParamKeyIsHTML    = "isHtml"
 )
 
-var CustomTaskApiVersion = fmt.Sprintf("%s/%s", CustomTaskGroup, CustomTaskVersion)
+// CustomTaskAPIVersion is
+var CustomTaskAPIVersion = fmt.Sprintf("%s/%s", CustomTaskGroup, CustomTaskVersion)

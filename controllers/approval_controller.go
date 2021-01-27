@@ -48,12 +48,13 @@ type ApprovalReconciler struct {
 }
 
 const (
-	ApiGroup           = "cicdapi.tmax.io"
-	ApprovalKind       = "approvals"
-	ApprovalSubApprove = "approve"
-	ApprovalSubReject  = "reject"
+	// APIGroup is a group of api
+	APIGroup           = "cicdapi.tmax.io"
+	approvalKind       = "approvals"
+	approvalSubApprove = "approve"
+	approvalSubReject  = "reject"
 
-	ServiceAccountPrefix = "system:serviceaccount:"
+	serviceAccountPrefix = "system:serviceaccount:"
 )
 
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=approvals,verbs=get;list;watch;create;update;patch;delete
@@ -61,6 +62,7 @@ const (
 // +kubebuilder:rbac:groups=cicdapi.tmax.io,resources=approvals/approve;approvals/reject,verbs=update
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
 
+// Reconcile reconciles Approval object
 func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("approval", req.NamespacedName)
@@ -179,8 +181,8 @@ func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error
 
 	// Set rules
 	role.Rules = []rbac.PolicyRule{{
-		APIGroups:     []string{ApiGroup},
-		Resources:     []string{fmt.Sprintf("%s/%s", ApprovalKind, ApprovalSubApprove), fmt.Sprintf("%s/%s", ApprovalKind, ApprovalSubReject)},
+		APIGroups:     []string{APIGroup},
+		Resources:     []string{fmt.Sprintf("%s/%s", approvalKind, approvalSubApprove), fmt.Sprintf("%s/%s", approvalKind, approvalSubReject)},
 		ResourceNames: []string{approval.Name},
 		Verbs:         []string{"update"},
 	}}
@@ -239,11 +241,11 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 		ns := approval.Namespace
 
 		// Check if it's ServiceAccount
-		if strings.HasPrefix(user, ServiceAccountPrefix) {
+		if strings.HasPrefix(user, serviceAccountPrefix) {
 			apiGroup = ""
 			kind = rbac.ServiceAccountKind
 
-			token := strings.Split(strings.TrimPrefix(user, ServiceAccountPrefix), ":")
+			token := strings.Split(strings.TrimPrefix(user, serviceAccountPrefix), ":")
 			if len(token) != 2 {
 				continue
 			}
@@ -350,6 +352,7 @@ func (r *ApprovalReconciler) patchStatus(instance *cicdv1.Approval, original *ci
 	}
 }
 
+// SetupWithManager sets ApprovalReconciler to the manager
 func (r *ApprovalReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cicdv1.Approval{}).
