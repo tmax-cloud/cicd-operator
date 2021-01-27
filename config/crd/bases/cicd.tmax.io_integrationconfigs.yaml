@@ -42,7 +42,7 @@ spec:
                 description: Git config for target repository
                 properties:
                   apiUrl:
-                    description: ApiUrl for api server (e.g., https://api.github.com
+                    description: APIUrl for api server (e.g., https://api.github.com
                       for github type), for the case where the git repository is self-hosted
                       (should contain specific protocol otherwise webhook server returns
                       error)
@@ -103,6 +103,8 @@ spec:
                     description: PostSubmit jobs are for push events (including tag
                       events)
                     items:
+                      description: Job is a specification of the job to be executed
+                        for specific events Same level of task of tekton
                       properties:
                         after:
                           description: After configures which jobs should be executed
@@ -172,7 +174,7 @@ spec:
                               description: Content of the email
                               type: string
                             isHtml:
-                              description: IsHtml describes if it's html content
+                              description: IsHTML describes if it's html content
                               type: boolean
                             receivers:
                               description: Receivers is a list of email receivers
@@ -1970,6 +1972,8 @@ spec:
                   preSubmit:
                     description: PreSubmit jobs are for pull-request events
                     items:
+                      description: Job is a specification of the job to be executed
+                        for specific events Same level of task of tekton
                       properties:
                         after:
                           description: After configures which jobs should be executed
@@ -2039,7 +2043,7 @@ spec:
                               description: Content of the email
                               type: string
                             isHtml:
-                              description: IsHtml describes if it's html content
+                              description: IsHTML describes if it's html content
                               type: boolean
                             receivers:
                               description: Receivers is a list of email receivers
