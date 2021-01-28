@@ -1,13 +1,16 @@
 package pipelinemanager
 
 import (
+	"context"
 	"fmt"
+	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
@@ -24,7 +27,7 @@ const (
 )
 
 // Generate generates (but not creates) a PipelineRun object
-func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
+func Generate(job *cicdv1.IntegrationJob, cli client.Client) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
 
 	// Workspace defs
@@ -33,14 +36,28 @@ func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 		workspaceDefs = append(workspaceDefs, tektonv1beta1.PipelineWorkspaceDeclaration{Name: w.Name})
 	}
 
+	// Resources
+	var specResources []tektonv1beta1.PipelineDeclaredResource
+	var runResources []tektonv1beta1.PipelineResourceBinding
+
 	// Generate Tasks
 	var tasks []tektonv1beta1.PipelineTask
 	for _, j := range job.Spec.Jobs {
-		taskSpec, err := generateTask(job, j)
+		taskSpec, resources, err := generateTask(job, j)
 		if err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, *taskSpec)
+
+		// Append resources
+		for _, res := range resources {
+			specRes, err := convertResourceToSpec(res.PipelineResourceBinding, job.Namespace, cli)
+			if err != nil {
+				return nil, err
+			}
+			runResources = append(runResources, res.PipelineResourceBinding)
+			specResources = append(specResources, *specRes)
+		}
 	}
 
 	// Fill default env.s
@@ -56,7 +73,9 @@ func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 		},
 		Spec: tektonv1beta1.PipelineRunSpec{
 			ServiceAccountName: cicdv1.GetServiceAccountName(job.Spec.ConfigRef.Name),
+			Resources:          runResources,
 			PipelineSpec: &tektonv1beta1.PipelineSpec{
+				Resources:  specResources,
 				Tasks:      tasks,
 				Workspaces: workspaceDefs,
 			},
@@ -66,23 +85,53 @@ func Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	}, nil
 }
 
-func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.PipelineTask, error) {
+func convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns string, cli client.Client) (*tektonv1beta1.PipelineDeclaredResource, error) {
+	// Get resource type
+	var t tektonv1beta1.PipelineResourceType
+	if binding.ResourceSpec != nil {
+		t = binding.ResourceSpec.Type
+	} else if binding.ResourceRef != nil {
+		// Get PipelineResource
+		res := &tektonv1alpha1.PipelineResource{}
+		if err := cli.Get(context.Background(), types.NamespacedName{Name: binding.ResourceRef.Name, Namespace: ns}, res); err != nil {
+			return nil, err
+		}
+		t = res.Spec.Type
+	} else {
+		return nil, fmt.Errorf("resource specs are all nil")
+	}
+
+	return &tektonv1beta1.PipelineDeclaredResource{
+		Name: binding.Name,
+		Type: t,
+	}, nil
+}
+
+func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.PipelineTask, []tektonv1beta1.TaskResourceBinding, error) {
 	task := &tektonv1beta1.PipelineTask{Name: j.Name}
 
-	// Handle Approval
-	if j.Approval != nil {
+	var resources []tektonv1beta1.TaskResourceBinding
+
+	// Handle TektonTask/Approval/Email
+	if j.TektonTask != nil {
+		res, err := generateTektonTaskRunTask(j, task)
+		if err != nil {
+			return nil, nil, err
+		}
+		resources = append(resources, res...)
+	} else if j.Approval != nil {
 		if err := generateApprovalRunTask(job, j, task); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else if j.Email != nil {
 		if err := generateEmailRunTask(j, task); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
 		// Steps
 		steps, err := generateSteps(j)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		task.TaskSpec = &tektonv1beta1.EmbeddedTask{}
@@ -106,7 +155,7 @@ func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.Pipe
 	// After
 	task.RunAfter = append(task.RunAfter, j.After...)
 
-	return task, nil
+	return task, resources, nil
 }
 
 func generateCustomTaskRef(kind string) *tektonv1beta1.TaskRef {

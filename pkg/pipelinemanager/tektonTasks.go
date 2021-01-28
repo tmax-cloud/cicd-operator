@@ -1,0 +1,152 @@
+package pipelinemanager
+
+import (
+	"encoding/json"
+	"fmt"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"net/http"
+	"strings"
+)
+
+const (
+	catalogURL = "https://raw.githubusercontent.com/tektoncd/catalog/master/task/%s/%s/%s.yaml"
+)
+
+func generateTektonTaskRunTask(j cicdv1.Job, target *tektonv1beta1.PipelineTask) ([]tektonv1beta1.TaskResourceBinding, error) {
+	taskSpec := j.TektonTask
+
+	// Ref local or catalog
+	if taskSpec.TaskRef.Local != nil {
+		target.TaskRef = taskSpec.TaskRef.Local
+	} else if taskSpec.TaskRef.Catalog != "" {
+		catTok := strings.Split(taskSpec.TaskRef.Catalog, "@")
+		if len(catTok) != 2 {
+			return nil, fmt.Errorf("catalog reference should be in form of [name]@[version]")
+		}
+		catName := catTok[0]
+		catVer := catTok[1]
+
+		// Fetch from catalog
+		spec, err := fetchCatalog(catName, catVer)
+		if err != nil {
+			return nil, err
+		}
+		target.TaskSpec = &tektonv1beta1.EmbeddedTask{TaskSpec: *spec}
+	} else {
+		return nil, fmt.Errorf("both local task and catalog are nil")
+	}
+
+	// Params
+	for _, p := range taskSpec.Params {
+		v := tektonv1beta1.ArrayOrString{}
+
+		if p.ArrayVal != nil {
+			v.Type = tektonv1beta1.ParamTypeArray
+			v.ArrayVal = append(v.ArrayVal, p.ArrayVal...)
+		} else {
+			v.Type = tektonv1beta1.ParamTypeString
+			v.StringVal = p.StringVal
+		}
+
+		target.Params = append(target.Params, tektonv1beta1.Param{
+			Name:  p.Name,
+			Value: v,
+		})
+	}
+
+	// Resources
+	var resources []tektonv1beta1.TaskResourceBinding
+	if taskSpec.Resources != nil {
+		target.Resources = &tektonv1beta1.PipelineTaskResources{}
+		// Input
+		for _, res := range taskSpec.Resources.Inputs {
+			globalName := globalResourceName(j.Name, res.Name)
+			target.Resources.Inputs = append(target.Resources.Inputs, tektonv1beta1.PipelineTaskInputResource{
+				Name:     res.Name,
+				Resource: globalName,
+			})
+
+			resSpec := res.DeepCopy()
+			resSpec.Name = globalName
+
+			// Append to resources
+			resources = append(resources, *resSpec)
+		}
+
+		// Output
+		for _, res := range taskSpec.Resources.Outputs {
+			globalName := globalResourceName(j.Name, res.Name)
+			target.Resources.Outputs = append(target.Resources.Outputs, tektonv1beta1.PipelineTaskOutputResource{
+				Name:     res.Name,
+				Resource: globalName,
+			})
+
+			resSpec := res.DeepCopy()
+			resSpec.Name = globalName
+
+			// Append to resources
+			resources = append(resources, *resSpec)
+		}
+	}
+
+	// Workspaces
+	target.Workspaces = append(target.Workspaces, taskSpec.Workspaces...)
+
+	return resources, nil
+}
+
+func globalResourceName(jobName, resName string) string {
+	return fmt.Sprintf("%s-%s", jobName, resName)
+}
+
+func fetchCatalog(catName, catVer string) (*tektonv1beta1.TaskSpec, error) {
+	// Fetch
+	resp, err := http.Get(fmt.Sprintf(catalogURL, catName, catVer, catName))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("error: %d, msg: %s", resp.StatusCode, string(respBody))
+	}
+
+	// Unmarshal
+	var body interface{}
+	if err := yaml.Unmarshal(respBody, &body); err != nil {
+		return nil, err
+	}
+	body = convert(body)
+	jsonString, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	task := &tektonv1beta1.Task{}
+	if err := json.Unmarshal(jsonString, task); err != nil {
+		return nil, err
+	}
+
+	return &task.Spec, nil
+}
+
+func convert(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		m2 := map[string]interface{}{}
+		for k, v := range x {
+			m2[k.(string)] = convert(v)
+		}
+		return m2
+	case []interface{}:
+		for i, v := range x {
+			x[i] = convert(v)
+		}
+	}
+	return i
+}
