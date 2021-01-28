@@ -35,10 +35,6 @@ type Job struct {
 	// Script will override command of container
 	Script string `json:"script,omitempty"`
 
-	// TektonTask is for referring local Tasks or the Tasks registered in tekton catalog github repo.
-	// Not implemented yet
-	TektonTask *TektonTask `json:"tektonTask,omitempty"`
-
 	// SkipCheckout describes whether or not to checkout from git before
 	SkipCheckout bool `json:"skipCheckout,omitempty"`
 
@@ -47,6 +43,9 @@ type Job struct {
 
 	// After configures which jobs should be executed before this job runs
 	After []string `json:"after,omitempty"`
+
+	// TektonTask is for referring local Tasks or the Tasks registered in tekton catalog github repo.
+	TektonTask *TektonTask `json:"tektonTask,omitempty"`
 
 	// Approval
 	Approval *JobApproval `json:"approval,omitempty"`
@@ -61,19 +60,26 @@ type TektonTask struct {
 	TaskRef JobTaskRef `json:"taskRef"`
 
 	// Params are input params for the task
-	Params []tektonv1beta1.Param `json:"params,omitempty"`
+	Params []TektonTaskParam `json:"params,omitempty"`
 
 	// Resources are input/output resources for the task
 	Resources *tektonv1beta1.TaskRunResources `json:"resources,omitempty"`
 
 	// Workspaces are workspaces for the task
-	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
+	Workspaces []tektonv1beta1.WorkspacePipelineTaskBinding `json:"workspaces,omitempty"`
+}
+
+// TektonTaskParam replicates tekton's parameter
+type TektonTaskParam struct {
+	Name      string   `json:"name"`
+	StringVal string   `json:"stringVal,omitempty"`
+	ArrayVal  []string `json:"arrayVal,omitempty"`
 }
 
 // JobTaskRef refers to the tekton task, both local and in catalog
 type JobTaskRef struct {
-	// Name for local Tasks
-	Name string `json:"name,omitempty"`
+	// Local refers to local tasks/cluster tasks
+	Local *tektonv1beta1.TaskRef `json:"local,omitempty"`
 
 	// Catalog is a name of the task @ tekton catalog github repo. (e.g., s2i@0.2)
 	// FYI: https://github.com/tektoncd/catalog

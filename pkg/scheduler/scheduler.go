@@ -124,7 +124,7 @@ func (s *Scheduler) schedulePending(availableCnt *int) func(structs.Item) {
 		}
 
 		// Generate and create PipelineRun
-		pr, err := pipelinemanager.Generate(jobNode.IntegrationJob)
+		pr, err := pipelinemanager.Generate(jobNode.IntegrationJob, s.k8sClient)
 		if err != nil {
 			if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
 				log.Error(err, "")

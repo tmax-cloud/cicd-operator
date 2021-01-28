@@ -17,6 +17,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
   - [`after`](#after)
   - [Configuring `approval` jobs](#configuring-approval-jobs)
   - [Configuring `email` jobs](#configuring-email-jobs)
+  - [Using Tekton Tasks](#using-tekton-tasks)
 - [Configuring `secrets`](#configuring-secrets)
 - [Configuring `workspaces`](#configuring-workspaces)
 
@@ -141,6 +142,61 @@ Refer to the [`Approval` guide](./approval.md)
 
 ### Configuring `email` jobs
 Refer to the [`Email` guide](./email.md)
+
+### Using Tekton Tasks
+You can use (or reuse) tekton tasks, rather than writing scripts in `IntegrationCOnfig`.
+* `params` are slightly different from the Tekton's spec. You should specify `name` field and one of `stringVal` field or `arrayVal` field, depending on the parameter's type.
+* You can use `resources` just like using in `PipelineRun` or `TaskRun`, either using `resourceRef` or `resourceSpec`.
+* You can use `workspaces`, just like using in `Pipeline`. Be sure you specified the workspace in `workspaces` field of `IntegrationConfig` (refer to [the link](#configuring-workspaces))
+```yaml
+spec:
+  jobs:
+    preSubmit:
+    - name: test-1
+      tektonTask:
+        taskRef:
+          local:
+            name: curl
+            kind: Task
+        params:
+          - name: BUILDER_IMAGE
+            stringVal: tmaxcloudck/s2i-tomcat:latest
+        resources:
+          outputs:
+            - name: image
+              resourceSpec:
+                type: image
+                params:
+                  - name: url
+                    value: 172.22.11.2:30500/test:test
+        workspaces:
+          - name: source
+            workspace: s2i
+```
+For users' convenience, we provide catalog reference. The catalog is fetched from the Tekton's catalog repository (https://github.com/tektoncd/catalog/tree/master/task).
+Be sure to specify the catalog name as `[name]@[version]` (e.g., `s2i@0.1`)
+```yaml
+spec:
+  jobs:
+    - name: test-1
+      tektonTask:
+        taskRef:
+          catalog: 's2i@0.1'
+        params:
+          - name: BUILDER_IMAGE
+            stringVal: tmaxcloudck/s2i-tomcat:latest
+        resources:
+          outputs:
+            - name: image
+              resourceSpec:
+                type: image
+                params:
+                  - name: url
+                    value: 172.22.11.2:30500/test:test
+        workspaces:
+          - name: source
+            workspace: s2i
+```
 
 
 ## Configuring `secrets`
