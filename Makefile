@@ -1,5 +1,5 @@
 # Current Operator version
-VERSION ?= v0.1.3
+VERSION ?= v0.1.4
 REGISTRY ?= tmaxcloudck
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
