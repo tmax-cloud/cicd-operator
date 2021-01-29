@@ -184,22 +184,22 @@ func (r *ConfigReconciler) reconcileEmailTemplate(cm *corev1.ConfigMap) error {
 
 func getVars(data map[string]string, vars map[string]operatorConfig) {
 	for key, c := range vars {
-		v, exist := data[key]
+		v := data[key]
 		switch c.Type {
 		case cfgTypeString:
 			if c.StringVal == nil {
 				continue
 			}
-			if exist {
+			if len(v) > 0 {
 				*c.StringVal = v
-			} else {
+			} else if len(c.StringDefault) > 0 {
 				*c.StringVal = c.StringDefault
 			}
 		case cfgTypeInt:
 			if c.IntVal == nil {
 				continue
 			}
-			if exist {
+			if len(v) > 0 {
 				i, err := strconv.Atoi(v)
 				if err != nil {
 					continue
@@ -212,7 +212,7 @@ func getVars(data map[string]string, vars map[string]operatorConfig) {
 			if c.BoolVal == nil {
 				continue
 			}
-			if exist {
+			if len(v) > 0 {
 				b, err := strconv.ParseBool(v)
 				if err != nil {
 					continue
