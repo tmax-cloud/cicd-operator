@@ -96,7 +96,7 @@ data:
                   <td><a href="{{.Spec.Link}}">{{.Spec.Link}}</a></td>
                 </tr>
               </table>
-              <button type="button" class="hypercloud-button" onclick="location.href='https://220.90.208.240/'">
+              <button type="button" class="hypercloud-button" onclick="location.href=''">
                 HyperCloud 바로가기
               </button>
             </div>
@@ -221,7 +221,7 @@ data:
                   <td><a href="{{.Spec.Link}}">{{.Spec.Link}}</a></td>
                 </tr>
               </table>
-              <button type="button" class="hypercloud-button" onclick="location.href='https://220.90.208.240/'">
+              <button type="button" class="hypercloud-button" onclick="location.href=''">
                 HyperCloud 바로가기
               </button>
             </div>
