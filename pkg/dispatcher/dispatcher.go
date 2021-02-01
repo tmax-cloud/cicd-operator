@@ -94,6 +94,7 @@ func handlePullRequest(webhook *git.Webhook, config *cicdv1.IntegrationConfig, j
 						},
 					},
 				},
+				PodTemplate: config.Spec.PodTemplate,
 			},
 		}
 	}
@@ -129,6 +130,7 @@ func handlePush(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobID st
 					Sha:  push.Sha,
 				},
 			},
+			PodTemplate: config.Spec.PodTemplate,
 		},
 	}
 	return job

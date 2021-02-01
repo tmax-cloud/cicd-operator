@@ -79,8 +79,9 @@ func Generate(job *cicdv1.IntegrationJob, cli client.Client) (*tektonv1beta1.Pip
 				Tasks:      tasks,
 				Workspaces: workspaceDefs,
 			},
-			Workspaces: job.Spec.Workspaces,
-			Timeout:    &metav1.Duration{Duration: 120 * time.Hour},
+			PodTemplate: job.Spec.PodTemplate,
+			Workspaces:  job.Spec.Workspaces,
+			Timeout:     &metav1.Duration{Duration: 120 * time.Hour},
 		},
 	}, nil
 }
