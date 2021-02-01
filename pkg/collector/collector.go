@@ -6,6 +6,7 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"gopkg.in/robfig/cron.v2"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
@@ -76,7 +77,9 @@ func (c *Collector) collect() {
 	log.Info("Garbage collector is running...")
 	jobList := &cicdv1.IntegrationJobList{}
 	if err := c.client.List(context.Background(), jobList); err != nil {
-		log.Error(err, "")
+		if _, ok := err.(*cache.ErrCacheNotStarted); !ok {
+			log.Error(err, "")
+		}
 		return
 	}
 

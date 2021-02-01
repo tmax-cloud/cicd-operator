@@ -45,6 +45,8 @@ type ConfigReconciler struct {
 	InitChan chan struct{}
 
 	Init bool
+
+	lastResourceVersion string
 }
 
 // Start starts the config map reconciler
@@ -78,7 +80,8 @@ func (r *ConfigReconciler) watch() {
 	log := r.Log.WithName("config controller")
 
 	watcher, err := r.client.Watch(context.Background(), metav1.ListOptions{
-		FieldSelector: "metadata.name!=2787db31.tmax.io",
+		FieldSelector:   "metadata.name!=2787db31.tmax.io",
+		ResourceVersion: r.lastResourceVersion,
 	})
 	if err != nil {
 		log.Error(err, "")
@@ -88,6 +91,7 @@ func (r *ConfigReconciler) watch() {
 	for ev := range watcher.ResultChan() {
 		cm, ok := ev.Object.(*corev1.ConfigMap)
 		if ok {
+			r.lastResourceVersion = cm.ResourceVersion
 			if err := r.Reconcile(cm); err != nil {
 				log.Error(err, "")
 			}
