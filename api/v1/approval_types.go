@@ -106,7 +106,7 @@ type Approval struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ApprovalSpec   `json:"spec,omitempty"`
+	Spec   ApprovalSpec   `json:"spec"`
 	Status ApprovalStatus `json:"status,omitempty"`
 }
 
