@@ -165,16 +165,17 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 		gitCli, err := utils.GetGitCli(instance, r.Client)
 		if err != nil {
 			r.Log.Error(err, "")
-		}
-		hookList, err := gitCli.ListWebhook()
-		if err != nil {
-			r.Log.Error(err, "")
-		}
-		for _, h := range hookList {
-			if h.URL == instance.GetWebhookServerAddress() {
-				r.Log.Info("Deleting webhook " + h.URL)
-				if err := gitCli.DeleteWebhook(h.ID); err != nil {
-					r.Log.Error(err, "")
+		} else {
+			hookList, err := gitCli.ListWebhook()
+			if err != nil {
+				r.Log.Error(err, "")
+			}
+			for _, h := range hookList {
+				if h.URL == instance.GetWebhookServerAddress() {
+					r.Log.Info("Deleting webhook " + h.URL)
+					if err := gitCli.DeleteWebhook(h.ID); err != nil {
+						r.Log.Error(err, "")
+					}
 				}
 			}
 		}
