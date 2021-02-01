@@ -5563,6 +5563,8 @@ spec:
             required:
             - conditions
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

@@ -82,7 +82,7 @@ type IntegrationConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IntegrationConfigSpec   `json:"spec,omitempty"`
+	Spec   IntegrationConfigSpec   `json:"spec"`
 	Status IntegrationConfigStatus `json:"status,omitempty"`
 }
 

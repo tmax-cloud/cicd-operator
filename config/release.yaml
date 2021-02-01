@@ -836,6 +836,8 @@ spec:
             - conditions
             - result
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
@@ -6413,6 +6415,8 @@ spec:
             required:
             - conditions
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
@@ -10634,6 +10638,8 @@ spec:
             required:
             - state
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

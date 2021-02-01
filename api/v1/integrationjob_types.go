@@ -139,7 +139,7 @@ type IntegrationJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IntegrationJobSpec   `json:"spec,omitempty"`
+	Spec   IntegrationJobSpec   `json:"spec"`
 	Status IntegrationJobStatus `json:"status,omitempty"`
 }
 
