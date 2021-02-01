@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,6 +51,9 @@ type IntegrationJobSpec struct {
 
 	// Refs
 	Refs IntegrationJobRefs `json:"refs"`
+
+	// PodTemplate for the TaskRun pods. Same as tekton's pod template
+	PodTemplate *pod.Template `json:"podTemplate,omitempty"`
 }
 
 // IntegrationJobConfigRef refers to the IntegrationConfig

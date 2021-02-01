@@ -20,6 +20,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
   - [Using Tekton Tasks](#using-tekton-tasks)
 - [Configuring `secrets`](#configuring-secrets)
 - [Configuring `workspaces`](#configuring-workspaces)
+- [Configuring `podTemplate`](#configuring-podtemplate)
 
 ## Configuring `git`
 For example,
@@ -232,6 +233,21 @@ spec:
       ...
       script: |
         echo 'hi' >> $(workspaces.s2i.path)/hello-file
+```
+
+## Configuring `podTemplate`
+You can specify pod's additional spec for running the jobs. It is just same as tekton's `podTemplate`, so please refer to https://github.com/tektoncd/pipeline/blob/master/docs/podtemplates.md
+```yaml
+spec:
+  jobs:
+    - name: test
+      ...
+  podTemplate:
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+    imagePullSecrets:
+      - name: pull-secret-1
 ```
 
 # Appendix

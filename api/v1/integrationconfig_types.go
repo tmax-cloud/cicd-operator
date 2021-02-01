@@ -19,6 +19,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 
@@ -51,6 +52,9 @@ type IntegrationConfigSpec struct {
 
 	// Merge
 	// TODO
+
+	// PodTemplate for the TaskRun pods. Same as tekton's pod template. Refer to https://github.com/tektoncd/pipeline/blob/master/docs/podtemplates.md
+	PodTemplate *pod.Template `json:"podTemplate,omitempty"`
 }
 
 // IntegrationConfigJobs categorizes jobs into two types (pre-submit and post-submit)
