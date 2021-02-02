@@ -258,6 +258,17 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 		}
 	}
 
+	// If it's start/completed but completion time is not set, set it as now
+	if job.Status.State == cicdv1.IntegrationJobStateFailed || job.Status.State == cicdv1.IntegrationJobStateCompleted {
+		t := &metav1.Time{Time: time.Now()}
+		if job.Status.StartTime == nil {
+			job.Status.StartTime = t
+		}
+		if job.Status.CompletionTime == nil {
+			job.Status.CompletionTime = t
+		}
+	}
+
 	// Set remote git's commit status for each job
 	if err := updateGitCommitStatus(cfg, client, job, stateChanged); err != nil {
 		return err
