@@ -78,6 +78,9 @@ type IntegrationConfigStatus struct {
 
 // IntegrationConfig is the Schema for the integrationconfigs API
 // +kubebuilder:resource:shortName="ic"
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="ready")].status`
+// +kubebuilder:printcolumn:name="WebhookRegistered",type=string,JSONPath=`.status.conditions[?(@.type=="webhook-registered")].status`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="Creation time"
 type IntegrationConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
