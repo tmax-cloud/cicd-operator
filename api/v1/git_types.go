@@ -27,6 +27,7 @@ type GitConfig struct {
 
 	// APIUrl for api server (e.g., https://api.github.com for github type),
 	// for the case where the git repository is self-hosted (should contain specific protocol otherwise webhook server returns error)
+	// Also, it should *NOT* contain repository path (e.g., tmax-cloud/cicd-operator)
 	APIUrl string `json:"apiUrl,omitempty"`
 
 	// Token

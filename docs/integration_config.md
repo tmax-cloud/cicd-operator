@@ -39,7 +39,8 @@ It is a type of git remote server.
 > Available values: github, gitlab
 
 ### `apiUrl`
-API server url for self-served git servers. (e.g., http://gitlab.my.domain)
+API server url for self-served git servers. (e.g., http://gitlab.my.domain)  
+**This should NOT contain repository path (e.g., tmax-cloud/cicd-operator)**
 > Optional
 
 ### `repository`
