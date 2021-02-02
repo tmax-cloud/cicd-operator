@@ -870,7 +870,18 @@ spec:
     singular: integrationconfig
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="webhook-registered")].status
+      name: WebhookRegistered
+      type: string
+    - description: Creation time
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: IntegrationConfig is the Schema for the integrationconfigs API
