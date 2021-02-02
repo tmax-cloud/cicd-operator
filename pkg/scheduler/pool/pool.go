@@ -92,7 +92,7 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 		return
 	}
 
-	// Pending -> Running
+	// Pending -> Running / Failed
 	if oldStatus == v1.IntegrationJobStatePending {
 		j.Pending.Delete(node)
 		if newStatus == v1.IntegrationJobStateRunning {

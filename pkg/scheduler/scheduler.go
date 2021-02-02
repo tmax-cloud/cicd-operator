@@ -162,5 +162,5 @@ func (s *Scheduler) patchJobScheduleFailed(job *cicdv1.IntegrationJob, msg strin
 	job.Status.CompletionTime = &metav1.Time{Time: time.Now()}
 
 	p := client.MergeFrom(original)
-	return s.k8sClient.Patch(context.Background(), job, p)
+	return s.k8sClient.Status().Patch(context.Background(), job, p)
 }
