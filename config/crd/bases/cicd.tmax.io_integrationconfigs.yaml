@@ -45,7 +45,8 @@ spec:
                     description: APIUrl for api server (e.g., https://api.github.com
                       for github type), for the case where the git repository is self-hosted
                       (should contain specific protocol otherwise webhook server returns
-                      error)
+                      error) Also, it should *NOT* contain repository path (e.g.,
+                      tmax-cloud/cicd-operator)
                     type: string
                   repository:
                     description: Repository name of git repository (in <org>/<repo>
