@@ -46,7 +46,7 @@ type ConfigReconciler struct {
 
 	Init bool
 
-	lastResourceVersion string
+	lastResourceVersions map[string]string
 }
 
 // Start starts the config map reconciler
@@ -71,17 +71,18 @@ func (r *ConfigReconciler) Start() {
 		os.Exit(1)
 	}
 
+	//Set last resource versions for each config map
+	r.lastResourceVersions = map[string]string{}
 	for {
 		r.watch()
 	}
 }
 
 func (r *ConfigReconciler) watch() {
-	log := r.Log.WithName("config controller")
+	log := r.Log.WithName("config-controller")
 
 	watcher, err := r.client.Watch(context.Background(), metav1.ListOptions{
-		FieldSelector:   "metadata.name!=2787db31.tmax.io",
-		ResourceVersion: r.lastResourceVersion,
+		FieldSelector: "metadata.name!=2787db31.tmax.io",
 	})
 	if err != nil {
 		log.Error(err, "")
@@ -91,7 +92,6 @@ func (r *ConfigReconciler) watch() {
 	for ev := range watcher.ResultChan() {
 		cm, ok := ev.Object.(*corev1.ConfigMap)
 		if ok {
-			r.lastResourceVersion = cm.ResourceVersion
 			if err := r.Reconcile(cm); err != nil {
 				log.Error(err, "")
 			}
@@ -122,11 +122,17 @@ type operatorConfig struct {
 
 // Reconcile reconciles ConfigMap
 func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
-	r.Log.Info("Config is changed")
-
 	if cm == nil {
 		return nil
 	}
+
+	// Check resource versions
+	if cm.ResourceVersion == r.lastResourceVersions[cm.Name] {
+		return nil
+	}
+	r.lastResourceVersions[cm.Name] = cm.ResourceVersion
+
+	r.Log.Info("Config is changed")
 
 	switch cm.Name {
 	case configNameConfig:
