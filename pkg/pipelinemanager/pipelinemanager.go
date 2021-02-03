@@ -213,20 +213,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 	}
 
 	// Initialize status.jobs
-	stateChanged := make([]bool, len(job.Spec.Jobs))
-	reset := len(job.Status.Jobs) != len(job.Spec.Jobs)
-	if reset {
-		job.Status.Jobs = nil
-	}
-	for _, j := range job.Spec.Jobs {
-		if reset {
-			job.Status.Jobs = append(job.Status.Jobs, cicdv1.JobStatus{
-				Name:  j.Name,
-				State: cicdv1.CommitStatusStatePending,
-			})
-		}
-		stateChanged = append(stateChanged, reset)
-	}
+	stateChanged := initState(job)
 
 	// If PR exists, default state is running
 	if pr != nil {
@@ -275,6 +262,24 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 	}
 
 	return nil
+}
+
+func initState(job *cicdv1.IntegrationJob) []bool {
+	stateChanged := make([]bool, len(job.Spec.Jobs))
+	reset := len(job.Status.Jobs) != len(job.Spec.Jobs)
+	if reset {
+		job.Status.Jobs = nil
+	}
+	for _, j := range job.Spec.Jobs {
+		if reset {
+			job.Status.Jobs = append(job.Status.Jobs, cicdv1.JobStatus{
+				Name:  j.Name,
+				State: cicdv1.CommitStatusStatePending,
+			})
+		}
+		stateChanged = append(stateChanged, reset)
+	}
+	return stateChanged
 }
 
 func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j cicdv1.Job) *cicdv1.JobStatus {
