@@ -23,10 +23,3 @@ type Client interface {
 
 // CommitStatusState is a commit status type
 type CommitStatusState string
-
-// User is a body of user info
-type User struct {
-	ID    int
-	Name  string
-	Email string
-}

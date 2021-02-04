@@ -27,54 +27,19 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (*git.Webho
 		return nil, err
 	}
 	eventType := git.EventType(header.Get("x-github-event"))
-	if eventType == git.EventTypePullRequest {
+	switch eventType {
+	case git.EventTypePullRequest:
 		return c.parsePullRequestWebhook(jsonString)
-	} else if eventType == git.EventTypePush {
+	case git.EventTypePush:
 		return c.parsePushWebhook(jsonString)
+	case git.EventTypeIssueComment:
+		return c.parseIssueCommentWebhook(jsonString)
+	case git.EventTypePullRequestReview:
+		return c.parsePullRequestReviewWebhook(jsonString)
+	case git.EventTypePullRequestReviewComment:
+		return c.parsePullRequestReviewCommentWebhook(jsonString)
 	}
 	return nil, nil
-}
-
-func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error) {
-	var data PullRequestWebhook
-
-	if err := json.Unmarshal(jsonString, &data); err != nil {
-		return nil, err
-	}
-
-	// Get sender email
-	sender := git.Sender{Name: data.Sender.Name, ID: data.Sender.ID}
-	userInfo, err := c.GetUserInfo(data.Sender.Name)
-	if err == nil {
-		sender.Email = userInfo.Email
-	}
-
-	base := git.Base{Ref: data.PullRequest.Base.Ref}
-	head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
-	repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.HTMLURL}
-	pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.HTMLURL, Base: base, Head: head, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action)}
-	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest}, nil
-}
-
-func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
-	var data PushWebhook
-
-	if err := json.Unmarshal(jsonString, &data); err != nil {
-		return nil, err
-	}
-	repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.HTMLURL}
-	if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
-		return nil, nil
-	}
-	push := git.Push{Sender: git.Sender{Name: data.Sender.Name, ID: data.Sender.ID}, Ref: data.Ref, Sha: data.Sha}
-
-	// Get sender email
-	userInfo, err := c.GetUserInfo(data.Sender.Name)
-	if err == nil {
-		push.Sender.Email = userInfo.Email
-	}
-
-	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Push: &push}, nil
 }
 
 // ListWebhook lists registered webhooks
@@ -209,6 +174,42 @@ func (c *Client) GetUserInfo(userName string) (*git.User, error) {
 		Name:  userInfo.UserName,
 		Email: userInfo.Email,
 	}, nil
+}
+
+func (c *Client) getPullRequestInfo(id int) (*git.PullRequest, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/pulls/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
+
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
+	if err != nil {
+		return nil, err
+	}
+	header := map[string]string{"Authorization": "token " + token}
+	data, _, err := git.RequestHTTP(http.MethodGet, apiURL, header, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	pr := &PullRequest{}
+	if err := json.Unmarshal(data, &pr); err != nil {
+		return nil, err
+	}
+
+	return convertPullRequestToShared(pr), nil
+}
+
+func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
+	return &git.PullRequest{
+		ID:    pr.ID,
+		Title: pr.Title,
+		State: git.PullRequestState(pr.State),
+		Sender: git.User{
+			ID:   pr.User.ID,
+			Name: pr.User.Name,
+		},
+		URL:  pr.URL,
+		Base: git.Base{Ref: pr.Base.Ref},
+		Head: git.Head{Ref: pr.Head.Ref, Sha: pr.Head.Sha},
+	}
 }
 
 // IsValidPayload validates the webhook payload

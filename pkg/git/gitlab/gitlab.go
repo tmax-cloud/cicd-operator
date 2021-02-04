@@ -26,66 +26,16 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (*git.Webho
 	}
 
 	eventFromHeader := header.Get("x-gitlab-event")
-	if eventFromHeader == "Merge Request Hook" {
+	switch eventFromHeader {
+	case "Merge Request Hook":
 		return c.parsePullRequestWebhook(jsonString)
-	} else if eventFromHeader == "Push Hook" || eventFromHeader == "Tag Push Hook" {
+	case "Push Hook", "Tag Push Hook":
 		return c.parsePushWebhook(jsonString)
+	case "Note Hook":
+		return c.parseIssueComment(jsonString)
 	}
 
 	return nil, nil
-}
-
-func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error) {
-	var data MergeRequestWebhook
-
-	if err := json.Unmarshal(jsonString, &data); err != nil {
-		return nil, err
-	}
-	sender := git.Sender{Name: data.User.Name, Email: data.User.Email}
-	base := git.Base{Ref: data.ObjectAttribute.BaseRef}
-	head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
-	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
-	action := git.PullRequestAction(data.ObjectAttribute.Action)
-	switch string(action) {
-	case "close":
-		action = git.PullRequestActionClose
-	case "open":
-		action = git.PullRequestActionOpen
-	case "reopen":
-		action = git.PullRequestActionReOpen
-	case "update":
-		action = git.PullRequestActionSynchronize
-	}
-	state := git.PullRequestState(data.ObjectAttribute.State)
-	switch string(state) {
-	case "opened":
-		state = git.PullRequestStateOpen
-	case "closed":
-		state = git.PullRequestStateClosed
-	}
-	pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Project.WebURL, Base: base, Head: head, State: state, Action: action}
-	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest}, nil
-}
-
-func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
-	var data PushWebhook
-
-	if err := json.Unmarshal(jsonString, &data); err != nil {
-		return nil, err
-	}
-	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
-	if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
-		return nil, nil
-	}
-	push := git.Push{Sender: git.Sender{Name: data.UserName, ID: data.UserID}, Ref: data.Ref, Sha: data.Sha}
-
-	// Get sender email
-	userInfo, err := c.GetUserInfo(strconv.Itoa(data.UserID))
-	if err == nil {
-		push.Sender.Email = userInfo.Email
-	}
-
-	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Push: &push}, nil
 }
 
 // ListWebhook lists registered webhooks

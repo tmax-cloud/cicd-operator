@@ -2,10 +2,20 @@ package gitlab
 
 // MergeRequestWebhook is a gitlab-specific merge-request event webhook body
 type MergeRequestWebhook struct {
-	Kind            string          `json:"kind"`
-	User            User            `json:"user"`
-	ObjectAttribute ObjectAttribute `json:"object_attributes"`
-	Project         Project         `json:"project"`
+	Kind            string `json:"kind"`
+	User            User   `json:"user"`
+	ObjectAttribute struct {
+		Title      string `json:"title"`
+		ID         int    `json:"id"`
+		BaseRef    string `json:"target_branch"`
+		HeadRef    string `json:"source_branch"`
+		LastCommit struct {
+			Sha string `json:"id"`
+		} `json:"last_commit"`
+		State  string `json:"state"`
+		Action string `json:"action"`
+	} `json:"object_attributes"`
+	Project Project `json:"project"`
 }
 
 // PushWebhook is a gitlab-specific push event webhook body
@@ -18,6 +28,29 @@ type PushWebhook struct {
 	Sha      string  `json:"after"`
 }
 
+// NoteHook is a gitlab-specific issue comment webhook body
+type NoteHook struct {
+	User             User    `json:"user"`
+	Project          Project `json:"project"`
+	ObjectAttributes struct {
+		Note      string     `json:"note"`
+		CreatedAt gitlabTime `json:"created_at"`
+		UpdatedAt gitlabTime `json:"updated_at"`
+	} `json:"object_attributes"`
+	MergeRequest struct {
+		ID           int    `json:"id"`
+		Title        string `json:"title"`
+		State        string `json:"state"`
+		URL          string `json:"url"`
+		AuthorID     int    `json:"author_id"`
+		SourceBranch string `json:"source_branch"`
+		TargetBranch string `json:"target_branch"`
+		LastCommit   struct {
+			ID string `json:"id"`
+		} `json:"last_commit"`
+	} `json:"merge_request"`
+}
+
 // Project is a name/url for the repository
 type Project struct {
 	Name   string `json:"path_with_namespace"`
@@ -28,22 +61,6 @@ type Project struct {
 type User struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
-}
-
-// ObjectAttribute is a core body for pull request webhook
-type ObjectAttribute struct {
-	Title      string     `json:"title"`
-	ID         int        `json:"id"`
-	BaseRef    string     `json:"target_branch"`
-	HeadRef    string     `json:"source_branch"`
-	LastCommit LastCommit `json:"last_commit"`
-	State      string     `json:"state"`
-	Action     string     `json:"action"`
-}
-
-// LastCommit is a commit hash for the last commit of the pull request
-type LastCommit struct {
-	Sha string `json:"id"`
 }
 
 // RegistrationWebhookBody is a body for requesting webhook registration for the remote git server

@@ -1,5 +1,7 @@
 package git
 
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 // EventType is a type of webhook event
 type EventType string
 
@@ -11,8 +13,11 @@ type PullRequestAction string
 
 // Event Types
 const (
-	EventTypePullRequest = EventType("pull_request")
-	EventTypePush        = EventType("push")
+	EventTypePullRequest              = EventType("pull_request")
+	EventTypePush                     = EventType("push")
+	EventTypeIssueComment             = EventType("issue_comment")
+	EventTypePullRequestReview        = EventType("pull_request_review")
+	EventTypePullRequestReviewComment = EventType("pull_request_review_comment")
 )
 
 // Pull Request states
@@ -35,14 +40,14 @@ type Webhook struct {
 	EventType EventType
 	Repo      Repository
 
-	Push        *Push
-	PullRequest *PullRequest
-	Action      string
+	Push         *Push
+	PullRequest  *PullRequest
+	IssueComment *IssueComment
 }
 
 // Push is a common structure for push events
 type Push struct {
-	Sender Sender
+	Sender User
 	Ref    string
 	Sha    string
 }
@@ -53,10 +58,29 @@ type PullRequest struct {
 	Title  string
 	State  PullRequestState
 	Action PullRequestAction
-	Sender Sender
+	Sender User
 	URL    string
 	Base   Base
 	Head   Head
+}
+
+// IssueComment is a common structure for issue comment
+type IssueComment struct {
+	Comment Comment
+	Issue   Issue
+	Sender  User
+}
+
+// Comment is a comment body
+type Comment struct {
+	Body string
+
+	CreatedAt *metav1.Time
+}
+
+// Issue is an issue related to the Comment
+type Issue struct {
+	PullRequest *PullRequest
 }
 
 // Repository is a repository of the git
@@ -65,8 +89,8 @@ type Repository struct {
 	URL  string
 }
 
-// Sender is who triggered the event
-type Sender struct {
+// User is who triggered the event
+type User struct {
 	ID    int
 	Name  string
 	Email string
