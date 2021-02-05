@@ -39,10 +39,9 @@ func generateDefaultEnvs(job *cicdv1.IntegrationJob) ([]corev1.EnvVar, error) {
 		{Name: "CI_CONFIG_NAME", Value: jobSpec.ConfigRef.Name},
 		{Name: "CI_JOB_ID", Value: jobSpec.ID},
 		{Name: "CI_REPOSITORY", Value: jobSpec.Refs.Repository},
+		{Name: "CI_EVENT_TYPE", Value: string(jobSpec.ConfigRef.Type)},
+		{Name: "CI_WORKSPACE", Value: DefaultWorkingDir},
 		{Name: "CI_SERVER_URL", Value: fmt.Sprintf("%s://%s", u.Scheme, u.Host)},
-		{Name: "CI_API_URL", Value: ""},                                // TODO
-		{Name: "CI_EVENT_TYPE", Value: string(jobSpec.ConfigRef.Type)}, // TODO
-		{Name: "CI_EVENT_PATH", Value: ""},                             // TODO
 	}
 
 	refs := jobSpec.Refs

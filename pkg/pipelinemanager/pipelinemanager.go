@@ -356,5 +356,5 @@ func updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, client client.Client, 
 
 // Name is a PipelineRun's name for the IntegrationJob j
 func Name(j *cicdv1.IntegrationJob) string {
-	return j.Name // TODO - should we add postfix or something? Job:PipelineRun=1:1...
+	return j.Name
 }

@@ -105,7 +105,6 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 	// If it WAS running and not now, dismiss it (it is completed for some reason)
 	if oldStatus == v1.IntegrationJobStateRunning {
 		j.Running.Delete(node)
-		// TODO : do we need to handle Running -> Pending ??? might not happen...
 		if newStatus == v1.IntegrationJobStatePending {
 			j.Pending.Add(node)
 		} else {
