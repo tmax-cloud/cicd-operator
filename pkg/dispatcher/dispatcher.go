@@ -22,26 +22,25 @@ type Dispatcher struct {
 // Handle handles pull-request and push events
 func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	var job *cicdv1.IntegrationJob
+	var err error
 	pr := webhook.PullRequest
 	push := webhook.Push
 	if pr == nil && push == nil {
 		return fmt.Errorf("pull request and push struct is nil")
 	}
 
-	jobID := utils.RandomString(20)
-
-	jobs, err := filterJobs(webhook, config)
-	if err != nil {
-		return err
-	}
-	if len(jobs) < 1 {
-		return nil
-	}
-
-	if webhook.EventType == git.EventTypePullRequest {
-		job = handlePullRequest(webhook, config, jobID, jobs)
-	} else if webhook.EventType == git.EventTypePush {
-		job = handlePush(webhook, config, jobID, jobs)
+	if webhook.EventType == git.EventTypePullRequest && pr != nil {
+		if pr.Action == git.PullRequestActionOpen || pr.Action == git.PullRequestActionSynchronize || pr.Action == git.PullRequestActionReOpen {
+			job, err = GeneratePreSubmit(pr, &webhook.Repo, &pr.Sender, config)
+			if err != nil {
+				return err
+			}
+		}
+	} else if webhook.EventType == git.EventTypePush && push != nil {
+		job, err = GeneratePostSubmit(push, &webhook.Repo, &push.Sender, config)
+		if err != nil {
+			return err
+		}
 	}
 
 	if job == nil {
@@ -55,60 +54,64 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 	return nil
 }
 
-func handlePullRequest(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobID string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
-	pr := webhook.PullRequest
-	var job *cicdv1.IntegrationJob
-	if pr.Action == git.PullRequestActionOpen || pr.Action == git.PullRequestActionSynchronize || pr.Action == git.PullRequestActionReOpen {
-		job = &cicdv1.IntegrationJob{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s", config.Name, pr.Head.Sha[:5], jobID[:5]),
-				Namespace: config.Namespace,
-				Labels:    map[string]string{}, // TODO
-			},
-			Spec: cicdv1.IntegrationJobSpec{
-				ConfigRef: cicdv1.IntegrationJobConfigRef{
-					Name: config.Name,
-					Type: cicdv1.JobTypePreSubmit,
-				},
-				ID:         jobID,
-				Jobs:       jobs,
-				Workspaces: config.Spec.Workspaces,
-				Refs: cicdv1.IntegrationJobRefs{
-					Repository: webhook.Repo.Name,
-					Link:       webhook.Repo.URL,
-					Sender: &cicdv1.IntegrationJobSender{
-						Name:  pr.Sender.Name,
-						Email: pr.Sender.Email,
-					},
-					Base: cicdv1.IntegrationJobRefsBase{
-						Ref:  pr.Base.Ref,
-						Link: webhook.Repo.URL,
-					},
-					Pull: &cicdv1.IntegrationJobRefsPull{
-						ID:   pr.ID,
-						Ref:  pr.Head.Ref,
-						Sha:  pr.Head.Sha,
-						Link: pr.URL,
-						Author: cicdv1.IntegrationJobRefsPullAuthor{
-							Name: pr.Sender.Name,
-						},
-					},
-				},
-				PodTemplate: config.Spec.PodTemplate,
-			},
-		}
+// GeneratePreSubmit generates IntegrationJob for pull request event
+func GeneratePreSubmit(pr *git.PullRequest, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) (*cicdv1.IntegrationJob, error) {
+	jobs, err := filter(config.Spec.Jobs.PreSubmit, git.EventTypePullRequest, pr.Base.Ref)
+	if err != nil {
+		return nil, err
 	}
-	return job
+	if len(jobs) < 1 {
+		return nil, nil
+	}
+	jobID := utils.RandomString(20)
+	return &cicdv1.IntegrationJob{
+		ObjectMeta: generateMeta(config.Name, config.Namespace, pr.Head.Sha, jobID),
+		Spec: cicdv1.IntegrationJobSpec{
+			ConfigRef: cicdv1.IntegrationJobConfigRef{
+				Name: config.Name,
+				Type: cicdv1.JobTypePreSubmit,
+			},
+			ID:         jobID,
+			Jobs:       jobs,
+			Workspaces: config.Spec.Workspaces,
+			Refs: cicdv1.IntegrationJobRefs{
+				Repository: repo.Name,
+				Link:       repo.URL,
+				Sender: &cicdv1.IntegrationJobSender{
+					Name:  sender.Name,
+					Email: sender.Email,
+				},
+				Base: cicdv1.IntegrationJobRefsBase{
+					Ref:  pr.Base.Ref,
+					Link: repo.URL,
+				},
+				Pull: &cicdv1.IntegrationJobRefsPull{
+					ID:   pr.ID,
+					Ref:  pr.Head.Ref,
+					Sha:  pr.Head.Sha,
+					Link: pr.URL,
+					Author: cicdv1.IntegrationJobRefsPullAuthor{
+						Name: pr.Sender.Name,
+					},
+				},
+			},
+			PodTemplate: config.Spec.PodTemplate,
+		},
+	}, nil
 }
 
-func handlePush(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobID string, jobs []cicdv1.Job) *cicdv1.IntegrationJob {
-	push := webhook.Push
-	job := &cicdv1.IntegrationJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-%s", config.Name, push.Sha[:5], jobID[:5]),
-			Namespace: config.Namespace,
-			Labels:    map[string]string{}, // TODO
-		},
+// GeneratePostSubmit generates IntegrationJob for push event
+func GeneratePostSubmit(push *git.Push, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) (*cicdv1.IntegrationJob, error) {
+	jobs, err := filter(config.Spec.Jobs.PostSubmit, git.EventTypePush, push.Ref)
+	if err != nil {
+		return nil, err
+	}
+	if len(jobs) < 1 {
+		return nil, nil
+	}
+	jobID := utils.RandomString(20)
+	return &cicdv1.IntegrationJob{
+		ObjectMeta: generateMeta(config.Name, config.Namespace, push.Sha, jobID),
 		Spec: cicdv1.IntegrationJobSpec{
 			ConfigRef: cicdv1.IntegrationJobConfigRef{
 				Name: config.Name,
@@ -118,57 +121,44 @@ func handlePush(webhook *git.Webhook, config *cicdv1.IntegrationConfig, jobID st
 			Jobs:       jobs,
 			Workspaces: config.Spec.Workspaces,
 			Refs: cicdv1.IntegrationJobRefs{
-				Repository: webhook.Repo.Name,
-				Link:       webhook.Repo.URL,
+				Repository: repo.Name,
+				Link:       repo.URL,
 				Sender: &cicdv1.IntegrationJobSender{
-					Name:  push.Sender.Name,
-					Email: push.Sender.Email,
+					Name:  sender.Name,
+					Email: sender.Email,
 				},
 				Base: cicdv1.IntegrationJobRefsBase{
 					Ref:  push.Ref,
-					Link: webhook.Repo.URL,
+					Link: repo.URL,
 					Sha:  push.Sha,
 				},
 			},
 			PodTemplate: config.Spec.PodTemplate,
 		},
-	}
-	return job
+	}, nil
 }
 
-func filterJobs(webhook *git.Webhook, config *cicdv1.IntegrationConfig) ([]cicdv1.Job, error) {
-	var jobs []cicdv1.Job
-
-	var cand []cicdv1.Job
-	switch webhook.EventType {
-	case git.EventTypePullRequest:
-		cand = config.Spec.Jobs.PreSubmit
-	case git.EventTypePush:
-		cand = config.Spec.Jobs.PostSubmit
-	default:
-		return cand, nil
+func generateMeta(cfgName, cfgNamespace, sha, jobID string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      fmt.Sprintf("%s-%s-%s", cfgName, sha[:5], jobID[:5]),
+		Namespace: cfgNamespace,
+		Labels:    map[string]string{}, // TODO
 	}
-
-	jobs, err := filter(cand, webhook)
-	if err != nil {
-		return nil, err
-	}
-
-	return jobs, nil
 }
 
-func filter(cand []cicdv1.Job, webhook *git.Webhook) ([]cicdv1.Job, error) {
+func filter(cand []cicdv1.Job, evType git.EventType, ref string) ([]cicdv1.Job, error) {
 	var filteredJobs []cicdv1.Job
 	var incomingBranch string
 	var incomingTag string
 
-	if webhook.EventType == git.EventTypePullRequest {
-		incomingBranch = webhook.PullRequest.Base.Ref
-	} else if webhook.EventType == git.EventTypePush {
-		if strings.Contains(webhook.Push.Ref, "refs/tags/") {
-			incomingTag = strings.Replace(webhook.Push.Ref, "refs/tags/", "", -1)
+	switch evType {
+	case git.EventTypePullRequest:
+		incomingBranch = ref
+	case git.EventTypePush:
+		if strings.Contains(ref, "refs/tags/") {
+			incomingTag = strings.Replace(ref, "refs/tags/", "", -1)
 		} else {
-			incomingBranch = strings.Replace(webhook.Push.Ref, "refs/heads/", "", -1)
+			incomingBranch = strings.Replace(ref, "refs/heads/", "", -1)
 		}
 	}
 

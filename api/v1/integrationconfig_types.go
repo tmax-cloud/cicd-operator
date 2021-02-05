@@ -60,10 +60,10 @@ type IntegrationConfigSpec struct {
 // IntegrationConfigJobs categorizes jobs into two types (pre-submit and post-submit)
 type IntegrationConfigJobs struct {
 	// PreSubmit jobs are for pull-request events
-	PreSubmit []Job `json:"preSubmit,omitempty"`
+	PreSubmit Jobs `json:"preSubmit,omitempty"`
 
 	// PostSubmit jobs are for push events (including tag events)
-	PostSubmit []Job `json:"postSubmit,omitempty"`
+	PostSubmit Jobs `json:"postSubmit,omitempty"`
 }
 
 // IntegrationConfigStatus defines the observed state of IntegrationConfig

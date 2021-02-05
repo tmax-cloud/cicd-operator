@@ -1,7 +1,9 @@
 package v1
 
 import (
+	"fmt"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tmax-cloud/cicd-operator/pkg/structs"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -159,4 +161,23 @@ func (j *JobStatus) Equals(i *JobStatus) bool {
 		j.Message == i.Message &&
 		j.StartTime.Equal(i.StartTime) &&
 		j.CompletionTime.Equal(i.CompletionTime)
+}
+
+// Jobs is an array of Job
+type Jobs []Job
+
+func (j *Jobs) GetGraph() (*structs.Graph, error) {
+	graph := structs.NewGraph()
+	for _, job := range *j {
+		for _, after := range job.After {
+			graph.AddEdge(after, job.Name)
+		}
+	}
+
+	// Check cyclic
+	if graph.IsCyclic() {
+		return nil, fmt.Errorf("job graph is cyclic")
+	}
+
+	return graph, nil
 }
