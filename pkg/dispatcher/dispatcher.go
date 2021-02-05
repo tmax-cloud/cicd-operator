@@ -142,7 +142,10 @@ func generateMeta(cfgName, cfgNamespace, sha, jobID string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      fmt.Sprintf("%s-%s-%s", cfgName, sha[:5], jobID[:5]),
 		Namespace: cfgNamespace,
-		Labels:    map[string]string{}, // TODO
+		Labels: map[string]string{
+			cicdv1.JobLabelConfig: cfgName,
+			cicdv1.JobLabelID:     jobID,
+		},
 	}
 }
 
