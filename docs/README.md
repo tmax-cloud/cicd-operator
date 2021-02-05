@@ -7,3 +7,4 @@
 - [Configuring IntegrationConfig](./integration_config.md)
 - [Add Approval step](./approval.md)
 - [Add Email step](./email.md)
+- [Chat Commands](./chat-commands.md)

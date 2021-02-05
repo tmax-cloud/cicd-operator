@@ -47,7 +47,7 @@ type IntegrationJobSpec struct {
 	Workspaces []tektonv1beta1.WorkspaceBinding `json:"workspaces,omitempty"`
 
 	// Jobs are the tasks to be executed
-	Jobs []Job `json:"jobs"`
+	Jobs Jobs `json:"jobs"`
 
 	// Refs
 	Refs IntegrationJobRefs `json:"refs"`
