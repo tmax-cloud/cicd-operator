@@ -89,3 +89,42 @@ func TestGraph_GetPres(t *testing.T) {
 	assert.Equal(t, 1, len(pres))
 	assert.Equal(t, "b-1", pres[0])
 }
+
+func TestGraph_IsCyclic(t *testing.T) {
+	/*
+		a-1  -->  a-2  --> a-4
+		     \->  a-3  -/
+
+		b-1  -->  b-2
+	*/
+
+	graph := NewGraph()
+	graph.AddEdge("a-1", "a-2")
+	graph.AddEdge("a-1", "a-3")
+	graph.AddEdge("a-2", "a-4")
+	graph.AddEdge("a-3", "a-4")
+	graph.AddEdge("b-1", "b-2")
+
+	assert.Equal(t, false, graph.IsCyclic())
+
+	/*
+
+		1  --> 2 --> 5
+		|\     ↑     ↓
+		|  \-> 3 <-  6
+		|          \ ↓
+		\-> 4       \7
+	*/
+
+	graph = NewGraph()
+	graph.AddEdge("1", "2")
+	graph.AddEdge("1", "3")
+	graph.AddEdge("1", "4")
+	graph.AddEdge("2", "5")
+	graph.AddEdge("3", "2")
+	graph.AddEdge("5", "6")
+	graph.AddEdge("6", "7")
+	graph.AddEdge("7", "3")
+
+	assert.Equal(t, true, graph.IsCyclic())
+}
