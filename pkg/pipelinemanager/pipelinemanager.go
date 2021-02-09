@@ -10,6 +10,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -26,8 +27,14 @@ const (
 	DefaultWorkingDir = "/tekton/home/integ-source"
 )
 
+// PipelineManager manages pipelines
+type PipelineManager struct {
+	Client client.Client
+	Scheme *runtime.Scheme
+}
+
 // Generate generates (but not creates) a PipelineRun object
-func Generate(job *cicdv1.IntegrationJob, cli client.Client) (*tektonv1beta1.PipelineRun, error) {
+func (p *PipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
 
 	// Workspace defs
@@ -43,7 +50,7 @@ func Generate(job *cicdv1.IntegrationJob, cli client.Client) (*tektonv1beta1.Pip
 	// Generate Tasks
 	var tasks []tektonv1beta1.PipelineTask
 	for _, j := range job.Spec.Jobs {
-		taskSpec, resources, err := generateTask(job, j)
+		taskSpec, resources, err := generateTask(job, &j)
 		if err != nil {
 			return nil, err
 		}
@@ -51,7 +58,7 @@ func Generate(job *cicdv1.IntegrationJob, cli client.Client) (*tektonv1beta1.Pip
 
 		// Append resources
 		for _, res := range resources {
-			specRes, err := convertResourceToSpec(res.PipelineResourceBinding, job.Namespace, cli)
+			specRes, err := p.convertResourceToSpec(res.PipelineResourceBinding, job.Namespace)
 			if err != nil {
 				return nil, err
 			}
@@ -86,7 +93,7 @@ func Generate(job *cicdv1.IntegrationJob, cli client.Client) (*tektonv1beta1.Pip
 	}, nil
 }
 
-func convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns string, cli client.Client) (*tektonv1beta1.PipelineDeclaredResource, error) {
+func (p *PipelineManager) convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns string) (*tektonv1beta1.PipelineDeclaredResource, error) {
 	// Get resource type
 	var t tektonv1beta1.PipelineResourceType
 	if binding.ResourceSpec != nil {
@@ -94,7 +101,7 @@ func convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns str
 	} else if binding.ResourceRef != nil {
 		// Get PipelineResource
 		res := &tektonv1alpha1.PipelineResource{}
-		if err := cli.Get(context.Background(), types.NamespacedName{Name: binding.ResourceRef.Name, Namespace: ns}, res); err != nil {
+		if err := p.Client.Get(context.Background(), types.NamespacedName{Name: binding.ResourceRef.Name, Namespace: ns}, res); err != nil {
 			return nil, err
 		}
 		t = res.Spec.Type
@@ -108,7 +115,7 @@ func convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns str
 	}, nil
 }
 
-func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.PipelineTask, []tektonv1beta1.TaskResourceBinding, error) {
+func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.PipelineTask, []tektonv1beta1.TaskResourceBinding, error) {
 	task := &tektonv1beta1.PipelineTask{Name: j.Name}
 
 	var resources []tektonv1beta1.TaskResourceBinding
@@ -121,13 +128,11 @@ func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.Pipe
 		}
 		resources = append(resources, res...)
 	} else if j.Approval != nil {
-		if err := generateApprovalRunTask(job, j, task); err != nil {
-			return nil, nil, err
-		}
+		generateApprovalRunTask(job, j, task)
 	} else if j.Email != nil {
-		if err := generateEmailRunTask(j, task); err != nil {
-			return nil, nil, err
-		}
+		generateEmailRunTask(job, j, task)
+	} else if j.Slack != nil {
+		generateSlackRunTask(job, j, task)
 	} else {
 		// Steps
 		steps, err := generateSteps(j)
@@ -159,14 +164,7 @@ func generateTask(job *cicdv1.IntegrationJob, j cicdv1.Job) (*tektonv1beta1.Pipe
 	return task, resources, nil
 }
 
-func generateCustomTaskRef(kind string) *tektonv1beta1.TaskRef {
-	return &tektonv1beta1.TaskRef{
-		APIVersion: cicdv1.CustomTaskAPIVersion,
-		Kind:       tektonv1beta1.TaskKind(kind),
-	}
-}
-
-func generateSteps(j cicdv1.Job) ([]tektonv1beta1.Step, error) {
+func generateSteps(j *cicdv1.Job) ([]tektonv1beta1.Step, error) {
 	var steps []tektonv1beta1.Step
 
 	if !j.SkipCheckout {
@@ -205,7 +203,7 @@ func generateLabel(j *cicdv1.IntegrationJob) map[string]string {
 
 // ReflectStatus reflects PipelineRun's status into IntegrationJob's status
 // It also set commit status for remote git server
-func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig, client client.Client) error {
+func (p *PipelineManager) ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error {
 	// If PR is nil but IntegrationJob's status is running, set as error
 	// Also, schedule next pipelineRun
 	if pr == nil && job.Status.State == cicdv1.IntegrationJobStateRunning {
@@ -234,14 +232,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 		// Reflect status of each task(job)
 		// Be sure job.Status.Jobs[i] is set sequentially
 		for i, j := range job.Spec.Jobs {
-			runStatus := getJobRunStatus(pr, j)
-
-			// Only update if taskRun's status exists
-			if runStatus != nil {
-				// If something is changed, commit status should be posted
-				stateChanged[i] = !job.Status.Jobs[i].Equals(runStatus)
-				runStatus.DeepCopyInto(&job.Status.Jobs[i])
-			}
+			stateChanged[i] = p.reflectJobStatus(pr, &j, &job.Status.Jobs[i], job, cfg)
 		}
 	}
 
@@ -257,7 +248,7 @@ func ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cf
 	}
 
 	// Set remote git's commit status for each job
-	if err := updateGitCommitStatus(cfg, client, job, stateChanged); err != nil {
+	if err := p.updateGitCommitStatus(cfg, job, stateChanged); err != nil {
 		return err
 	}
 
@@ -282,7 +273,29 @@ func initState(job *cicdv1.IntegrationJob) []bool {
 	return stateChanged
 }
 
-func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j cicdv1.Job) *cicdv1.JobStatus {
+func (p *PipelineManager) reflectJobStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job, jStatus *cicdv1.JobStatus, ij *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) bool {
+	changed := false
+
+	runStatus := getJobRunStatus(pr, j)
+
+	// Only update if taskRun's status exists
+	if runStatus != nil {
+		// If something is changed, commit status should be posted
+		changed = !jStatus.Equals(runStatus)
+		runStatus.DeepCopyInto(jStatus)
+
+		// Handle post-run notifications for the completed jobs
+		if runStatus.CompletionTime != nil {
+			if err := p.handleNotification(runStatus, ij, cfg); err != nil {
+				jStatus.Message = err.Error()
+			}
+		}
+	}
+
+	return changed
+}
+
+func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobStatus {
 	jobStatus := &cicdv1.JobStatus{Name: j.Name, State: cicdv1.CommitStatusStatePending}
 	// Find in TaskRun first
 	for _, runStatus := range pr.Status.TaskRuns {
@@ -331,8 +344,8 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j cicdv1.Job) *cicdv1.JobSta
 	return jobStatus
 }
 
-func updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, client client.Client, job *cicdv1.IntegrationJob, stateChanged []bool) error {
-	gitCli, err := utils.GetGitCli(cfg, client)
+func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, job *cicdv1.IntegrationJob, stateChanged []bool) error {
+	gitCli, err := utils.GetGitCli(cfg, p.Client)
 	if err != nil {
 		return err
 	}

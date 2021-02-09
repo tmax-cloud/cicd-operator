@@ -25,7 +25,7 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	"github.com/tmax-cloud/cicd-operator/pkg/mail"
+	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
 	"html/template"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"

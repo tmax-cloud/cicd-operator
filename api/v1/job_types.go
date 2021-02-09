@@ -52,8 +52,11 @@ type Job struct {
 	// Approval
 	Approval *JobApproval `json:"approval,omitempty"`
 
-	// Email
-	Email *JobEmail `json:"email,omitempty"`
+	// NotificationMethods sends noti, not running the tasks
+	NotificationMethods `json:",inline"`
+
+	// Notification sends notification when success/fail
+	Notification *Notification `json:"notification,omitempty"`
 }
 
 // TektonTask refers to an existing tekton task, rather than using job's script or command
@@ -102,21 +105,6 @@ type JobApproval struct {
 
 	// RequestMessage is a message to be sent to approvers by email
 	RequestMessage string `json:"requestMessage"`
-}
-
-// JobEmail sends email to receivers
-type JobEmail struct {
-	// Receivers is a list of email receivers
-	Receivers []string `json:"receivers,omitempty"`
-
-	// Title of the email
-	Title string `json:"title"`
-
-	// Content of the email
-	Content string `json:"content"`
-
-	// IsHTML describes if it's html content
-	IsHTML bool `json:"isHtml,omitempty"`
 }
 
 // JobWhen describes when the Job should be executed

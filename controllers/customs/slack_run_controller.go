@@ -6,7 +6,7 @@ import (
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
-	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
+	"github.com/tmax-cloud/cicd-operator/pkg/notification/slack"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,17 +17,22 @@ import (
 	"time"
 )
 
-// EmailRunHandler handles email custom task
-type EmailRunHandler struct {
+const (
+	varIntegrationJobName = "$INTEGRATION_JOB_NAME"
+	varJobName            = "$JOB_NAME"
+)
+
+// SlackRunHandler handles slack custom task
+type SlackRunHandler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-// Handle sends email to the receivers
-func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
+// Handle sends slack to the webhook
+func (a *SlackRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := a.Log.WithValues("EmailRun", run.Namespace)
+	log := a.Log.WithValues("SlackRun", run.Namespace)
 
 	original := run.DeepCopy()
 
@@ -38,7 +43,7 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 			Type:    apis.ConditionSucceeded,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "Waiting",
-			Message: "Sending email",
+			Message: "Sending slack message",
 		}
 	}
 
@@ -61,8 +66,8 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 		run.Status.StartTime = &metav1.Time{Time: time.Now()}
 	}
 
-	// Send mail
-	_, receivers, err := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyReceivers, tektonv1beta1.ParamTypeArray)
+	// Send slack
+	url, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskSlackParamKeyWebhook, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
@@ -71,7 +76,7 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
-	title, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyTitle, tektonv1beta1.ParamTypeString)
+	message, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskSlackParamKeyMessage, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
@@ -80,41 +85,22 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
-	content, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyContent, tektonv1beta1.ParamTypeString)
-	if err != nil {
-		log.Error(err, "")
-		cond.Status = corev1.ConditionFalse
-		cond.Reason = "InsufficientParams"
-		cond.Message = err.Error()
-		return ctrl.Result{}, nil
-	}
-
-	isHTMLStr, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyIsHTML, tektonv1beta1.ParamTypeString)
-
-	isHTML := false
-	if isHTMLStr == "true" {
-		isHTML = true
-	}
-
-	ij, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyIntegrationJob, tektonv1beta1.ParamTypeString)
-	job, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyIntegrationJobJob, tektonv1beta1.ParamTypeString)
+	ij, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskSlackParamKeyIntegrationJob, tektonv1beta1.ParamTypeString)
+	job, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskSlackParamKeyIntegrationJobJob, tektonv1beta1.ParamTypeString)
 
 	// Substitute variables
-	title = strings.ReplaceAll(title, varIntegrationJobName, ij)
-	title = strings.ReplaceAll(title, varJobName, job)
-
-	content = strings.ReplaceAll(content, varIntegrationJobName, ij)
-	content = strings.ReplaceAll(content, varJobName, job)
+	message = strings.ReplaceAll(message, varIntegrationJobName, ij)
+	message = strings.ReplaceAll(message, varJobName, job)
 
 	// Send!
-	if err := mail.Send(receivers, title, content, isHTML, a.Client); err != nil {
+	if err := slack.SendMessage(url, message); err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
 		cond.Reason = "EmailError"
 		cond.Message = err.Error()
 	} else {
 		cond.Status = corev1.ConditionTrue
-		cond.Reason = "SentMail"
+		cond.Reason = "SentSlack"
 		cond.Message = ""
 	}
 
