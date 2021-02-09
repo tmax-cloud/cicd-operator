@@ -15,8 +15,9 @@ This guide shows how to configure `IntegrationConfig` in detail.
   - [`skipCheckout`](#skipcheckout)
   - [`when`](#when)
   - [`after`](#after)
+  - [`notification`](#notification)
   - [Configuring `approval` jobs](#configuring-approval-jobs)
-  - [Configuring `email` jobs](#configuring-email-jobs)
+  - [Configuring Notification jobs](#configuring-notification-jobs)
   - [Using Tekton Tasks](#using-tekton-tasks)
 - [Configuring `secrets`](#configuring-secrets)
 - [Configuring `workspaces`](#configuring-workspaces)
@@ -139,11 +140,40 @@ spec:
           - pre-process
 ```
 
+### `notification`
+If you want to send notification when the job succeeded/failed, you can specify it in `notification` field.
+The field's spec is same as [Notification Jobs](./notification-jobs.md)
+> Optional  
+```yaml
+spec:
+  jobs:
+    preSubmit:
+      - name: pre-process
+        ...
+      - name: test
+        ...
+        notification:
+          onSuccess:
+            email:
+              receivers:
+                - sunghyun_kim3@tmax.co.kr
+              title: IntegrationJob $INTEGRATION_JOB_NAME Succeeded
+              isHtml: true
+              content: |
+                <hr>
+                <b>IntegrationJob: $INTEGRATION_JOB_NAME</b>
+                <i>Job: $JOb_NAME</i>
+          onFailure:
+            slack:
+              url: https://hooks.slack.com/services/....
+              message: IntegrationJob($INTEGRATION_JOB_NAME)'s job($JOB_NAME) failed
+```
+
 ### Configuring `approval` jobs
 Refer to the [`Approval` guide](./approval.md)
 
-### Configuring `email` jobs
-Refer to the [`Email` guide](./email.md)
+### Configuring Notification jobs
+Refer to the [`Notifications` guide](./notification-jobs.md)
 
 ### Using Tekton Tasks
 You can use (or reuse) tekton tasks, rather than writing scripts in `IntegrationCOnfig`.

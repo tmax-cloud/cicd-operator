@@ -28,10 +28,22 @@ const (
 const (
 	CustomTaskKindEmail = "EmailTask"
 
-	CustomTaskEmailParamKeyReceivers = "receivers"
-	CustomTaskEmailParamKeyTitle     = "title"
-	CustomTaskEmailParamKeyContent   = "content"
-	CustomTaskEmailParamKeyIsHTML    = "isHtml"
+	CustomTaskEmailParamKeyReceivers         = "receivers"
+	CustomTaskEmailParamKeyTitle             = "title"
+	CustomTaskEmailParamKeyContent           = "content"
+	CustomTaskEmailParamKeyIsHTML            = "isHtml"
+	CustomTaskEmailParamKeyIntegrationJobJob = CustomTaskApprovalParamKeyIntegrationJobJob
+	CustomTaskEmailParamKeyIntegrationJob    = CustomTaskApprovalParamKeyIntegrationJob
+)
+
+// Slack custom tasks
+const (
+	CustomTaskKindSlack = "SlackTask"
+
+	CustomTaskSlackParamKeyWebhook           = "webhook-url"
+	CustomTaskSlackParamKeyMessage           = CustomTaskApprovalParamKeyMessage
+	CustomTaskSlackParamKeyIntegrationJob    = CustomTaskApprovalParamKeyIntegrationJob
+	CustomTaskSlackParamKeyIntegrationJobJob = CustomTaskApprovalParamKeyIntegrationJobJob
 )
 
 // CustomTaskAPIVersion is

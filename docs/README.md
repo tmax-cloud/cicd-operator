@@ -6,5 +6,5 @@
 - [Quick Start Guide](./quickstart.md)
 - [Configuring IntegrationConfig](./integration_config.md)
 - [Add Approval step](./approval.md)
-- [Add Email step](./email.md)
+- [Add Notification steps](./notification-jobs.md)
 - [Chat Commands](./chat-commands.md)

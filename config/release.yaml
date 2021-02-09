@@ -1032,13 +1032,14 @@ spec:
                             type: string
                           type: array
                         email:
-                          description: Email
+                          description: Email sends email
                           properties:
                             content:
                               description: Content of the email
                               type: string
                             isHtml:
-                              description: IsHTML describes if it's html content
+                              description: IsHTML describes if it's html content.
+                                Default is false
                               type: boolean
                             receivers:
                               description: Receivers is a list of email receivers
@@ -1540,6 +1541,98 @@ spec:
                             Each container in a pod must have a unique name (DNS_LABEL).
                             Cannot be updated.
                           type: string
+                        notification:
+                          description: Notification sends notification when success/fail
+                          properties:
+                            onFailure:
+                              description: OnFailure notifies when the job is failed
+                              properties:
+                                email:
+                                  description: Email sends email
+                                  properties:
+                                    content:
+                                      description: Content of the email
+                                      type: string
+                                    isHtml:
+                                      description: IsHTML describes if it's html content.
+                                        Default is false
+                                      type: boolean
+                                    receivers:
+                                      description: Receivers is a list of email receivers
+                                      items:
+                                        type: string
+                                      type: array
+                                    title:
+                                      description: Title of the email
+                                      type: string
+                                  required:
+                                  - content
+                                  - title
+                                  type: object
+                                slack:
+                                  description: Slack sends slack
+                                  properties:
+                                    message:
+                                      description: Message is a message sent to the
+                                        webhook. It should be a Markdown format. You
+                                        can use $INTEGRATION_JOB_NAME and $JOB_NAME
+                                        variable for IntegrationJob's name and the
+                                        job's name respectively.
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url of a slack
+                                        app. Refer to https://api.slack.com/messaging/webhooks
+                                      type: string
+                                  required:
+                                  - message
+                                  - url
+                                  type: object
+                              type: object
+                            onSuccess:
+                              description: OnSuccess notifies when the job is succeeded
+                              properties:
+                                email:
+                                  description: Email sends email
+                                  properties:
+                                    content:
+                                      description: Content of the email
+                                      type: string
+                                    isHtml:
+                                      description: IsHTML describes if it's html content.
+                                        Default is false
+                                      type: boolean
+                                    receivers:
+                                      description: Receivers is a list of email receivers
+                                      items:
+                                        type: string
+                                      type: array
+                                    title:
+                                      description: Title of the email
+                                      type: string
+                                  required:
+                                  - content
+                                  - title
+                                  type: object
+                                slack:
+                                  description: Slack sends slack
+                                  properties:
+                                    message:
+                                      description: Message is a message sent to the
+                                        webhook. It should be a Markdown format. You
+                                        can use $INTEGRATION_JOB_NAME and $JOB_NAME
+                                        variable for IntegrationJob's name and the
+                                        job's name respectively.
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url of a slack
+                                        app. Refer to https://api.slack.com/messaging/webhooks
+                                      type: string
+                                  required:
+                                  - message
+                                  - url
+                                  type: object
+                              type: object
+                          type: object
                         ports:
                           description: List of ports to expose from the container.
                             Exposing a port here gives the system additional information
@@ -1870,6 +1963,23 @@ spec:
                           description: SkipCheckout describes whether or not to checkout
                             from git before
                           type: boolean
+                        slack:
+                          description: Slack sends slack
+                          properties:
+                            message:
+                              description: Message is a message sent to the webhook.
+                                It should be a Markdown format. You can use $INTEGRATION_JOB_NAME
+                                and $JOB_NAME variable for IntegrationJob's name and
+                                the job's name respectively.
+                              type: string
+                            url:
+                              description: URL is a webhook url of a slack app. Refer
+                                to https://api.slack.com/messaging/webhooks
+                              type: string
+                          required:
+                          - message
+                          - url
+                          type: object
                         startupProbe:
                           description: 'StartupProbe indicates that the Pod has successfully
                             initialized. If specified, no other probes are executed
@@ -2462,13 +2572,14 @@ spec:
                             type: string
                           type: array
                         email:
-                          description: Email
+                          description: Email sends email
                           properties:
                             content:
                               description: Content of the email
                               type: string
                             isHtml:
-                              description: IsHTML describes if it's html content
+                              description: IsHTML describes if it's html content.
+                                Default is false
                               type: boolean
                             receivers:
                               description: Receivers is a list of email receivers
@@ -2970,6 +3081,98 @@ spec:
                             Each container in a pod must have a unique name (DNS_LABEL).
                             Cannot be updated.
                           type: string
+                        notification:
+                          description: Notification sends notification when success/fail
+                          properties:
+                            onFailure:
+                              description: OnFailure notifies when the job is failed
+                              properties:
+                                email:
+                                  description: Email sends email
+                                  properties:
+                                    content:
+                                      description: Content of the email
+                                      type: string
+                                    isHtml:
+                                      description: IsHTML describes if it's html content.
+                                        Default is false
+                                      type: boolean
+                                    receivers:
+                                      description: Receivers is a list of email receivers
+                                      items:
+                                        type: string
+                                      type: array
+                                    title:
+                                      description: Title of the email
+                                      type: string
+                                  required:
+                                  - content
+                                  - title
+                                  type: object
+                                slack:
+                                  description: Slack sends slack
+                                  properties:
+                                    message:
+                                      description: Message is a message sent to the
+                                        webhook. It should be a Markdown format. You
+                                        can use $INTEGRATION_JOB_NAME and $JOB_NAME
+                                        variable for IntegrationJob's name and the
+                                        job's name respectively.
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url of a slack
+                                        app. Refer to https://api.slack.com/messaging/webhooks
+                                      type: string
+                                  required:
+                                  - message
+                                  - url
+                                  type: object
+                              type: object
+                            onSuccess:
+                              description: OnSuccess notifies when the job is succeeded
+                              properties:
+                                email:
+                                  description: Email sends email
+                                  properties:
+                                    content:
+                                      description: Content of the email
+                                      type: string
+                                    isHtml:
+                                      description: IsHTML describes if it's html content.
+                                        Default is false
+                                      type: boolean
+                                    receivers:
+                                      description: Receivers is a list of email receivers
+                                      items:
+                                        type: string
+                                      type: array
+                                    title:
+                                      description: Title of the email
+                                      type: string
+                                  required:
+                                  - content
+                                  - title
+                                  type: object
+                                slack:
+                                  description: Slack sends slack
+                                  properties:
+                                    message:
+                                      description: Message is a message sent to the
+                                        webhook. It should be a Markdown format. You
+                                        can use $INTEGRATION_JOB_NAME and $JOB_NAME
+                                        variable for IntegrationJob's name and the
+                                        job's name respectively.
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url of a slack
+                                        app. Refer to https://api.slack.com/messaging/webhooks
+                                      type: string
+                                  required:
+                                  - message
+                                  - url
+                                  type: object
+                              type: object
+                          type: object
                         ports:
                           description: List of ports to expose from the container.
                             Exposing a port here gives the system additional information
@@ -3300,6 +3503,23 @@ spec:
                           description: SkipCheckout describes whether or not to checkout
                             from git before
                           type: boolean
+                        slack:
+                          description: Slack sends slack
+                          properties:
+                            message:
+                              description: Message is a message sent to the webhook.
+                                It should be a Markdown format. You can use $INTEGRATION_JOB_NAME
+                                and $JOB_NAME variable for IntegrationJob's name and
+                                the job's name respectively.
+                              type: string
+                            url:
+                              description: URL is a webhook url of a slack app. Refer
+                                to https://api.slack.com/messaging/webhooks
+                              type: string
+                          required:
+                          - message
+                          - url
+                          type: object
                         startupProbe:
                           description: 'StartupProbe indicates that the Pod has successfully
                             initialized. If specified, no other probes are executed
@@ -6573,13 +6793,14 @@ spec:
                         type: string
                       type: array
                     email:
-                      description: Email
+                      description: Email sends email
                       properties:
                         content:
                           description: Content of the email
                           type: string
                         isHtml:
-                          description: IsHTML describes if it's html content
+                          description: IsHTML describes if it's html content. Default
+                            is false
                           type: boolean
                         receivers:
                           description: Receivers is a list of email receivers
@@ -7073,6 +7294,96 @@ spec:
                         Each container in a pod must have a unique name (DNS_LABEL).
                         Cannot be updated.
                       type: string
+                    notification:
+                      description: Notification sends notification when success/fail
+                      properties:
+                        onFailure:
+                          description: OnFailure notifies when the job is failed
+                          properties:
+                            email:
+                              description: Email sends email
+                              properties:
+                                content:
+                                  description: Content of the email
+                                  type: string
+                                isHtml:
+                                  description: IsHTML describes if it's html content.
+                                    Default is false
+                                  type: boolean
+                                receivers:
+                                  description: Receivers is a list of email receivers
+                                  items:
+                                    type: string
+                                  type: array
+                                title:
+                                  description: Title of the email
+                                  type: string
+                              required:
+                              - content
+                              - title
+                              type: object
+                            slack:
+                              description: Slack sends slack
+                              properties:
+                                message:
+                                  description: Message is a message sent to the webhook.
+                                    It should be a Markdown format. You can use $INTEGRATION_JOB_NAME
+                                    and $JOB_NAME variable for IntegrationJob's name
+                                    and the job's name respectively.
+                                  type: string
+                                url:
+                                  description: URL is a webhook url of a slack app.
+                                    Refer to https://api.slack.com/messaging/webhooks
+                                  type: string
+                              required:
+                              - message
+                              - url
+                              type: object
+                          type: object
+                        onSuccess:
+                          description: OnSuccess notifies when the job is succeeded
+                          properties:
+                            email:
+                              description: Email sends email
+                              properties:
+                                content:
+                                  description: Content of the email
+                                  type: string
+                                isHtml:
+                                  description: IsHTML describes if it's html content.
+                                    Default is false
+                                  type: boolean
+                                receivers:
+                                  description: Receivers is a list of email receivers
+                                  items:
+                                    type: string
+                                  type: array
+                                title:
+                                  description: Title of the email
+                                  type: string
+                              required:
+                              - content
+                              - title
+                              type: object
+                            slack:
+                              description: Slack sends slack
+                              properties:
+                                message:
+                                  description: Message is a message sent to the webhook.
+                                    It should be a Markdown format. You can use $INTEGRATION_JOB_NAME
+                                    and $JOB_NAME variable for IntegrationJob's name
+                                    and the job's name respectively.
+                                  type: string
+                                url:
+                                  description: URL is a webhook url of a slack app.
+                                    Refer to https://api.slack.com/messaging/webhooks
+                                  type: string
+                              required:
+                              - message
+                              - url
+                              type: object
+                          type: object
+                      type: object
                     ports:
                       description: List of ports to expose from the container. Exposing
                         a port here gives the system additional information about
@@ -7397,6 +7708,23 @@ spec:
                       description: SkipCheckout describes whether or not to checkout
                         from git before
                       type: boolean
+                    slack:
+                      description: Slack sends slack
+                      properties:
+                        message:
+                          description: Message is a message sent to the webhook. It
+                            should be a Markdown format. You can use $INTEGRATION_JOB_NAME
+                            and $JOB_NAME variable for IntegrationJob's name and the
+                            job's name respectively.
+                          type: string
+                        url:
+                          description: URL is a webhook url of a slack app. Refer
+                            to https://api.slack.com/messaging/webhooks
+                          type: string
+                      required:
+                      - message
+                      - url
+                      type: object
                     startupProbe:
                       description: 'StartupProbe indicates that the Pod has successfully
                         initialized. If specified, no other probes are executed until

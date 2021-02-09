@@ -28,7 +28,6 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/collector"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	"github.com/tmax-cloud/cicd-operator/pkg/scheduler"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
 	"io"
 	rbac "k8s.io/api/rbac/v1"
@@ -126,12 +125,8 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "IntegrationConfig")
 		os.Exit(1)
 	}
-	if err = (&controllers.IntegrationJobReconciler{
-		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("IntegrationJob"),
-		Scheme:    mgr.GetScheme(),
-		Scheduler: scheduler.New(mgr.GetClient(), mgr.GetScheme()),
-	}).SetupWithManager(mgr); err != nil {
+
+	if err = controllers.NewIntegrationJobReconciler(mgr.GetClient(), mgr.GetScheme(), ctrl.Log.WithName("controllers").WithName("IntegrationJob")).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IntegrationJob")
 		os.Exit(1)
 	}
@@ -158,9 +153,14 @@ func main() {
 	}, &cicdv1.Approval{})
 	customRunController.AddKindHandler(cicdv1.CustomTaskKindEmail, &customs.EmailRunHandler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ApprovalRun"),
+		Log:    ctrl.Log.WithName("controllers").WithName("EmailRun"),
 		Scheme: mgr.GetScheme(),
-	}, &cicdv1.Approval{})
+	})
+	customRunController.AddKindHandler(cicdv1.CustomTaskKindSlack, &customs.SlackRunHandler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("SlackRun"),
+		Scheme: mgr.GetScheme(),
+	})
 	if err = customRunController.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CustomRun")
 	}

@@ -35,9 +35,24 @@ import (
 // IntegrationJobReconciler reconciles a IntegrationJob object
 type IntegrationJobReconciler struct {
 	client.Client
-	Log       logr.Logger
-	Scheme    *runtime.Scheme
-	Scheduler *scheduler.Scheduler
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+
+	scheduler *scheduler.Scheduler
+	pm        *pipelinemanager.PipelineManager
+}
+
+// NewIntegrationJobReconciler is a constructor of IntegrationJobReconciler
+func NewIntegrationJobReconciler(cli client.Client, scheme *runtime.Scheme, log logr.Logger) *IntegrationJobReconciler {
+	pm := &pipelinemanager.PipelineManager{Client: cli, Scheme: scheme}
+	return &IntegrationJobReconciler{
+		Client: cli,
+		Scheme: scheme,
+		Log:    log,
+
+		pm:        pm,
+		scheduler: scheduler.New(cli, scheme, pm),
+	}
 }
 
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationjobs,verbs=get;list;watch;create;update;patch;delete
@@ -77,7 +92,7 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Notify state change to scheduler
-	defer r.Scheduler.Notify(instance)
+	defer r.scheduler.Notify(instance)
 
 	// Get parent IntegrationConfig
 	config := &cicdv1.IntegrationConfig{}
@@ -106,7 +121,7 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Check PipelineRun's status and update IntegrationJob's status
-	if err := pipelinemanager.ReflectStatus(pr, instance, config, r.Client); err != nil {
+	if err := r.pm.ReflectStatus(pr, instance, config); err != nil {
 		log.Error(err, "")
 		r.patchStatus(instance, original, err.Error())
 		return ctrl.Result{}, nil
@@ -145,7 +160,7 @@ func (r *IntegrationJobReconciler) handleFinalizer(instance, original *cicdv1.In
 	// Deletion check-up
 	if instance.DeletionTimestamp != nil && idx >= 0 {
 		// Notify scheduler
-		r.Scheduler.Notify(instance)
+		r.scheduler.Notify(instance)
 
 		// Delete finalizer
 		if len(instance.Finalizers) == 1 {

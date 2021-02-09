@@ -15,7 +15,7 @@ const (
 	catalogURL = "https://raw.githubusercontent.com/tektoncd/catalog/master/task/%s/%s/%s.yaml"
 )
 
-func generateTektonTaskRunTask(j cicdv1.Job, target *tektonv1beta1.PipelineTask) ([]tektonv1beta1.TaskResourceBinding, error) {
+func generateTektonTaskRunTask(j *cicdv1.Job, target *tektonv1beta1.PipelineTask) ([]tektonv1beta1.TaskResourceBinding, error) {
 	taskSpec := j.TektonTask
 
 	// Ref local or catalog

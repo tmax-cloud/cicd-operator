@@ -24,12 +24,13 @@ import (
 var log = logf.Log.WithName("job-scheduler")
 
 // New is a constructor for a Scheduler
-func New(c client.Client, s *runtime.Scheme) *Scheduler {
+func New(c client.Client, s *runtime.Scheme, pm *pipelinemanager.PipelineManager) *Scheduler {
 	log.Info("New scheduler")
 	sch := &Scheduler{
 		k8sClient: c,
 		scheme:    s,
 		caller:    make(chan struct{}, 1),
+		pm:        pm,
 	}
 	sch.jobPool = pool.NewJobPool(sch.caller, fifoCompare) // TODO : compare function should be configurable
 	go sch.start()
@@ -41,6 +42,8 @@ func New(c client.Client, s *runtime.Scheme) *Scheduler {
 type Scheduler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
+
+	pm *pipelinemanager.PipelineManager
 
 	jobPool *pool.JobPool
 
@@ -124,7 +127,7 @@ func (s *Scheduler) schedulePending(availableCnt *int) func(structs.Item) {
 		}
 
 		// Generate and create PipelineRun
-		pr, err := pipelinemanager.Generate(jobNode.IntegrationJob, s.k8sClient)
+		pr, err := s.pm.Generate(jobNode.IntegrationJob)
 		if err != nil {
 			if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
 				log.Error(err, "")
