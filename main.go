@@ -80,7 +80,9 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	defer logFile.Close()
+	defer func() {
+		_ = logFile.Close()
+	}()
 	logWriter := io.MultiWriter(logFile, os.Stdout)
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(logWriter)))
 	if err := logrotate.StartRotate(); err != nil {

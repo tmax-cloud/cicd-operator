@@ -161,7 +161,9 @@ func (h *reportHandler) getPodLog(podName, namespace, container string) (string,
 	if err != nil {
 		return "", err
 	}
-	defer podLogs.Close()
+	defer func() {
+		_ = podLogs.Close()
+	}()
 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, podLogs)

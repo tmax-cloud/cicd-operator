@@ -166,6 +166,7 @@ func (j *JobStatus) Equals(i *JobStatus) bool {
 // Jobs is an array of Job
 type Jobs []Job
 
+// GetGraph creates job dependency graph
 func (j *Jobs) GetGraph() (*structs.Graph, error) {
 	graph := structs.NewGraph()
 	for _, job := range *j {

@@ -14,6 +14,7 @@ type ChatOps struct {
 	handlers map[commandType]commandHandler
 }
 
+// New is a constructor fo ChatOps
 func New(c client.Client) *ChatOps {
 	co := &ChatOps{
 		Client:   c,
