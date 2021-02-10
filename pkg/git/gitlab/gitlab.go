@@ -179,6 +179,27 @@ func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
 	return permission.AccessLevel >= 30, nil
 }
 
+// RegisterComment registers comment to an issue
+func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, body string) error {
+	var t string
+	switch issueType {
+	case git.IssueTypeIssue:
+		t = "issues"
+	case git.IssueTypePullRequest:
+		t = "merge_requests"
+	default:
+		return fmt.Errorf("issue type %s is not supported", issueType)
+	}
+
+	apiUrl := fmt.Sprintf("%s/api/v4/projects/%s/%s/%d/notes", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), t, issueNo)
+
+	commentBody := &CommentBody{Body: body}
+	if _, _, err := c.requestHTTP(http.MethodPost, apiUrl, commentBody); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
 	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
 	if err != nil {

@@ -20,7 +20,19 @@ type Client interface {
 	// Users
 	GetUserInfo(user string) (*User, error)
 	CanUserWriteToRepo(user User) (bool, error)
+
+	// Comments
+	RegisterComment(issueType IssueType, issueNo int, body string) error
 }
+
+// IssueType is a type of the issue
+type IssueType string
+
+// IssueType constants
+const (
+	IssueTypeIssue       = IssueType("issue")
+	IssueTypePullRequest = IssueType("pull_request")
+)
 
 // CommitStatusState is a commit status type
 type CommitStatusState string
