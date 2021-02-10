@@ -34,6 +34,7 @@ type NoteHook struct {
 	Project          Project `json:"project"`
 	ObjectAttributes struct {
 		Note      string     `json:"note"`
+		AuthorID  int        `json:"author_id"`
 		CreatedAt gitlabTime `json:"created_at"`
 		UpdatedAt gitlabTime `json:"updated_at"`
 	} `json:"object_attributes"`

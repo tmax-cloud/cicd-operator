@@ -164,7 +164,7 @@ func (c *Client) GetUserInfo(userID string) (*git.User, error) {
 // CanUserWriteToRepo decides if the user has write permission on the repo
 func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
 	// userID is int!
-	apiURL := fmt.Sprintf("%s/projects/%s/members/all/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), user.ID)
+	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/members/all/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), user.ID)
 
 	result, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
 	if err != nil {
