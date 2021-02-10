@@ -159,6 +159,17 @@ func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
 	return permission.Permission == "admin" || permission.Permission == "write", nil
 }
 
+// RegisterComment registers comment to an issue
+func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) error {
+	apiUrl := fmt.Sprintf("%s/repos/%s/issues/%d/comments", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, issueNo)
+
+	commentBody := &CommentBody{Body: body}
+	if _, _, err := c.requestHTTP(http.MethodPost, apiUrl, commentBody); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Client) getPullRequestInfo(id int) (*git.PullRequest, error) {
 	apiURL := fmt.Sprintf("%s/repos/%s/pulls/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
 
@@ -177,7 +188,7 @@ func (c *Client) getPullRequestInfo(id int) (*git.PullRequest, error) {
 
 func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 	return &git.PullRequest{
-		ID:    pr.ID,
+		ID:    pr.Number,
 		Title: pr.Title,
 		State: git.PullRequestState(pr.State),
 		Sender: git.User{

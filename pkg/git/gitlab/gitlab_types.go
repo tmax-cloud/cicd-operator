@@ -20,3 +20,8 @@ type CommitStatusBody struct {
 	Description string `json:"description"`
 	Context     string `json:"context"`
 }
+
+// CommentBody is a body structure for creating new comment
+type CommentBody struct {
+	Body string `json:"body"`
+}

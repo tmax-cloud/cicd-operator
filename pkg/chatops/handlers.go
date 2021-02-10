@@ -22,9 +22,12 @@ func (c *chatOps) handleTestCommand(command command, webhook *git.Webhook, confi
 		return c.handleRetestCommand(command, webhook, config)
 	}
 
+	// Authorize or exit
 	if err := c.authorizeUserForTest(config, webhook); err != nil {
-		// TODO - comment to the issue that we cannot run test because you are not an author and you don't have write permission
-		return err
+		if err := c.registerUserUnauthorizedForTestComment(config, issueComment.Issue.PullRequest.ID, err); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// Generate IntegrationJob for the PullRequest
@@ -62,9 +65,12 @@ func (c *chatOps) handleRetestCommand(_ command, webhook *git.Webhook, config *c
 		return nil
 	}
 
+	// Authorize or exit
 	if err := c.authorizeUserForTest(config, webhook); err != nil {
-		// TODO - comment to the issue that we cannot run test because you are not an author and you don't have write permission
-		return err
+		if err := c.registerUserUnauthorizedForTestComment(config, issueComment.Issue.PullRequest.ID, err); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// Generate IntegrationJob for the PullRequest
@@ -106,7 +112,7 @@ func (c *chatOps) authorizeUserForTest(cfg *cicdv1.IntegrationConfig, webhook *g
 		return nil
 	}
 
-	return fmt.Errorf("user %s is not authorized to trigger the test", webhook.IssueComment.Sender.Name)
+	return &unauthorizedError{user: issueComment.Sender.Name, repo: cfg.Spec.Git.Repository}
 }
 
 // filterDependentJobs filters out unnecessary (not dependent) jobs
@@ -144,4 +150,28 @@ func dependentJobs(wanted string, jobs cicdv1.Jobs) (map[string]struct{}, error)
 		depends[p] = struct{}{}
 	}
 	return depends, nil
+}
+
+// registerUserUnauthorizedForTestComment registers comment that the user cannot trigger the test
+func (c *chatOps) registerUserUnauthorizedForTestComment(config *cicdv1.IntegrationConfig, issueID int, err error) error {
+	unAuthErr, ok := err.(*unauthorizedError)
+	if !ok {
+		return err
+	}
+	gitCli, err := utils.GetGitCli(config, c.client)
+	if err != nil {
+		return err
+	}
+	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueID, generateUserUnauthorizedForTestComment(unAuthErr.user, unAuthErr.repo)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func generateUserUnauthorizedForTestComment(user, repo string) string {
+	return fmt.Sprintf("User `%s` is not allowed to trigger the test for the repository `%s`\n\n"+
+		"If you want to trigger the test, you need to...\n"+
+		"- Be author of the pull request\n"+
+		"- (For GitHub) Have write permission on the repository\n"+
+		"- (For GitLab) Be Developer, Maintainer, or Owner\n", user, repo)
 }
