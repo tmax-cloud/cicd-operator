@@ -5,6 +5,7 @@ import (
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"github.com/tmax-cloud/cicd-operator/pkg/server"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -86,7 +87,7 @@ func TestChatOps_Handle(t *testing.T) {
 
 type verifier func(ij *cicdv1.IntegrationJob)
 
-func testJob(t *testing.T, chatOps *ChatOps, fakeCli client.Client, wh *git.Webhook, ic *cicdv1.IntegrationConfig, command string, verifyFunc verifier) {
+func testJob(t *testing.T, chatOps server.Plugin, fakeCli client.Client, wh *git.Webhook, ic *cicdv1.IntegrationConfig, command string, verifyFunc verifier) {
 	var ijList cicdv1.IntegrationJobList
 	wh.IssueComment.Comment.Body = command
 	if err := chatOps.Handle(wh, ic); err != nil {

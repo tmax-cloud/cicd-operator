@@ -8,53 +8,85 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// RouterWrapper wraps router with tree structure
-type RouterWrapper struct {
-	Router *mux.Router
+// RouterWrapper is an interface for wrapper
+type RouterWrapper interface {
+	Add(child *wrapper) error
+	FullPath() string
 
-	SubPath string
-	Methods []string
-	Handler http.HandlerFunc
+	Router() *mux.Router
+	SetRouter(*mux.Router)
 
-	Children []*RouterWrapper
-	Parent   *RouterWrapper
+	Children() []RouterWrapper
+
+	Handler() http.HandlerFunc
 }
 
-// New is a constructor for the RouterWrapper
-func New(path string, methods []string, handler http.HandlerFunc) *RouterWrapper {
-	return &RouterWrapper{
-		SubPath: path,
-		Methods: methods,
-		Handler: handler,
+// wrapper wraps router with tree structure
+type wrapper struct {
+	router *mux.Router
+
+	subPath string
+	methods []string
+	handler http.HandlerFunc
+
+	children []RouterWrapper
+	parent   RouterWrapper
+}
+
+// New is a constructor for the wrapper
+func New(path string, methods []string, handler http.HandlerFunc) *wrapper {
+	return &wrapper{
+		subPath: path,
+		methods: methods,
+		handler: handler,
 	}
 }
 
+// Router returns its router
+func (w *wrapper) Router() *mux.Router {
+	return w.router
+}
+
+// SetRouter sets its router
+func (w *wrapper) SetRouter(r *mux.Router) {
+	w.router = r
+}
+
+// Children returns its children
+func (w *wrapper) Children() []RouterWrapper {
+	return w.children
+}
+
+func (w *wrapper) Handler() http.HandlerFunc {
+	return w.handler
+}
+
 // Add adds child as a child (child node of a tree) of w
-func (w *RouterWrapper) Add(child *RouterWrapper) error {
+func (w *wrapper) Add(child *wrapper) error {
 	if child == nil {
 		return fmt.Errorf("child is nil")
 	}
 
-	if child.Parent != nil {
+	if child.parent != nil {
 		return fmt.Errorf("child already has parent")
 	}
 
-	if child.SubPath == "" || child.SubPath == "/" || child.SubPath[0] != '/' {
+	if child.subPath == "" || child.subPath == "/" || child.subPath[0] != '/' {
 		return fmt.Errorf("child subpath is not valid")
 	}
 
-	child.Parent = w
-	w.Children = append(w.Children, child)
+	child.parent = w
+	w.children = append(w.children, child)
 
-	child.Router = w.Router.PathPrefix(child.SubPath).Subrouter()
+	child.router = w.router.PathPrefix(child.subPath).Subrouter()
 
-	if child.Handler != nil {
-		if len(child.Methods) > 0 {
-			child.Router.Methods(child.Methods...).Subrouter().HandleFunc("/", child.Handler)
-			w.Router.Methods(child.Methods...).Subrouter().HandleFunc(child.SubPath, child.Handler)
+	if child.handler != nil {
+		if len(child.methods) > 0 {
+			child.router.Methods(child.methods...).Subrouter().HandleFunc("/", child.handler)
+			w.router.Methods(child.methods...).Subrouter().HandleFunc(child.subPath, child.handler)
 		} else {
-			child.Router.HandleFunc("/", child.Handler)
-			w.Router.HandleFunc(child.SubPath, child.Handler)
+			child.router.HandleFunc("/", child.handler)
+			w.router.HandleFunc(child.subPath, child.handler)
 		}
 	}
 
@@ -62,10 +94,10 @@ func (w *RouterWrapper) Add(child *RouterWrapper) error {
 }
 
 // FullPath builds full path string of the api
-func (w *RouterWrapper) FullPath() string {
-	if w.Parent == nil {
-		return w.SubPath
+func (w *wrapper) FullPath() string {
+	if w.parent == nil {
+		return w.subPath
 	}
 	re := regexp.MustCompile(`/{2,}`)
-	return re.ReplaceAllString(w.Parent.FullPath()+w.SubPath, "/")
+	return re.ReplaceAllString(w.parent.FullPath()+w.subPath, "/")
 }

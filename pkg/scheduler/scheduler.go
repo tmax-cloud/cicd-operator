@@ -23,29 +23,34 @@ import (
 
 var log = logf.Log.WithName("job-scheduler")
 
-// New is a constructor for a Scheduler
-func New(c client.Client, s *runtime.Scheme, pm *pipelinemanager.PipelineManager) *Scheduler {
+// New is a constructor for a scheduler
+func New(c client.Client, s *runtime.Scheme, pm *pipelinemanager.PipelineManager) *scheduler {
 	log.Info("New scheduler")
-	sch := &Scheduler{
+	sch := &scheduler{
 		k8sClient: c,
 		scheme:    s,
 		caller:    make(chan struct{}, 1),
 		pm:        pm,
 	}
-	sch.jobPool = pool.NewJobPool(sch.caller, fifoCompare)
+	sch.jobPool = pool.New(sch.caller, fifoCompare)
 	go sch.start()
 	return sch
 }
 
-// Scheduler watches IntegrationJobs and creates corresponding PipelineRuns, considering how many pipeline runs are
+// Scheduler is an interface of scheduler
+type Scheduler interface {
+	Notify(job *cicdv1.IntegrationJob)
+}
+
+// scheduler watches IntegrationJobs and creates corresponding PipelineRuns, considering how many pipeline runs are
 // running (in a jobPool)
-type Scheduler struct {
+type scheduler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
 
 	pm *pipelinemanager.PipelineManager
 
-	jobPool *pool.JobPool
+	jobPool pool.JobPool
 
 	// Buffered channel with capacity 1
 	// Since scheduler lists resources by itself, the actual scheduling logic should be executed only once even when
@@ -54,13 +59,13 @@ type Scheduler struct {
 }
 
 // Notify notifies scheduler to sync
-func (s Scheduler) Notify(job *cicdv1.IntegrationJob) {
+func (s scheduler) Notify(job *cicdv1.IntegrationJob) {
 	s.jobPool.Lock()
 	s.jobPool.SyncJob(job)
 	s.jobPool.Unlock()
 }
 
-func (s Scheduler) start() {
+func (s scheduler) start() {
 	for range s.caller {
 		s.run()
 		// Set minimum time gap between scheduling logic
@@ -68,14 +73,14 @@ func (s Scheduler) start() {
 	}
 }
 
-func (s Scheduler) run() {
+func (s scheduler) run() {
 	s.jobPool.Lock()
 	defer s.jobPool.Unlock()
 	log.Info("scheduling...")
-	availableCnt := configs.MaxPipelineRun - s.jobPool.Running.Len()
+	availableCnt := configs.MaxPipelineRun - s.jobPool.Running().Len()
 
 	// Check if running jobs are actually running (has pipelineRun, pipelineRun is running)
-	s.jobPool.Running.ForEach(s.filterOutRunning(&availableCnt))
+	s.jobPool.Running().ForEach(s.filterOutRunning(&availableCnt))
 
 	// If the number of running jobs is greater or equals to the max pipeline run, no scheduling is allowed
 	if availableCnt <= 0 {
@@ -84,10 +89,10 @@ func (s Scheduler) run() {
 	}
 
 	// Schedule if available
-	s.jobPool.Pending.ForEach(s.schedulePending(&availableCnt))
+	s.jobPool.Pending().ForEach(s.schedulePending(&availableCnt))
 }
 
-func (s *Scheduler) filterOutRunning(availableCnt *int) func(structs.Item) {
+func (s *scheduler) filterOutRunning(availableCnt *int) func(structs.Item) {
 	return func(item structs.Item) {
 		j, ok := item.(*pool.JobNode)
 		if !ok {
@@ -102,7 +107,7 @@ func (s *Scheduler) filterOutRunning(availableCnt *int) func(structs.Item) {
 	}
 }
 
-func (s *Scheduler) schedulePending(availableCnt *int) func(structs.Item) {
+func (s *scheduler) schedulePending(availableCnt *int) func(structs.Item) {
 	return func(item structs.Item) {
 		if *availableCnt <= 0 {
 			return
@@ -157,7 +162,7 @@ func (s *Scheduler) schedulePending(availableCnt *int) func(structs.Item) {
 	}
 }
 
-func (s *Scheduler) patchJobScheduleFailed(job *cicdv1.IntegrationJob, msg string) error {
+func (s *scheduler) patchJobScheduleFailed(job *cicdv1.IntegrationJob, msg string) error {
 	original := job.DeepCopy()
 
 	job.Status.State = cicdv1.IntegrationJobStateFailed

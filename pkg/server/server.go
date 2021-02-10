@@ -26,14 +26,19 @@ const (
 
 var logger = logf.Log.WithName("server")
 
-// Server is a HTTP server for git webhook API and report page
-type Server struct {
+// Server is an interface of server
+type Server interface {
+	Start()
+}
+
+// server is a HTTP server for git webhook API and report page
+type server struct {
 	k8sClient client.Client
 	router    *mux.Router
 }
 
-// New is a constructor of a Server
-func New(c client.Client, cfg *rest.Config) *Server {
+// New is a constructor of a server
+func New(c client.Client, cfg *rest.Config) *server {
 	r := mux.NewRouter()
 
 	// ClientSet
@@ -49,14 +54,14 @@ func New(c client.Client, cfg *rest.Config) *Server {
 	// Add report handler
 	r.Methods(http.MethodGet).Subrouter().Handle(reportPath, &reportHandler{k8sClient: c, clientSet: clientSet})
 
-	return &Server{
+	return &server{
 		k8sClient: c,
 		router:    r,
 	}
 }
 
-// Start starts the Server
-func (s *Server) Start() {
+// Start starts the server
+func (s *server) Start() {
 	httpAddr := fmt.Sprintf("0.0.0.0:%d", port)
 
 	logger.Info(fmt.Sprintf("Server is running on %s", httpAddr))

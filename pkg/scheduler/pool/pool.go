@@ -7,41 +7,58 @@ import (
 	"sync"
 )
 
-// JobPool stores current status of v1.IntegrationJobs, who are in Pending status or Running status
+// jobPool stores current status of v1.IntegrationJobs, who are in pending status or running status
 // All operations for this pool should be done in thread-safe manner, using Lock and Unlock methods
-type JobPool struct {
+type jobPool struct {
 	jobMap jobMap
 
-	Pending *structs.SortedUniqueList
-	Running *structs.SortedUniqueList
+	pending structs.SortedUniqueList
+	running structs.SortedUniqueList
 
 	scheduleChan chan struct{}
 	lock         sync.Mutex
 }
 
-// NewJobPool is a constructor for a JobPool
-func NewJobPool(ch chan struct{}, compareFunc structs.CompareFunc) *JobPool {
-	return &JobPool{
+// JobPool is an interface of jobPool
+type JobPool interface {
+	Lock()
+	Unlock()
+	SyncJob(job *v1.IntegrationJob)
+	Running() structs.SortedUniqueList
+	Pending() structs.SortedUniqueList
+}
+
+// New is a constructor for a jobPool
+func New(ch chan struct{}, compareFunc structs.CompareFunc) *jobPool {
+	return &jobPool{
 		jobMap:       jobMap{},
-		Pending:      structs.NewSortedUniqueQueue(compareFunc),
-		Running:      structs.NewSortedUniqueQueue(nil),
+		pending:      structs.NewSortedUniqueQueue(compareFunc),
+		running:      structs.NewSortedUniqueQueue(nil),
 		scheduleChan: ch,
 		lock:         sync.Mutex{},
 	}
 }
 
-// Lock locks JobPool
-func (j *JobPool) Lock() {
+func (j *jobPool) Running() structs.SortedUniqueList {
+	return j.running
+}
+
+func (j *jobPool) Pending() structs.SortedUniqueList {
+	return j.pending
+}
+
+// Lock locks jobPool
+func (j *jobPool) Lock() {
 	j.lock.Lock()
 }
 
-// Unlock unlocks JobPool
-func (j *JobPool) Unlock() {
+// Unlock unlocks jobPool
+func (j *jobPool) Unlock() {
 	j.lock.Unlock()
 }
 
-// SyncJob syncs JobPool with an incoming IntegrationJob job, considering its status
-func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
+// SyncJob syncs jobPool with an incoming IntegrationJob job, considering its status
+func (j *jobPool) SyncJob(job *v1.IntegrationJob) {
 	// If job state is not set, return
 	if job.Status.State == "" {
 		return
@@ -68,8 +85,8 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 
 	// If there's deletion timestamp, dismiss it
 	if node.DeletionTimestamp != nil {
-		j.Pending.Delete(node)
-		j.Running.Delete(node)
+		j.pending.Delete(node)
+		j.running.Delete(node)
 		delete(j.jobMap, nodeID)
 		j.sendSchedule()
 		return
@@ -84,9 +101,9 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 	if !exist {
 		switch newStatus {
 		case v1.IntegrationJobStatePending:
-			j.Pending.Add(node)
+			j.pending.Add(node)
 		case v1.IntegrationJobStateRunning:
-			j.Running.Add(node)
+			j.running.Add(node)
 		}
 		j.sendSchedule()
 		return
@@ -94,9 +111,9 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 
 	// Pending -> Running / Failed
 	if oldStatus == v1.IntegrationJobStatePending {
-		j.Pending.Delete(node)
+		j.pending.Delete(node)
 		if newStatus == v1.IntegrationJobStateRunning {
-			j.Running.Add(node)
+			j.running.Add(node)
 		}
 		return
 	}
@@ -104,9 +121,9 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 	// Running -> The others
 	// If it WAS running and not now, dismiss it (it is completed for some reason)
 	if oldStatus == v1.IntegrationJobStateRunning {
-		j.Running.Delete(node)
+		j.running.Delete(node)
 		if newStatus == v1.IntegrationJobStatePending {
-			j.Pending.Add(node)
+			j.pending.Add(node)
 		} else {
 			delete(j.jobMap, nodeID)
 		}
@@ -115,13 +132,13 @@ func (j *JobPool) SyncJob(job *v1.IntegrationJob) {
 	}
 }
 
-func (j *JobPool) sendSchedule() {
+func (j *jobPool) sendSchedule() {
 	if len(j.scheduleChan) < cap(j.scheduleChan) {
 		j.scheduleChan <- struct{}{}
 	}
 }
 
-// JobNode is a node to be stored in jobMap and JobPool
+// JobNode is a node to be stored in jobMap and jobPool
 type JobNode struct {
 	*v1.IntegrationJob
 }

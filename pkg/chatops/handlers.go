@@ -10,7 +10,7 @@ import (
 )
 
 // handleTestCommand handles '/test <ARGS>' command
-func (c *ChatOps) handleTestCommand(command command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
+func (c *chatOps) handleTestCommand(command command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	issueComment := webhook.IssueComment
 	// Do nothing if it's not pull request's comment or it's closed
 	if issueComment.Issue.PullRequest == nil || issueComment.Issue.PullRequest.State != git.PullRequestStateOpen {
@@ -47,7 +47,7 @@ func (c *ChatOps) handleTestCommand(command command, webhook *git.Webhook, confi
 	}
 
 	// Create it
-	if err := c.Client.Create(context.Background(), job); err != nil {
+	if err := c.client.Create(context.Background(), job); err != nil {
 		return err
 	}
 
@@ -55,7 +55,7 @@ func (c *ChatOps) handleTestCommand(command command, webhook *git.Webhook, confi
 }
 
 // handleTestCommand handles '/retest' command
-func (c *ChatOps) handleRetestCommand(_ command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
+func (c *chatOps) handleRetestCommand(_ command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	issueComment := webhook.IssueComment
 	// Do nothing if it's not pull request's comment or it's closed
 	if issueComment.Issue.PullRequest == nil || issueComment.Issue.PullRequest.State != git.PullRequestStateOpen {
@@ -78,7 +78,7 @@ func (c *ChatOps) handleRetestCommand(_ command, webhook *git.Webhook, config *c
 	}
 
 	// Create it
-	if err := c.Client.Create(context.Background(), job); err != nil {
+	if err := c.client.Create(context.Background(), job); err != nil {
 		return err
 	}
 
@@ -86,7 +86,7 @@ func (c *ChatOps) handleRetestCommand(_ command, webhook *git.Webhook, config *c
 }
 
 // authorizeUserForTest decides if the sender is authorized to trigger the tests
-func (c *ChatOps) authorizeUserForTest(cfg *cicdv1.IntegrationConfig, webhook *git.Webhook) error {
+func (c *chatOps) authorizeUserForTest(cfg *cicdv1.IntegrationConfig, webhook *git.Webhook) error {
 	issueComment := webhook.IssueComment
 
 	// Check if it's PR's author
@@ -95,7 +95,7 @@ func (c *ChatOps) authorizeUserForTest(cfg *cicdv1.IntegrationConfig, webhook *g
 	}
 
 	// Check if it's repo's maintainer
-	g, err := utils.GetGitCli(cfg, c.Client)
+	g, err := utils.GetGitCli(cfg, c.client)
 	if err != nil {
 		return err
 	}

@@ -24,17 +24,31 @@ func newNode(item Item) *node {
 // CompareFunc is a function to sort nodes in a queue
 type CompareFunc func(a Item, b Item) bool
 
-// SortedUniqueList is a kind of priority queues, whose nodes are sorted
+// SortedUniqueList is an interface of sortedUniqueList
+type SortedUniqueList interface {
+	Add(item Item)
+	First() Item
+	ForEach(iteratorFunc IteratorFunc)
+	Delete(i Item)
+	Len() int
+}
+
+// sortedUniqueList is a kind of priority queues, whose nodes are sorted
 // Also, uniqueness of the node is guaranteed
-type SortedUniqueList struct {
+type sortedUniqueList struct {
 	nodes *node
 	lock  sync.Mutex
 
 	compareFunc CompareFunc
 }
 
-// Add a node to the SortedUniqueList
-func (q *SortedUniqueList) Add(item Item) {
+// NewSortedUniqueQueue is a constructor for the sortedUniqueList
+func NewSortedUniqueQueue(compareFunc CompareFunc) *sortedUniqueList {
+	return &sortedUniqueList{lock: sync.Mutex{}, compareFunc: compareFunc}
+}
+
+// Add a node to the sortedUniqueList
+func (q *sortedUniqueList) Add(item Item) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -80,7 +94,7 @@ func (q *SortedUniqueList) Add(item Item) {
 }
 
 // First retrieves the first node in the queue
-func (q *SortedUniqueList) First() Item {
+func (q *sortedUniqueList) First() Item {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -97,7 +111,7 @@ func (q *SortedUniqueList) First() Item {
 type IteratorFunc func(Item)
 
 // ForEach runs IteratorFunc for each item in the queue
-func (q *SortedUniqueList) ForEach(iteratorFunc IteratorFunc) {
+func (q *sortedUniqueList) ForEach(iteratorFunc IteratorFunc) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -110,7 +124,7 @@ func (q *SortedUniqueList) ForEach(iteratorFunc IteratorFunc) {
 }
 
 // Delete deletes a node from the queue
-func (q *SortedUniqueList) Delete(i Item) {
+func (q *sortedUniqueList) Delete(i Item) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -133,15 +147,10 @@ func (q *SortedUniqueList) Delete(i Item) {
 }
 
 // Len returns the length of the queue
-func (q *SortedUniqueList) Len() int {
+func (q *sortedUniqueList) Len() int {
 	i := 0
 	q.ForEach(func(_ Item) {
 		i++
 	})
 	return i
-}
-
-// NewSortedUniqueQueue is a constructor for the SortedUniqueList
-func NewSortedUniqueQueue(compareFunc CompareFunc) *SortedUniqueList {
-	return &SortedUniqueList{lock: sync.Mutex{}, compareFunc: compareFunc}
 }

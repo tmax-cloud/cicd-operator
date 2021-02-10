@@ -32,20 +32,25 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
 
-// IntegrationJobReconciler reconciles a IntegrationJob object
-type IntegrationJobReconciler struct {
+// IntegrationJobReconciler is an interface for integrationJobReconciler
+type IntegrationJobReconciler interface {
+	SetupWithManager(mgr ctrl.Manager) error
+}
+
+// integrationJobReconciler reconciles a IntegrationJob object
+type integrationJobReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 
-	scheduler *scheduler.Scheduler
+	scheduler scheduler.Scheduler
 	pm        *pipelinemanager.PipelineManager
 }
 
-// NewIntegrationJobReconciler is a constructor of IntegrationJobReconciler
-func NewIntegrationJobReconciler(cli client.Client, scheme *runtime.Scheme, log logr.Logger) *IntegrationJobReconciler {
+// NewIntegrationJobReconciler is a constructor of integrationJobReconciler
+func NewIntegrationJobReconciler(cli client.Client, scheme *runtime.Scheme, log logr.Logger) *integrationJobReconciler {
 	pm := &pipelinemanager.PipelineManager{Client: cli, Scheme: scheme}
-	return &IntegrationJobReconciler{
+	return &integrationJobReconciler{
 		Client: cli,
 		Scheme: scheme,
 		Log:    log,
@@ -61,7 +66,7 @@ func NewIntegrationJobReconciler(cli client.Client, scheme *runtime.Scheme, log 
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/status,verbs=get
 
 // Reconcile reconciles IntegrationJob
-func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *integrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("integrationjob", req.NamespacedName)
 
@@ -137,7 +142,7 @@ func (r *IntegrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	return ctrl.Result{}, nil
 }
 
-func (r *IntegrationJobReconciler) handleFinalizer(instance, original *cicdv1.IntegrationJob) (bool, error) {
+func (r *integrationJobReconciler) handleFinalizer(instance, original *cicdv1.IntegrationJob) (bool, error) {
 	// Check first if finalizer is already set
 	found := false
 	idx := -1
@@ -183,7 +188,7 @@ func (r *IntegrationJobReconciler) handleFinalizer(instance, original *cicdv1.In
 	return false, nil
 }
 
-func (r *IntegrationJobReconciler) patchStatus(instance *cicdv1.IntegrationJob, original *cicdv1.IntegrationJob, message string) {
+func (r *integrationJobReconciler) patchStatus(instance *cicdv1.IntegrationJob, original *cicdv1.IntegrationJob, message string) {
 	instance.Status.State = cicdv1.IntegrationJobStateFailed
 	instance.Status.Message = message
 	p := client.MergeFrom(original)
@@ -192,8 +197,8 @@ func (r *IntegrationJobReconciler) patchStatus(instance *cicdv1.IntegrationJob, 
 	}
 }
 
-// SetupWithManager sets IntegrationJobReconciler to the manager
-func (r *IntegrationJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
+// SetupWithManager sets integrationJobReconciler to the manager
+func (r *integrationJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cicdv1.IntegrationJob{}).
 		Owns(&tektonv1beta1.PipelineRun{}).

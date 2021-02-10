@@ -14,8 +14,13 @@ import (
 
 var log = logf.Log.WithName("garbage-collector")
 
-// Collector collects garbage (old IntegrationJobs, PipelineRuns...)
-type Collector struct {
+// Collector is an interface of collector
+type Collector interface {
+	Start()
+}
+
+// collector collects garbage (old IntegrationJobs, PipelineRuns...)
+type collector struct {
 	client client.Client
 
 	reconfigureChan chan struct{}
@@ -25,9 +30,9 @@ type Collector struct {
 	cronID   cron.EntryID
 }
 
-// New is a constructor of Collector
-func New(c client.Client, ch chan struct{}) (*Collector, error) {
-	gc := &Collector{
+// New is a constructor of collector
+func New(c client.Client, ch chan struct{}) (*collector, error) {
+	gc := &collector{
 		client:          c,
 		cron:            cron.New(),
 		cronSpec:        parseGcPeriod(),
@@ -41,8 +46,8 @@ func New(c client.Client, ch chan struct{}) (*Collector, error) {
 	return gc, nil
 }
 
-// Start starts the Collector
-func (c *Collector) Start() {
+// Start starts the collector
+func (c *collector) Start() {
 	log.Info("Starting garbage collector")
 	c.cron.Start()
 
@@ -53,7 +58,7 @@ func (c *Collector) Start() {
 	}
 }
 
-func (c *Collector) reconfigure() error {
+func (c *collector) reconfigure() error {
 	period := parseGcPeriod()
 	if c.cronSpec == period {
 		return nil
@@ -73,7 +78,7 @@ func (c *Collector) reconfigure() error {
 	return nil
 }
 
-func (c *Collector) collect() {
+func (c *collector) collect() {
 	log.Info("Garbage collector is running...")
 	jobList := &cicdv1.IntegrationJobList{}
 	if err := c.client.List(context.Background(), jobList); err != nil {

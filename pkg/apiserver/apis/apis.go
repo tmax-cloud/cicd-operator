@@ -18,10 +18,10 @@ const (
 )
 
 // AddAPIFuncs adds add functions
-var AddAPIFuncs []func(*wrapper.RouterWrapper, client.Client) error
+var AddAPIFuncs []func(wrapper.RouterWrapper, client.Client) error
 
 // AddApis registers apis api for service discovery
-func AddApis(parent *wrapper.RouterWrapper, cli client.Client) error {
+func AddApis(parent wrapper.RouterWrapper, cli client.Client) error {
 	apiWrapper := wrapper.New("/apis", nil, apisHandler)
 	if err := parent.Add(apiWrapper); err != nil {
 		return err
