@@ -1,15 +1,22 @@
 package structs
 
-// Graph is a graph struct
-type Graph struct {
+// Graph is an graph interface
+type Graph interface {
+	AddEdge(from, to string)
+	IsCyclic() bool
+	GetPres(target string) []string
+}
+
+// graph is a graph struct
+type graph struct {
 	nodes     map[string]struct{}
 	edgesTo   map[string][]string
 	edgesFrom map[string][]string
 }
 
 // NewGraph is a constructor of the Graph
-func NewGraph() *Graph {
-	return &Graph{
+func NewGraph() *graph {
+	return &graph{
 		edgesTo:   map[string][]string{},
 		edgesFrom: map[string][]string{},
 		nodes:     map[string]struct{}{},
@@ -17,7 +24,7 @@ func NewGraph() *Graph {
 }
 
 // AddEdge adds edge to the Graph
-func (g *Graph) AddEdge(from, to string) {
+func (g *graph) AddEdge(from, to string) {
 	g.edgesTo[from] = append(g.edgesTo[from], to)
 	g.edgesFrom[to] = append(g.edgesFrom[to], from)
 	g.nodes[from] = struct{}{}
@@ -25,7 +32,7 @@ func (g *Graph) AddEdge(from, to string) {
 }
 
 // IsCyclic returns if the Graph contains any loop
-func (g *Graph) IsCyclic() bool {
+func (g *graph) IsCyclic() bool {
 	visited := map[string]bool{}
 	explore := map[string]bool{}
 
@@ -48,7 +55,7 @@ func (g *Graph) IsCyclic() bool {
 	return false
 }
 
-func (g *Graph) detectCycle(from string, tos []string, visited, explore map[string]bool) bool {
+func (g *graph) detectCycle(from string, tos []string, visited, explore map[string]bool) bool {
 	if explore[from] {
 		return true
 	}
@@ -72,7 +79,7 @@ func (g *Graph) detectCycle(from string, tos []string, visited, explore map[stri
 }
 
 // GetPres get the list of parents (pre-s)
-func (g *Graph) GetPres(target string) []string {
+func (g *graph) GetPres(target string) []string {
 	var pres []string
 
 	froms, ok := g.edgesFrom[target]

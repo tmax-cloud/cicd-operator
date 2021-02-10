@@ -20,21 +20,26 @@ import (
 
 var log = logf.Log.WithName("approve-server")
 
-// Server is an api server
-type Server struct {
-	Wrapper *wrapper.RouterWrapper
-	Client  client.Client
+// Server is an interface of server
+type Server interface {
+	Start()
+}
+
+// server is an api server
+type server struct {
+	wrapper wrapper.RouterWrapper
+	client  client.Client
 }
 
 // +kubebuilder:rbac:groups=apiregistration.k8s.io,resources=apiservices,resourceNames=v1.cicdapi.tmax.io,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,namespace=kube-system,resourceNames=extension-apiserver-authentication,verbs=get;list;watch
 
 // New is a constructor of server
-func New(scheme *runtime.Scheme) *Server {
-	server := &Server{}
-	server.Wrapper = wrapper.New("/", nil, server.rootHandler)
-	server.Wrapper.Router = mux.NewRouter()
-	server.Wrapper.Router.HandleFunc("/", server.rootHandler)
+func New(scheme *runtime.Scheme) *server {
+	srv := &server{}
+	srv.wrapper = wrapper.New("/", nil, srv.rootHandler)
+	srv.wrapper.SetRouter(mux.NewRouter())
+	srv.wrapper.Router().HandleFunc("/", srv.rootHandler)
 
 	cli, err := utils.Client(scheme)
 	if err != nil {
@@ -42,53 +47,53 @@ func New(scheme *runtime.Scheme) *Server {
 		os.Exit(1)
 	}
 
-	server.Client = cli
+	srv.client = cli
 
-	if err := apis.AddApis(server.Wrapper, cli); err != nil {
+	if err := apis.AddApis(srv.wrapper, cli); err != nil {
 		log.Error(err, "cannot add apis")
 		os.Exit(1)
 	}
 
-	if err := createCert(context.Background(), server.Client); err != nil {
+	if err := createCert(context.Background(), srv.client); err != nil {
 		log.Error(err, "cannot create cert")
 		os.Exit(1)
 	}
 
-	return server
+	return srv
 }
 
 // Start starts the server
-func (s *Server) Start() {
+func (s *server) Start() {
 	addr := "0.0.0.0:34335"
 	log.Info(fmt.Sprintf("API aggregation server is running on %s", addr))
 
-	cfg, err := tlsConfig(context.Background(), s.Client)
+	cfg, err := tlsConfig(context.Background(), s.client)
 	if err != nil {
 		log.Error(err, "cannot get tls config")
 		os.Exit(1)
 	}
 
-	httpServer := &http.Server{Addr: addr, Handler: s.Wrapper.Router, TLSConfig: cfg}
+	httpServer := &http.Server{Addr: addr, Handler: s.wrapper.Router(), TLSConfig: cfg}
 	if err := httpServer.ListenAndServeTLS(path.Join(certDir, "tls.crt"), path.Join(certDir, "tls.key")); err != nil {
 		log.Error(err, "cannot launch server")
 		os.Exit(1)
 	}
 }
 
-func (s *Server) rootHandler(w http.ResponseWriter, _ *http.Request) {
+func (s *server) rootHandler(w http.ResponseWriter, _ *http.Request) {
 	paths := metav1.RootPaths{}
 
-	addPath(&paths.Paths, s.Wrapper)
+	addPath(&paths.Paths, s.wrapper)
 
 	_ = utils.RespondJSON(w, paths)
 }
 
-func addPath(paths *[]string, w *wrapper.RouterWrapper) {
-	if w.Handler != nil {
+func addPath(paths *[]string, w wrapper.RouterWrapper) {
+	if w.Handler() != nil {
 		*paths = append(*paths, w.FullPath())
 	}
 
-	for _, c := range w.Children {
+	for _, c := range w.Children() {
 		addPath(paths, c)
 	}
 }

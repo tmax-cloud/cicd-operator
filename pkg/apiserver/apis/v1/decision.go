@@ -22,7 +22,7 @@ import (
 // +kubebuilder:rbac:groups="authorization.k8s.io",resources=subjectaccessreviews,verbs=get;list;watch;create;update;patch
 
 // addApproveApis adds approve api
-func addApproveApis(parent *wrapper.RouterWrapper, cli client.Client) error {
+func addApproveApis(parent wrapper.RouterWrapper, cli client.Client) error {
 	approveWrapper := wrapper.New("/approve", []string{http.MethodPut}, approveHandler)
 	if err := parent.Add(approveWrapper); err != nil {
 		return err
@@ -38,7 +38,7 @@ func addApproveApis(parent *wrapper.RouterWrapper, cli client.Client) error {
 }
 
 // addRejectApis adds reject api
-func addRejectApis(parent *wrapper.RouterWrapper, cli client.Client) error {
+func addRejectApis(parent wrapper.RouterWrapper, cli client.Client) error {
 	approveWrapper := wrapper.New("/reject", []string{http.MethodPut}, rejectHandler)
 	if err := parent.Add(approveWrapper); err != nil {
 		return err

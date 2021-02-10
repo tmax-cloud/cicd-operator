@@ -39,7 +39,7 @@ func compare(_a, _b Item) bool {
 	return a.body < b.body
 }
 
-func initQueue() *SortedUniqueList {
+func initQueue() *sortedUniqueList {
 	q := NewSortedUniqueQueue(compare)
 	q.Add(&testType{body: 2})
 	q.Add(&testType{body: 3})

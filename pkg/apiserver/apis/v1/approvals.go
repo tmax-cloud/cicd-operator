@@ -7,13 +7,13 @@ import (
 	"github.com/tmax-cloud/cicd-operator/internal/wrapper"
 )
 
-func addApprovalApis(parent *wrapper.RouterWrapper, cli client.Client) error {
+func addApprovalApis(parent wrapper.RouterWrapper, cli client.Client) error {
 	approvalWrapper := wrapper.New(fmt.Sprintf("/%s/{approvalName}", approvalKind), nil, nil)
 	if err := parent.Add(approvalWrapper); err != nil {
 		return err
 	}
 
-	approvalWrapper.Router.Use(authorize)
+	approvalWrapper.Router().Use(authorize)
 
 	if err := addApproveApis(approvalWrapper, cli); err != nil {
 		return err

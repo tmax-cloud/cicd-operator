@@ -12,7 +12,7 @@ import (
 
 func TestJobPool_SyncJob(t *testing.T) {
 	ch := make(chan struct{}, 1)
-	p := NewJobPool(ch, testCompare)
+	p := New(ch, testCompare)
 
 	now := time.Now()
 	testJob1 := jobForTest("1", "default", now)
@@ -32,20 +32,20 @@ func TestJobPool_SyncJob(t *testing.T) {
 	p.SyncJob(testJob7)
 
 	// Initial
-	assert.Equal(t, 7, p.Pending.Len(), "state transition isn't done properly")
-	assert.Equal(t, 0, p.Running.Len(), "state transition isn't done properly")
+	assert.Equal(t, 7, p.pending.Len(), "state transition isn't done properly")
+	assert.Equal(t, 0, p.running.Len(), "state transition isn't done properly")
 
 	// 3 Running
 	testJob3.Status.State = cicdv1.IntegrationJobStateRunning
 	p.SyncJob(testJob3)
-	assert.Equal(t, 6, p.Pending.Len(), "state transition isn't done properly")
-	assert.Equal(t, 1, p.Running.Len(), "state transition isn't done properly")
+	assert.Equal(t, 6, p.pending.Len(), "state transition isn't done properly")
+	assert.Equal(t, 1, p.running.Len(), "state transition isn't done properly")
 
 	// 3 Completed
 	testJob3.Status.State = cicdv1.IntegrationJobStateCompleted
 	p.SyncJob(testJob3)
-	assert.Equal(t, 6, p.Pending.Len(), "state transition isn't done properly")
-	assert.Equal(t, 0, p.Running.Len(), "state transition isn't done properly")
+	assert.Equal(t, 6, p.pending.Len(), "state transition isn't done properly")
+	assert.Equal(t, 0, p.running.Len(), "state transition isn't done properly")
 }
 
 func testCompare(_a, _b structs.Item) bool {

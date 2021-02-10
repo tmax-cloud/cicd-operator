@@ -34,7 +34,7 @@ type reqBody struct {
 }
 
 // AddV1Apis adds v1 api
-func AddV1Apis(parent *wrapper.RouterWrapper, cli client.Client) error {
+func AddV1Apis(parent wrapper.RouterWrapper, cli client.Client) error {
 	versionWrapper := wrapper.New(fmt.Sprintf("/%s/%s", APIGroup, APIVersion), nil, versionHandler)
 	if err := parent.Add(versionWrapper); err != nil {
 		return err
