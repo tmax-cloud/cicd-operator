@@ -19,6 +19,7 @@ type Client interface {
 
 	// Users
 	GetUserInfo(user string) (*User, error)
+	CanUserWriteToRepo(user User) (bool, error)
 }
 
 // CommitStatusState is a commit status type

@@ -7,6 +7,11 @@ type UserInfo struct {
 	Email    string `json:"email"`
 }
 
+// UserPermission is a user's permission on a repository
+type UserPermission struct {
+	Permission string `json:"permission"`
+}
+
 // CommitStatusBody is an API body for setting commits' status
 type CommitStatusBody struct {
 	State       string `json:"state"`

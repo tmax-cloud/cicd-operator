@@ -46,12 +46,7 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (*git.Webho
 func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 	var apiURL = c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/hooks"
 
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return nil, err
-	}
-	header := map[string]string{"Authorization": "token " + token}
-	data, _, err := git.RequestHTTP(http.MethodGet, apiURL, header, nil)
+	data, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -85,13 +80,7 @@ func (c *Client) RegisterWebhook(url string) error {
 
 	registrationBody.Config = registrationConfig
 
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return err
-	}
-	header := map[string]string{"Authorization": "token " + token}
-	_, _, err = git.RequestHTTP(http.MethodPost, apiURL, header, registrationBody)
-	if err != nil {
+	if _, _, err := c.requestHTTP(http.MethodPost, apiURL, registrationBody); err != nil {
 		return err
 	}
 
@@ -101,16 +90,9 @@ func (c *Client) RegisterWebhook(url string) error {
 // DeleteWebhook deletes registered webhook
 func (c *Client) DeleteWebhook(id int) error {
 	var apiURL = c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/hooks/" + strconv.Itoa(id)
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
+	if _, _, err := c.requestHTTP(http.MethodDelete, apiURL, nil); err != nil {
 		return err
 	}
-	header := map[string]string{"Authorization": "token " + token}
-	_, _, err = git.RequestHTTP(http.MethodDelete, apiURL, header, nil)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -130,16 +112,7 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
 
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return err
-	}
-	header := map[string]string{
-		"Authorization": "token " + token,
-		"Accept":        "application/vnd.github.v3+json",
-	}
-	_, _, err = git.RequestHTTP(http.MethodPost, apiURL, header, commitStatusBody)
-	if err != nil {
+	if _, _, err := c.requestHTTP(http.MethodPost, apiURL, commitStatusBody); err != nil {
 		return err
 	}
 
@@ -150,16 +123,8 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 func (c *Client) GetUserInfo(userName string) (*git.User, error) {
 	// userName is string!
 	apiURL := fmt.Sprintf("%s/users/%s", c.IntegrationConfig.Spec.Git.GetAPIUrl(), userName)
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return nil, err
-	}
-	header := map[string]string{
-		"Authorization": "token " + token,
-		"Accept":        "application/vnd.github.v3+json",
-	}
 
-	result, _, err := git.RequestHTTP(http.MethodGet, apiURL, header, nil)
+	result, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -176,15 +141,28 @@ func (c *Client) GetUserInfo(userName string) (*git.User, error) {
 	}, nil
 }
 
+// CanUserWriteToRepo decides if the user has write permission on the repo
+func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
+	// userName is string!
+	apiURL := fmt.Sprintf("%s/repos/%s/collaborators/%s/permission", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, user.Name)
+
+	result, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return false, err
+	}
+
+	var permission UserPermission
+	if err := json.Unmarshal(result, &permission); err != nil {
+		return false, err
+	}
+
+	return permission.Permission == "admin" || permission.Permission == "write", nil
+}
+
 func (c *Client) getPullRequestInfo(id int) (*git.PullRequest, error) {
 	apiURL := fmt.Sprintf("%s/repos/%s/pulls/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
 
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return nil, err
-	}
-	header := map[string]string{"Authorization": "token " + token}
-	data, _, err := git.RequestHTTP(http.MethodGet, apiURL, header, nil)
+	data, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -210,6 +188,19 @@ func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 		Base: git.Base{Ref: pr.Base.Ref},
 		Head: git.Head{Ref: pr.Head.Ref, Sha: pr.Head.Sha},
 	}
+}
+
+func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
+	if err != nil {
+		return nil, nil, err
+	}
+	header := map[string]string{
+		"Authorization": "token " + token,
+		"Accept":        "application/vnd.github.v3+json",
+	}
+
+	return git.RequestHTTP(method, apiURL, header, data)
 }
 
 // IsValidPayload validates the webhook payload

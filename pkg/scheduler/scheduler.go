@@ -32,7 +32,7 @@ func New(c client.Client, s *runtime.Scheme, pm *pipelinemanager.PipelineManager
 		caller:    make(chan struct{}, 1),
 		pm:        pm,
 	}
-	sch.jobPool = pool.NewJobPool(sch.caller, fifoCompare) // TODO : compare function should be configurable
+	sch.jobPool = pool.NewJobPool(sch.caller, fifoCompare)
 	go sch.start()
 	return sch
 }
