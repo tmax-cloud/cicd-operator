@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 )
@@ -21,7 +22,8 @@ func (c *ChatOps) handleTestCommand(command command, webhook *git.Webhook, confi
 		return c.handleRetestCommand(command, webhook, config)
 	}
 
-	if err := c.authorizeUserForTest(webhook); err != nil {
+	if err := c.authorizeUserForTest(config, webhook); err != nil {
+		// TODO - comment to the issue that we cannot run test because you are not an author and you don't have write permission
 		return err
 	}
 
@@ -60,7 +62,8 @@ func (c *ChatOps) handleRetestCommand(_ command, webhook *git.Webhook, config *c
 		return nil
 	}
 
-	if err := c.authorizeUserForTest(webhook); err != nil {
+	if err := c.authorizeUserForTest(config, webhook); err != nil {
+		// TODO - comment to the issue that we cannot run test because you are not an author and you don't have write permission
 		return err
 	}
 
@@ -83,7 +86,7 @@ func (c *ChatOps) handleRetestCommand(_ command, webhook *git.Webhook, config *c
 }
 
 // authorizeUserForTest decides if the sender is authorized to trigger the tests
-func (c *ChatOps) authorizeUserForTest(webhook *git.Webhook) error {
+func (c *ChatOps) authorizeUserForTest(cfg *cicdv1.IntegrationConfig, webhook *git.Webhook) error {
 	issueComment := webhook.IssueComment
 
 	// Check if it's PR's author
@@ -92,7 +95,16 @@ func (c *ChatOps) authorizeUserForTest(webhook *git.Webhook) error {
 	}
 
 	// Check if it's repo's maintainer
-	// TODO
+	g, err := utils.GetGitCli(cfg, c.Client)
+	if err != nil {
+		return err
+	}
+	ok, err := g.CanUserWriteToRepo(issueComment.Sender)
+	if err != nil {
+		return err
+	} else if ok {
+		return nil
+	}
 
 	return fmt.Errorf("user %s is not authorized to trigger the test", webhook.IssueComment.Sender.Name)
 }

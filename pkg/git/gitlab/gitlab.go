@@ -43,16 +43,7 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 	encodedRepoPath := url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks"
 
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return nil, err
-	}
-
-	header := map[string]string{
-		"PRIVATE-TOKEN": token,
-		"Content-Type":  "application/json",
-	}
-	data, _, err := git.RequestHTTP(http.MethodGet, apiURL, header, nil)
+	data, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -93,16 +84,7 @@ func (c *Client) RegisterWebhook(uri string) error {
 	registrationBody.ID = EncodedRepoPath
 	registrationBody.Token = c.IntegrationConfig.Status.Secrets
 
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return err
-	}
-	header := map[string]string{
-		"PRIVATE-TOKEN": token,
-		"Content-Type":  "application/json",
-	}
-	_, _, err = git.RequestHTTP(http.MethodPost, apiURL, header, registrationBody)
-	if err != nil {
+	if _, _, err := c.requestHTTP(http.MethodPost, apiURL, registrationBody); err != nil {
 		return err
 	}
 
@@ -114,18 +96,7 @@ func (c *Client) DeleteWebhook(id int) error {
 	encodedRepoPath := url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks/" + strconv.Itoa(id)
 
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return err
-	}
-
-	header := map[string]string{
-		"PRIVATE-TOKEN": token,
-		"Content-Type":  "application/json",
-	}
-
-	_, _, err = git.RequestHTTP(http.MethodDelete, apiURL, header, nil)
-	if err != nil {
+	if _, _, err := c.requestHTTP(http.MethodDelete, apiURL, nil); err != nil {
 		return err
 	}
 
@@ -155,20 +126,8 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 	commitStatusBody.Description = description
 	commitStatusBody.Context = context
 
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return err
-	}
-	header := map[string]string{
-		"PRIVATE-TOKEN": token,
-		"Content-Type":  "application/json",
-	}
-	_, _, err = git.RequestHTTP(http.MethodPost, apiURL, header, commitStatusBody)
 	// Cannot transition status via :run from :running
-	if err != nil && strings.Contains(strings.ToLower(err.Error()), "cannot transition status via") {
-		err = nil
-	}
-	if err != nil {
+	if _, _, err := c.requestHTTP(http.MethodPost, apiURL, commitStatusBody); err != nil && !strings.Contains(strings.ToLower(err.Error()), "cannot transition status via") {
 		return err
 	}
 
@@ -179,16 +138,8 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 func (c *Client) GetUserInfo(userID string) (*git.User, error) {
 	// userID is int!
 	apiURL := fmt.Sprintf("%s/api/v4/users/%s", c.IntegrationConfig.Spec.Git.GetAPIUrl(), userID)
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return nil, err
-	}
-	header := map[string]string{
-		"PRIVATE-TOKEN": token,
-		"Content-Type":  "application/json",
-	}
 
-	result, _, err := git.RequestHTTP(http.MethodGet, apiURL, header, nil)
+	result, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -208,6 +159,37 @@ func (c *Client) GetUserInfo(userID string) (*git.User, error) {
 		Name:  userInfo.UserName,
 		Email: email,
 	}, err
+}
+
+// CanUserWriteToRepo decides if the user has write permission on the repo
+func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
+	// userID is int!
+	apiURL := fmt.Sprintf("%s/projects/%s/members/all/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), user.ID)
+
+	result, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return false, err
+	}
+
+	var permission UserPermission
+	if err := json.Unmarshal(result, &permission); err != nil {
+		return false, err
+	}
+
+	return permission.AccessLevel >= 30, nil
+}
+
+func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
+	if err != nil {
+		return nil, nil, err
+	}
+	header := map[string]string{
+		"PRIVATE-TOKEN": token,
+		"Content-Type":  "application/json",
+	}
+
+	return git.RequestHTTP(method, apiURL, header, data)
 }
 
 // Validate validates the webhook payload
