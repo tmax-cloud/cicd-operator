@@ -77,7 +77,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 	}
 
 	// Only handle creation
-	if data.ObjectAttributes.CreatedAt.Time.Equal(data.ObjectAttributes.UpdatedAt.Time) {
+	if !data.ObjectAttributes.CreatedAt.Time.Equal(data.ObjectAttributes.UpdatedAt.Time) {
 		return nil, nil
 	}
 
@@ -116,6 +116,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 			PullRequest: pr,
 		},
 		Sender: git.User{
+			ID:    data.ObjectAttributes.AuthorID,
 			Name:  data.User.Name,
 			Email: data.User.Email,
 		},
