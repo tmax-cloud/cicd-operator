@@ -7,11 +7,13 @@ import (
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
+	"github.com/tmax-cloud/cicd-operator/pkg/events"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
@@ -204,6 +206,9 @@ func generateLabel(j *cicdv1.IntegrationJob) map[string]string {
 // ReflectStatus reflects PipelineRun's status into IntegrationJob's status
 // It also set commit status for remote git server
 func (p *PipelineManager) ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error {
+	oldState := job.Status.State
+	oldMessage := job.Status.Message
+
 	// If PR is nil but IntegrationJob's status is running, set as error
 	// Also, schedule next pipelineRun
 	if pr == nil && job.Status.State == cicdv1.IntegrationJobStateRunning {
@@ -220,7 +225,12 @@ func (p *PipelineManager) ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicd
 		job.Status.StartTime = pr.CreationTimestamp.DeepCopy()
 		job.Status.CompletionTime = pr.Status.CompletionTime.DeepCopy()
 
-		if job.Status.CompletionTime != nil && len(pr.Status.Conditions) == 1 {
+		prCond := pr.Status.GetCondition(apis.ConditionSucceeded)
+		if prCond != nil {
+			// Set message
+			job.Status.Message = prCond.Message
+
+			// Set state
 			switch tektonv1beta1.PipelineRunReason(pr.Status.Conditions[0].Reason) {
 			case tektonv1beta1.PipelineRunReasonSuccessful, tektonv1beta1.PipelineRunReasonCompleted:
 				job.Status.State = cicdv1.IntegrationJobStateCompleted
@@ -249,6 +259,11 @@ func (p *PipelineManager) ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicd
 
 	// Set remote git's commit status for each job
 	if err := p.updateGitCommitStatus(cfg, job, stateChanged); err != nil {
+		return err
+	}
+
+	// Emit events
+	if err := p.emitEvents(job, oldState, oldMessage); err != nil {
 		return err
 	}
 
@@ -365,6 +380,13 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 	}
 
 	return nil
+}
+
+func (p *PipelineManager) emitEvents(job *cicdv1.IntegrationJob, oldState cicdv1.IntegrationJobState, oldMessage string) error {
+	if oldState == job.Status.State && oldMessage == job.Status.Message {
+		return nil
+	}
+	return events.Emit(p.Client, job, corev1.EventTypeNormal, string(job.Status.State), job.Status.Message)
 }
 
 // Name is a PipelineRun's name for the IntegrationJob j
