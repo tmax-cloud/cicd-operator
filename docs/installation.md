@@ -21,6 +21,17 @@ This guides to install CI/CD operator. The contents are as follows.
    --type merge \
    -p '{"data": {"enable-custom-tasks": "true", "disable-affinity-assistant": "true"}}'
    ```
+   
+3. Ensure ingress-class is set properly
+   ```bash
+   INGRESS_CLASS=<Ingress class you want to use> # e.g., nginx, nginx-shd
+   
+   # Update config map
+   kubectl -n cicd-system patch configmap cicd-config --type merge -p "{\"data\": {\"ingressClass\": \"$INGRESS_CLASS\"}}" "$kubectl_opt"
+   
+   # Restart operator
+   kubectl -n cicd-system delete pod $(kubectl -n cicd-system get pod | grep cicd-operator | awk '{print $1}')
+   ```
 
 ## Enabling email feature
 **You need an external SMTP server**
