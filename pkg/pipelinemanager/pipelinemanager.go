@@ -382,6 +382,8 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 	return nil
 }
 
+// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch;delete
+
 func (p *PipelineManager) emitEvents(job *cicdv1.IntegrationJob, oldState cicdv1.IntegrationJobState, oldMessage string) error {
 	if oldState == job.Status.State && oldMessage == job.Status.Message {
 		return nil
