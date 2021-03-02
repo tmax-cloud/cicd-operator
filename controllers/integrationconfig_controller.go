@@ -382,6 +382,10 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 
 	changed := false
 	for _, s := range desiredSecrets {
+		if s.Name == "" {
+			continue
+		}
+
 		// Check if secret is set for the service account
 		found := false
 		for _, cur := range sa.Secrets {
