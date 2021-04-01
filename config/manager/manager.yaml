@@ -52,6 +52,7 @@ data:
   collectPeriod: "120"
   integrationJobTTL: "120"
   ingressClass: ""
+  ingressHost: ""
 ---
 apiVersion: apps/v1
 kind: Deployment

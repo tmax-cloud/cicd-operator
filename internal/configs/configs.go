@@ -40,4 +40,7 @@ var (
 
 	// IngressClass is a class for ingress instance
 	IngressClass string
+
+	// IngressHost is a host for ingress instance
+	IngressHost string
 )

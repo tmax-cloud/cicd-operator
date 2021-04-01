@@ -164,6 +164,7 @@ func (r *ConfigReconciler) reconcileConfig(cm *corev1.ConfigMap) error {
 		"collectPeriod":             {Type: cfgTypeInt, IntVal: &configs.CollectPeriod, IntDefault: 120},        // GC period
 		"integrationJobTTL":         {Type: cfgTypeInt, IntVal: &configs.IntegrationJobTTL, IntDefault: 120},    // GC threshold
 		"ingressClass":              {Type: cfgTypeString, StringVal: &configs.IngressClass, StringDefault: ""}, // Ingress class
+		"ingressHost":               {Type: cfgTypeString, StringVal: &configs.IngressHost, StringDefault: ""},  // Ingress host
 	}
 
 	getVars(cm.Data, vars)
