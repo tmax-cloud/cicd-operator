@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	gitCheckoutCPUReq = "100m"
-	gitCheckoutMemReq = "100Mi"
+	gitCheckoutCPUReq = "30m"
+	gitCheckoutMemReq = "50Mi"
 )
 
 func gitCheckout() tektonv1beta1.Step {
