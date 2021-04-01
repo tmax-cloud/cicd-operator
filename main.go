@@ -168,8 +168,10 @@ func main() {
 
 	// Check for ingress first
 	setupLog.Info("Waiting for ingress to be ready")
-	if err := controllers.WaitIngressReady(); err != nil {
-		setupLog.Error(err, "error while waiting ingress ready")
+	ingCon := controllers.NewIngressController()
+	go ingCon.Start()
+	if err := ingCon.Wait(); err != nil {
+		setupLog.Error(err, "error waiting for ingress")
 		os.Exit(1)
 	}
 
