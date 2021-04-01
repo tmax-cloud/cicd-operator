@@ -6715,6 +6715,10 @@ spec:
       jsonPath: .status.completionTime
       name: CompletionTime
       type: date
+    - description: Creation time
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:

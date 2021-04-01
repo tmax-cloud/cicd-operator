@@ -135,6 +135,7 @@ type IntegrationJobStatus struct {
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="Current status of IntegrationJob"
 // +kubebuilder:printcolumn:name="StartTime",type="date",JSONPath=".status.startTime",description="Start time"
 // +kubebuilder:printcolumn:name="CompletionTime",type="date",JSONPath=".status.completionTime",description="Completion time"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="Creation time"
 type IntegrationJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
