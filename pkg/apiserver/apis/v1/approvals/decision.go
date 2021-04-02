@@ -1,10 +1,11 @@
-package v1
+package approvals
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
@@ -14,62 +15,32 @@ import (
 
 	"github.com/gorilla/mux"
 	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/tmax-cloud/cicd-operator/internal/wrapper"
 )
 
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="authorization.k8s.io",resources=subjectaccessreviews,verbs=get;list;watch;create;update;patch
 
-// addApproveApis adds approve api
-func addApproveApis(parent wrapper.RouterWrapper, cli client.Client) error {
-	approveWrapper := wrapper.New("/approve", []string{http.MethodPut}, approveHandler)
-	if err := parent.Add(approveWrapper); err != nil {
-		return err
-	}
-
-	k8sCliLock.Lock()
-	defer k8sCliLock.Unlock()
-	if k8sClient == nil {
-		k8sClient = cli
-	}
-
-	return nil
+type reqBody struct {
+	Reason string `json:"reason"`
 }
 
-// addRejectApis adds reject api
-func addRejectApis(parent wrapper.RouterWrapper, cli client.Client) error {
-	approveWrapper := wrapper.New("/reject", []string{http.MethodPut}, rejectHandler)
-	if err := parent.Add(approveWrapper); err != nil {
-		return err
-	}
-
-	k8sCliLock.Lock()
-	defer k8sCliLock.Unlock()
-	if k8sClient == nil {
-		k8sClient = cli
-	}
-
-	return nil
+func (h *handler) approveHandler(w http.ResponseWriter, req *http.Request) {
+	h.updateDecision(w, req, cicdv1.ApprovalResultApproved)
 }
 
-func approveHandler(w http.ResponseWriter, req *http.Request) {
-	updateDecision(w, req, cicdv1.ApprovalResultApproved)
+func (h *handler) rejectHandler(w http.ResponseWriter, req *http.Request) {
+	h.updateDecision(w, req, cicdv1.ApprovalResultRejected)
 }
 
-func rejectHandler(w http.ResponseWriter, req *http.Request) {
-	updateDecision(w, req, cicdv1.ApprovalResultRejected)
-}
-
-func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.ApprovalResult) {
+func (h *handler) updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.ApprovalResult) {
 	reqID := utils.RandomString(10)
-	log := logger.WithValues("request", reqID)
+	log := h.log.WithValues("request", reqID)
 
 	// Get ns/approvalName
 	vars := mux.Vars(req)
 
-	ns, nsExist := vars["namespace"]
-	approvalName, nameExist := vars["approvalName"]
+	ns, nsExist := vars[apiserver.NamespaceParamKey]
+	approvalName, nameExist := vars[approvalNameParamKey]
 	if !nsExist || !nameExist {
 		_ = utils.RespondError(w, http.StatusBadRequest, "url is malformed")
 		return
@@ -85,7 +56,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	}
 
 	// Get user
-	user, err := getUserName(req.Header)
+	user, err := apiserver.GetUserName(req.Header)
 	if err != nil {
 		log.Info(err.Error())
 		_ = utils.RespondError(w, http.StatusUnauthorized, fmt.Sprintf("req: %s, forbidden user, err : %s", reqID, err.Error()))
@@ -93,15 +64,8 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 	}
 
 	// Get corresponding Approval object
-	if k8sClient == nil {
-		msg := fmt.Errorf("req: %s, k8sClient is not ready", reqID)
-		log.Info(msg.Error())
-		_ = utils.RespondError(w, http.StatusInternalServerError, msg.Error())
-		return
-	}
-
 	approval := &cicdv1.Approval{}
-	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: approvalName, Namespace: ns}, approval); err != nil {
+	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: approvalName, Namespace: ns}, approval); err != nil {
 		log.Info(err.Error())
 		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, no Approval %s/%s is found", reqID, ns, approvalName))
 		return
@@ -135,7 +99,7 @@ func updateDecision(w http.ResponseWriter, req *http.Request, decision cicdv1.Ap
 
 	defer func() {
 		p := client.MergeFrom(original)
-		if err := k8sClient.Status().Patch(context.Background(), approval, p); err != nil {
+		if err := h.k8sClient.Status().Patch(context.Background(), approval, p); err != nil {
 			log.Error(err, "")
 		}
 	}()
