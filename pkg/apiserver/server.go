@@ -3,6 +3,7 @@ package apiserver
 import (
 	"context"
 	"fmt"
+	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 	"net/http"
@@ -18,7 +19,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver/apis"
 )
 
-var log = logf.Log.WithName("approve-server")
+var log = logf.Log.WithName("api-server")
 
 // Server is an interface of server
 type Server interface {
@@ -29,6 +30,8 @@ type Server interface {
 type server struct {
 	wrapper wrapper.RouterWrapper
 	client  client.Client
+
+	apisHandler apiserver.APIHandler
 }
 
 // +kubebuilder:rbac:groups=apiregistration.k8s.io,resources=apiservices,resourceNames=v1.cicdapi.tmax.io,verbs=get;list;watch;create;update;patch;delete
@@ -41,18 +44,21 @@ func New(scheme *runtime.Scheme) *server {
 	srv.wrapper.SetRouter(mux.NewRouter())
 	srv.wrapper.Router().HandleFunc("/", srv.rootHandler)
 
+	// Set client
 	cli, err := utils.Client(scheme)
 	if err != nil {
 		log.Error(err, "cannot get client")
 		os.Exit(1)
 	}
-
 	srv.client = cli
 
-	if err := apis.AddApis(srv.wrapper, cli); err != nil {
+	// Set apisHandler
+	apisHandler, err := apis.NewHandler(srv.wrapper, srv.client, log)
+	if err != nil {
 		log.Error(err, "cannot add apis")
 		os.Exit(1)
 	}
+	srv.apisHandler = apisHandler
 
 	if err := createCert(context.Background(), srv.client); err != nil {
 		log.Error(err, "cannot create cert")
