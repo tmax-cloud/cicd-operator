@@ -105,6 +105,12 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 	} else {
 		sha = integrationJob.Spec.Refs.Pull.Sha
 	}
+
+	// Don't set commit status if its' sha is a fake
+	if sha == git.FakeSha {
+		return nil
+	}
+
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + integrationJob.Spec.Refs.Repository + "/statuses/" + sha
 
 	commitStatusBody.State = string(state)

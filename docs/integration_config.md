@@ -22,6 +22,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
 - [Configuring `secrets`](#configuring-secrets)
 - [Configuring `workspaces`](#configuring-workspaces)
 - [Configuring `podTemplate`](#configuring-podtemplate)
+- [Triggering jobs](#triggering-jobs)
 
 ## Configuring `git`
 For example,
@@ -280,6 +281,48 @@ spec:
     imagePullSecrets:
       - name: pull-secret-1
 ```
+
+## Triggering jobs
+Although the jobs are triggered via git event, you can manually trigger them by calling http request.
+1. Find the user's token.
+   If you are using ServiceAccount, you can find your token with following command
+   ```bash
+   SERVICE_ACCOUNT=<Name of the service account>
+   kubectl get secret $(kubectl get serviceaccount $SERVICE_ACCOUNT -o jsonpath='{.secrets[].name}') -o jsonpath='{.data.token}' | base64 -d
+   ```
+2. Run API call to Kubernetes API server
+   1. Trigger PullRequest event
+   ```bash
+   KUBERNETES_API_SERVER=<Kubernetes api server host:port>
+   TOKEN=<Token got from 1.>
+
+   INTEGRATION_CONFIG=<Name of the IntegrationConfig object>
+   NAMESPACE=<Namespace where the IntegrationConfig exists>
+
+   BASE_BRANCH="master"
+   HEAD_BRANCH="feat/new-feat"
+
+   curl -k -X POST \
+   -H "Authorization: Bearer $TOKEN" \
+   -d "{\"base_branch\": \"$BASE_BRANCH\", \"head_branch\": \"$HEAD_BRANCH\"}"
+   "$KUBERNETES_API_SERVER/apis/cicdapi.tmax.io/v1/namespaces/$NAMESPACE/integrationconfigs/$INTEGRATION_CONFIG/runpre"
+   ```
+
+   2. Trigger Push event
+   ```bash
+   KUBERNETES_API_SERVER=<Kubernetes api server host:port>
+   TOKEN=<Token got from 1.>
+
+   INTEGRATION_CONFIG=<Name of the IntegrationConfig object>
+   NAMESPACE=<Namespace where the IntegrationConfig exists>
+
+   BRANCH="master"
+
+   curl -k -X POST \
+   -H "Authorization: Bearer $TOKEN" \
+   -d "{\"branch\": \"$BRANCH\"}"
+   "$KUBERNETES_API_SERVER/apis/cicdapi.tmax.io/v1/namespaces/$NAMESPACE/integrationconfigs/$INTEGRATION_CONFIG/runpost"
+   ```
 
 # Appendix
 ## All Available Fields
