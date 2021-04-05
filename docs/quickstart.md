@@ -69,8 +69,8 @@ spec:
       - name: image
         image: quay.io/buildah/stable
         script: |
-          buildah bud --format docker --storage-driver=overlay -f ./Dockerfile -t $IMAGE_URL:${CI_HEAD_REF#refs/tags/} .
-          buildah push --storage-driver=vfs $IMAGE_URL:${CI_HEAD_REF#refs/tags/} docker://$IMAGE_URL:${CI_HEAD_REF#refs/tags/}
+          buildah bud --tls-verify=false --storage-driver=vfs --format docker -f ./Dockerfile -t $IMAGE_URL:${CI_HEAD_REF#refs/heads/} .
+          buildah push --tls-verify=false --storage-driver=vfs $IMAGE_URL:${CI_HEAD_REF#refs/tags/} docker://$IMAGE_URL:${CI_HEAD_REF#refs/heads/}
         env:
           - name: IMAGE_URL
             value: my-repository/my-image
