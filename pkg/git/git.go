@@ -36,3 +36,8 @@ const (
 
 // CommitStatusState is a commit status type
 type CommitStatusState string
+
+// FakeSha is a fake SHA for a commit
+const (
+	FakeSha = "0000000000000000000000000000000000000000"
+)

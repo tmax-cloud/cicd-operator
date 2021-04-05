@@ -12,6 +12,18 @@ type Plugin interface {
 
 var plugins = map[git.EventType][]Plugin{}
 
+// HandleEvent passes webhook event to plugins
+func HandleEvent(wh *git.Webhook, ic *cicdv1.IntegrationConfig) error {
+	var retErr error
+	plugins := getPlugins(wh.EventType)
+	for _, p := range plugins {
+		if err := p.Handle(wh, ic); err != nil {
+			retErr = err
+		}
+	}
+	return retErr
+}
+
 // AddPlugin adds handler for specific events
 func AddPlugin(events []git.EventType, p Plugin) {
 	for _, ev := range events {

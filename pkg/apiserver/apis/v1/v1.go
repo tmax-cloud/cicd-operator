@@ -7,6 +7,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/internal/wrapper"
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver/apis/v1/approvals"
+	"github.com/tmax-cloud/cicd-operator/pkg/apiserver/apis/v1/integrationconfigs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,7 @@ const (
 
 type handler struct {
 	approvalsHandler apiserver.APIHandler
+	icHandler        apiserver.APIHandler
 }
 
 // NewHandler instantiates a new v1 api handler
@@ -44,6 +46,13 @@ func NewHandler(parent wrapper.RouterWrapper, cli client.Client, logger logr.Log
 	}
 	handler.approvalsHandler = approvalsHandler
 
+	// /v1/namespaces/<namespace>/integrationconfigs
+	icHandler, err := integrationconfigs.NewHandler(namespaceWrapper, cli, logger)
+	if err != nil {
+		return nil, err
+	}
+	handler.icHandler = icHandler
+
 	return handler, nil
 }
 
@@ -60,6 +69,14 @@ func (h *handler) versionHandler(w http.ResponseWriter, _ *http.Request) {
 		},
 		{
 			Name:       fmt.Sprintf("%s/reject", approvals.ApprovalKind),
+			Namespaced: true,
+		},
+		{
+			Name:       fmt.Sprintf("%s/runpre", integrationconfigs.ICKind),
+			Namespaced: true,
+		},
+		{
+			Name:       fmt.Sprintf("%s/runpost", integrationconfigs.ICKind),
 			Namespaced: true,
 		},
 	}

@@ -39,6 +39,8 @@ func (config *GitConfig) GetGitHost() (string, error) {
 	gitURL := config.GetAPIUrl()
 	if gitURL == GithubDefaultAPIUrl {
 		gitURL = GithubDefaultHost
+	} else if gitURL == GitlabDefaultAPIUrl {
+		gitURL = GitlabDefaultHost
 	}
 	gitU, err := url.Parse(gitURL)
 	if err != nil {

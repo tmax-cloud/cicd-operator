@@ -37,7 +37,7 @@ git fetch "$CHECKOUT_URL" "$CHECKOUT_REF"
 git checkout FETCH_HEAD
 if [ "$CI_BASE_REF" != "" ]; then
     git fetch "$CHECKOUT_URL" "$CI_HEAD_REF"
-    git merge --no-ff "$CI_HEAD_SHA"
+    git merge --no-ff FETCH_HEAD
 fi
 git submodule update --init --recursive
 `
