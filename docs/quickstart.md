@@ -52,7 +52,8 @@ metadata:
   name: tutorial-config
 spec:
   git:
-    type: github # If you are using gitlab, use 'gitlab'
+    type: gitlab # If you are using github, use 'github'
+    apiUrl: http://gitlab.my.domain # Private gitlab's base url
     repository: my/repository
     token:
       valueFrom:
