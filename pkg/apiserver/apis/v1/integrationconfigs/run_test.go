@@ -32,13 +32,13 @@ func Test_handler_runPreHandler(t *testing.T) {
 	}
 
 	// TEST 1
-	testReq(t, h, bodyReqPre{HeadBranch: "newnew"}, "runpre", func(job *cicdv1.IntegrationJob) {
+	testReq(t, h, cicdv1.IntegrationConfigAPIReqRunPreBody{HeadBranch: "newnew"}, "runpre", func(job *cicdv1.IntegrationJob) {
 		assert.Equal(t, true, job.Spec.Refs.Pull != nil, "refs.pr is not nil")
 		assert.Equal(t, "newnew", job.Spec.Refs.Pull.Ref, "pr.ref")
 	})
 
 	// TEST 2
-	testReq(t, h, bodyReqPre{HeadBranch: "newnew", BaseBranch: "new"}, "runpre", func(job *cicdv1.IntegrationJob) {
+	testReq(t, h, cicdv1.IntegrationConfigAPIReqRunPreBody{HeadBranch: "newnew", BaseBranch: "new"}, "runpre", func(job *cicdv1.IntegrationJob) {
 		assert.Equal(t, "new", job.Spec.Refs.Base.Ref, "base.ref")
 		assert.Equal(t, true, job.Spec.Refs.Pull != nil, "refs.pr is not nil")
 		assert.Equal(t, "newnew", job.Spec.Refs.Pull.Ref, "pr.ref")
@@ -52,13 +52,13 @@ func Test_handler_runPostHandler(t *testing.T) {
 	}
 
 	// TEST 1
-	testReq(t, h, bodyReqPost{}, "runpost", func(job *cicdv1.IntegrationJob) {
+	testReq(t, h, cicdv1.IntegrationConfigAPIReqRunPostBody{}, "runpost", func(job *cicdv1.IntegrationJob) {
 		assert.Equal(t, "master", job.Spec.Refs.Base.Ref, "base ref")
 		assert.Equal(t, true, job.Spec.Refs.Pull == nil, "ref.pr is nil")
 	})
 
 	// TEST 2
-	testReq(t, h, bodyReqPost{Branch: "new"}, "runpost", func(job *cicdv1.IntegrationJob) {
+	testReq(t, h, cicdv1.IntegrationConfigAPIReqRunPostBody{Branch: "new"}, "runpost", func(job *cicdv1.IntegrationJob) {
 		assert.Equal(t, "new", job.Spec.Refs.Base.Ref, "base ref")
 		assert.Equal(t, true, job.Spec.Refs.Pull == nil, "ref.pr is nil")
 	})

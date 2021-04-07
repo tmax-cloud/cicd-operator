@@ -20,10 +20,6 @@ import (
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="authorization.k8s.io",resources=subjectaccessreviews,verbs=get;list;watch;create;update;patch
 
-type reqBody struct {
-	Reason string `json:"reason"`
-}
-
 func (h *handler) approveHandler(w http.ResponseWriter, req *http.Request) {
 	h.updateDecision(w, req, cicdv1.ApprovalResultApproved)
 }
@@ -47,7 +43,7 @@ func (h *handler) updateDecision(w http.ResponseWriter, req *http.Request, decis
 	}
 
 	// Get decision reason
-	userReq := &reqBody{}
+	userReq := &cicdv1.ApprovalAPIReqBody{}
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(userReq); err != nil {
 		log.Info(err.Error())

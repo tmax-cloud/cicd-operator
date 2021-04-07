@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	"github.com/go-logr/logr"
+	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/internal/wrapper"
@@ -64,19 +65,19 @@ func (h *handler) versionHandler(w http.ResponseWriter, _ *http.Request) {
 
 	apiResourceList.APIResources = []metav1.APIResource{
 		{
-			Name:       fmt.Sprintf("%s/approve", approvals.ApprovalKind),
+			Name:       fmt.Sprintf("%s/approve", cicdv1.ApprovalKind),
 			Namespaced: true,
 		},
 		{
-			Name:       fmt.Sprintf("%s/reject", approvals.ApprovalKind),
+			Name:       fmt.Sprintf("%s/reject", cicdv1.ApprovalKind),
 			Namespaced: true,
 		},
 		{
-			Name:       fmt.Sprintf("%s/runpre", integrationconfigs.ICKind),
+			Name:       fmt.Sprintf("%s/runpre", cicdv1.IntegrationConfigKind),
 			Namespaced: true,
 		},
 		{
-			Name:       fmt.Sprintf("%s/runpost", integrationconfigs.ICKind),
+			Name:       fmt.Sprintf("%s/runpost", cicdv1.IntegrationConfigKind),
 			Namespaced: true,
 		},
 	}
