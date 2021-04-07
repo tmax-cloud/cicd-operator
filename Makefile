@@ -37,6 +37,10 @@ test: generate fmt vet manifests
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
+# Build cicdctl binary
+cicdctl:
+	go build -o bin/cicdctl cmd/cicdctl/main.go
+
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
 	go run ./main.go $(RUN_ARGS)
@@ -143,7 +147,7 @@ test-lint:
 
 # Unit test
 test-unit:
-	go test -v ./pkg/...
+	go test -v ./...
 
 save-sha-gen:
 	$(eval GENSHA=$(shell sha512sum api/v1/zz_generated.deepcopy.go))
