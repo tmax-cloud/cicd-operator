@@ -30,6 +30,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// IntegrationConfig's kind string
+const (
+	IntegrationConfigKind = "integrationconfigs"
+)
+
 // Condition keys for IntegrationConfig
 const (
 	IntegrationConfigConditionWebhookRegistered = status.ConditionType("webhook-registered")
@@ -140,4 +145,21 @@ func GetSecretName(configName string) string {
 // GetWebhookServerAddress returns Server address which webhook events will be received
 func (i *IntegrationConfig) GetWebhookServerAddress() string {
 	return fmt.Sprintf("http://%s/webhook/%s/%s", configs.ExternalHostName, i.Namespace, i.Name)
+}
+
+// IntegrationConfig's API kinds
+const (
+	IntegrationConfigAPIRunPre  = "runpre"
+	IntegrationConfigAPIRunPost = "runpost"
+)
+
+// IntegrationConfigAPIReqRunPreBody is a body struct for IntegrationConfig's api request
+type IntegrationConfigAPIReqRunPreBody struct {
+	BaseBranch string `json:"base_branch"`
+	HeadBranch string `json:"head_branch"`
+}
+
+// IntegrationConfigAPIReqRunPostBody is a body struct for IntegrationConfig's api request
+type IntegrationConfigAPIReqRunPostBody struct {
+	Branch string `json:"branch"`
 }

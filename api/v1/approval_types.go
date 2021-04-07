@@ -23,6 +23,11 @@ import (
 	"time"
 )
 
+// Approval's kind string
+const (
+	ApprovalKind = "approvals"
+)
+
 // ApprovalResult is a result of the Approval
 type ApprovalResult string
 
@@ -134,4 +139,15 @@ func (a *ApprovalStatus) GetDecisionTimeInZone(zone string) (*time.Time, error) 
 	}
 	localTime := a.DecisionTime.Time.In(location)
 	return &localTime, nil
+}
+
+// Approval API kinds
+const (
+	ApprovalAPIApprove = "approve"
+	ApprovalAPIReject  = "reject"
+)
+
+// ApprovalAPIReqBody is a body struct for Approval's api request
+type ApprovalAPIReqBody struct {
+	Reason string `json:"reason"`
 }

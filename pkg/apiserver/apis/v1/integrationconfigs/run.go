@@ -20,15 +20,6 @@ const (
 	defaultBranch = "master"
 )
 
-type bodyReqPost struct {
-	Branch string `json:"branch"`
-}
-
-type bodyReqPre struct {
-	BaseBranch string `json:"base_branch"`
-	HeadBranch string `json:"head_branch"`
-}
-
 func (h *handler) runPreHandler(w http.ResponseWriter, req *http.Request) {
 	h.runHandler(w, req, git.EventTypePullRequest)
 }
@@ -47,6 +38,7 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 	ns, nsExist := vars[apiserver.NamespaceParamKey]
 	resName, nameExist := vars[icParamKey]
 	if !nsExist || !nameExist {
+		log.Info("url is malformed")
 		_ = utils.RespondError(w, http.StatusBadRequest, "url is malformed")
 		return
 	}
@@ -114,7 +106,7 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 }
 
 func buildPullRequestWebhook(body io.ReadCloser, user string) (*git.PullRequest, error) {
-	userReq := &bodyReqPre{}
+	userReq := &cicdv1.IntegrationConfigAPIReqRunPreBody{}
 	decoder := json.NewDecoder(body)
 	if err := decoder.Decode(userReq); err != nil {
 		return nil, err
@@ -146,7 +138,7 @@ func buildPullRequestWebhook(body io.ReadCloser, user string) (*git.PullRequest,
 }
 
 func buildPushWebhook(body io.ReadCloser, user string) (*git.Push, error) {
-	userReq := &bodyReqPost{}
+	userReq := &cicdv1.IntegrationConfigAPIReqRunPostBody{}
 	decoder := json.NewDecoder(body)
 	if err := decoder.Decode(userReq); err != nil {
 		return nil, err
