@@ -360,6 +360,10 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobSt
 }
 
 func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, job *cicdv1.IntegrationJob, stateChanged []bool) error {
+	// Skip if token is nil
+	if cfg.Spec.Git.Token == nil {
+		return nil
+	}
 	gitCli, err := utils.GetGitCli(cfg, p.Client)
 	if err != nil {
 		return err

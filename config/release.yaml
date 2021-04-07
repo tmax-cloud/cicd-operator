@@ -938,7 +938,9 @@ spec:
                     pattern: .+/.+
                     type: string
                   token:
-                    description: Token
+                    description: Token is a token for accessing the remote git server.
+                      It can be empty, if you don't want to register a webhook to
+                      the git server
                     properties:
                       value:
                         description: Value is un-encrypted plain string of git token,
@@ -978,7 +980,6 @@ spec:
                     type: string
                 required:
                 - repository
-                - token
                 - type
                 type: object
               jobs:

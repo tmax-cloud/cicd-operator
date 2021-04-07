@@ -17,6 +17,24 @@ import (
 type Client struct {
 	IntegrationConfig *cicdv1.IntegrationConfig
 	K8sClient         client.Client
+
+	header map[string]string
+}
+
+// Init initiates the Client
+func (c *Client) Init() error {
+	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
+	if err != nil {
+		return err
+	}
+
+	c.header = map[string]string{
+		"Content-Type": "application/json",
+	}
+	if token != "" {
+		c.header["PRIVATE-TOKEN"] = token
+	}
+	return nil
 }
 
 // ParseWebhook parses a webhook body for gitlab
@@ -207,16 +225,7 @@ func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, body stri
 }
 
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
-	token, err := c.IntegrationConfig.GetToken(c.K8sClient)
-	if err != nil {
-		return nil, nil, err
-	}
-	header := map[string]string{
-		"PRIVATE-TOKEN": token,
-		"Content-Type":  "application/json",
-	}
-
-	return git.RequestHTTP(method, apiURL, header, data)
+	return git.RequestHTTP(method, apiURL, c.header, data)
 }
 
 // Validate validates the webhook payload

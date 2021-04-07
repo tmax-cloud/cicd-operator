@@ -158,6 +158,12 @@ func (c *chatOps) registerUserUnauthorizedForTestComment(config *cicdv1.Integrat
 	if !ok {
 		return err
 	}
+
+	// Skip if token is empty
+	if config.Spec.Git.Token == nil {
+		return nil
+	}
+
 	gitCli, err := utils.GetGitCli(config, c.client)
 	if err != nil {
 		return err

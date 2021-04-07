@@ -161,20 +161,22 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 
 	// Deletion check-up
 	if instance.DeletionTimestamp != nil && idx >= 0 {
-		// Delete webhook
-		gitCli, err := utils.GetGitCli(instance, r.Client)
-		if err != nil {
-			r.Log.Error(err, "")
-		} else {
-			hookList, err := gitCli.ListWebhook()
+		// Delete webhook only if it has git token
+		if instance.Spec.Git.Token != nil {
+			gitCli, err := utils.GetGitCli(instance, r.Client)
 			if err != nil {
 				r.Log.Error(err, "")
-			}
-			for _, h := range hookList {
-				if h.URL == instance.GetWebhookServerAddress() {
-					r.Log.Info("Deleting webhook " + h.URL)
-					if err := gitCli.DeleteWebhook(h.ID); err != nil {
-						r.Log.Error(err, "")
+			} else {
+				hookList, err := gitCli.ListWebhook()
+				if err != nil {
+					r.Log.Error(err, "")
+				}
+				for _, h := range hookList {
+					if h.URL == instance.GetWebhookServerAddress() {
+						r.Log.Info("Deleting webhook " + h.URL)
+						if err := gitCli.DeleteWebhook(h.ID); err != nil {
+							r.Log.Error(err, "")
+						}
 					}
 				}
 			}
@@ -221,6 +223,14 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 			Type:   cicdv1.IntegrationConfigConditionWebhookRegistered,
 			Status: corev1.ConditionFalse,
 		}
+	}
+
+	// If token is empty, skip to register
+	if instance.Spec.Git.Token == nil {
+		webhookRegistered.Reason = cicdv1.IntegrationConfigConditionReasonNoGitToken
+		webhookRegistered.Message = "Skipped to register webhook"
+		webhookConditionChanged = instance.Status.Conditions.SetCondition(*webhookRegistered)
+		return webhookConditionChanged
 	}
 
 	// Register only if the condition is false
@@ -279,7 +289,7 @@ func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationC
 
 	// For now, only checked is if webhook-registered is true & secrets are set
 	webhookRegistered := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionWebhookRegistered)
-	if instance.Status.Secrets != "" && webhookRegistered != nil && webhookRegistered.Status == corev1.ConditionTrue {
+	if instance.Status.Secrets != "" && webhookRegistered != nil && (webhookRegistered.Status == corev1.ConditionTrue || webhookRegistered.Reason == cicdv1.IntegrationConfigConditionReasonNoGitToken) {
 		ready.Status = corev1.ConditionTrue
 	}
 	readyConditionChanged := instance.Status.Conditions.SetCondition(*ready)

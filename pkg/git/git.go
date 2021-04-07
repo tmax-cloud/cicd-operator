@@ -8,6 +8,8 @@ import (
 
 // Client is a git client interface
 type Client interface {
+	Init() error
+
 	// Webhooks
 	ListWebhook() ([]WebhookEntry, error)
 	RegisterWebhook(url string) error

@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// IntegrationConfig's kind string
+// IntegrationConfigKind is kind string
 const (
 	IntegrationConfigKind = "integrationconfigs"
 )
@@ -39,6 +39,11 @@ const (
 const (
 	IntegrationConfigConditionWebhookRegistered = status.ConditionType("webhook-registered")
 	IntegrationConfigConditionReady             = status.ConditionType("ready")
+)
+
+// IntegrationConfigConditionReasonNoGitToken is a Reason key
+const (
+	IntegrationConfigConditionReasonNoGitToken = "noGitToken"
 )
 
 // IntegrationConfigSpec defines the desired state of IntegrationConfig
@@ -110,6 +115,12 @@ func init() {
 // GetToken fetches git access token from IntegrationConfig
 func (i *IntegrationConfig) GetToken(c client.Client) (string, error) {
 	tokenStruct := i.Spec.Git.Token
+
+	// Empty token
+	if tokenStruct == nil {
+		return "", nil
+	}
+
 	// Get from value
 	if tokenStruct.ValueFrom == nil {
 		if tokenStruct.Value != "" {
