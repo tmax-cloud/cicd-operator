@@ -3,9 +3,11 @@ package apiserver
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -23,6 +25,8 @@ type authorizer struct {
 	APIGroup   string
 	APIVersion string
 	Verb       string
+
+	log logr.Logger
 }
 
 // NewAuthorizer instantiates a new authorizer
@@ -32,17 +36,21 @@ func NewAuthorizer(cli *authorization.AuthorizationV1Client, apiGroup, apiVersio
 		APIGroup:   apiGroup,
 		APIVersion: apiVersion,
 		Verb:       verb,
+		log:        logf.Log.WithName("authorizer"),
 	}
 }
 
 func (a *authorizer) Authorize(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.TLS == nil || len(req.TLS.PeerCertificates) == 0 {
-			_ = utils.RespondError(w, http.StatusUnauthorized, "is not https or there is no peer certificate")
+			msg := "is not https or there is no peer certificate"
+			a.log.Info(msg)
+			_ = utils.RespondError(w, http.StatusUnauthorized, msg)
 			return
 		}
 
 		if err := a.reviewAccess(req); err != nil {
+			a.log.Info(err.Error())
 			_ = utils.RespondError(w, http.StatusForbidden, err.Error())
 			return
 		}
