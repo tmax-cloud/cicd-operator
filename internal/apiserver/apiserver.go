@@ -36,7 +36,7 @@ func GetUserName(header http.Header) (string, error) {
 // GetUserGroup extracts user group from the header
 func GetUserGroup(header http.Header) ([]string, error) {
 	for k, v := range header {
-		if k == userHeader {
+		if k == groupHeader {
 			return v, nil
 		}
 	}
