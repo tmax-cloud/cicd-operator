@@ -22,6 +22,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
 - [Configuring `secrets`](#configuring-secrets)
 - [Configuring `workspaces`](#configuring-workspaces)
 - [Configuring `podTemplate`](#configuring-podtemplate)
+- [Configuring `mergeConfig`](#configuring-mergeconfig)
 - [Triggering jobs](#triggering-jobs)
   - [Option.1 Using `cicdctl`](#option1-using-cicdctl)
   - [Option.2 Using `curl`](#option2-using-curl)
@@ -53,7 +54,7 @@ API server url for self-served git servers. (e.g., http://gitlab.my.domain)
 
 ### `token`
 Access token for accessing the repository. (It registers webhook, commit statuses)
-> **Required**
+> Optional
 
 ### Token value
 Stores token value itself in the yaml. **Not recommended due to a security issue**
@@ -283,6 +284,10 @@ spec:
     imagePullSecrets:
       - name: pull-secret-1
 ```
+
+## Configuring `mergeConfig`
+Merge automation can be configured using `mergeConfig`.
+Refer to the [merger doc](./merger.md#configuring-mergeconfig).
 
 ## Triggering jobs
 Although the jobs are triggered via git event, you can manually trigger them by calling API request.

@@ -44,3 +44,21 @@ var (
 	// IngressHost is a host for ingress instance
 	IngressHost string
 )
+
+// Merge Automation Configs
+var (
+	// MergeSyncPeriod is a PR sync period in minute
+	MergeSyncPeriod int
+
+	// MergeBlockLabel is a label name which blocks a PR to be merged
+	MergeBlockLabel string
+
+	// MergeKindSquashLabel is a label to make a PR to be merged by 'squash'
+	MergeKindSquashLabel string
+
+	// MergeKindRebaseLabel is a label to make a PR to be merged by 'rebase'
+	MergeKindRebaseLabel string
+
+	// MergeKindMergeLabel is a label to make a PR to be merged by 'merge'
+	MergeKindMergeLabel string
+)
