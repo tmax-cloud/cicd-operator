@@ -6,9 +6,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
-	"time"
 )
 
 const (
@@ -18,16 +18,9 @@ const (
 func TestSendMessage(t *testing.T) {
 	errChan := make(chan error)
 
+	srv := newTestServer()
 	go func() {
-		if err := launchTestServer(); err != nil {
-			errChan <- err
-		}
-	}()
-
-	time.Sleep(2 * time.Second)
-
-	go func() {
-		if err := SendMessage("http://127.0.0.1:23233", testMessage); err != nil {
+		if err := SendMessage(srv.URL, testMessage); err != nil {
 			errChan <- err
 		}
 		errChan <- nil
@@ -42,7 +35,7 @@ func TestSendMessage(t *testing.T) {
 	}
 }
 
-func launchTestServer() error {
+func newTestServer() *httptest.Server {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -73,5 +66,5 @@ func launchTestServer() error {
 		}
 	})
 
-	return http.ListenAndServe("0.0.0.0:23233", router)
+	return httptest.NewServer(router)
 }
