@@ -30,8 +30,9 @@ type GitConfig struct {
 	// Also, it should *NOT* contain repository path (e.g., tmax-cloud/cicd-operator)
 	APIUrl string `json:"apiUrl,omitempty"`
 
-	// Token
-	Token GitToken `json:"token"`
+	// Token is a token for accessing the remote git server. It can be empty, if you don't want to register a webhook
+	// to the git server
+	Token *GitToken `json:"token,omitempty"`
 }
 
 // GetGitHost gets git host

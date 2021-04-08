@@ -24,14 +24,19 @@ func FileExists(path string) bool {
 
 // GetGitCli generates git client, depending on the git type in the cfg
 func GetGitCli(cfg *cicdv1.IntegrationConfig, cli client.Client) (git.Client, error) {
+	var c git.Client
 	switch cfg.Spec.Git.Type {
 	case cicdv1.GitTypeGitHub:
-		return &github.Client{IntegrationConfig: cfg, K8sClient: cli}, nil
+		c = &github.Client{IntegrationConfig: cfg, K8sClient: cli}
 	case cicdv1.GitTypeGitLab:
-		return &gitlab.Client{IntegrationConfig: cfg, K8sClient: cli}, nil
+		c = &gitlab.Client{IntegrationConfig: cfg, K8sClient: cli}
 	default:
 		return nil, fmt.Errorf("git type %s is not supported", cfg.Spec.Git.Type)
 	}
+	if err := c.Init(); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 // ParseApproversList parses user/email from line-separated and comma-separated approvers list
