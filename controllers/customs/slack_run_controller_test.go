@@ -18,10 +18,10 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"knative.dev/pkg/apis"
 	"net/http"
+	"net/http/httptest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
-	"time"
 )
 
 const (
@@ -32,13 +32,7 @@ const (
 func TestSlackRunHandler_Handle(t *testing.T) {
 	errCh := make(chan error, 10)
 	// Launch test slack webhook server
-	go func() {
-		if err := launchTestServer(); err != nil {
-			errCh <- err
-		}
-	}()
-
-	time.Sleep(2 * time.Second)
+	srv := newTestServer()
 
 	s := runtime.NewScheme()
 	utilruntime.Must(cicdv1.AddToScheme(s))
@@ -56,7 +50,7 @@ func TestSlackRunHandler_Handle(t *testing.T) {
 				Kind:       "SlackTask",
 			},
 			Params: []tektonv1beta1.Param{
-				{Name: cicdv1.CustomTaskSlackParamKeyWebhook, Value: tektonv1alpha1.ArrayOrString{Type: tektonv1alpha1.ParamTypeString, StringVal: "http://127.0.0.1:23233"}},
+				{Name: cicdv1.CustomTaskSlackParamKeyWebhook, Value: tektonv1alpha1.ArrayOrString{Type: tektonv1alpha1.ParamTypeString, StringVal: srv.URL}},
 				{Name: cicdv1.CustomTaskSlackParamKeyMessage, Value: tektonv1alpha1.ArrayOrString{Type: tektonv1alpha1.ParamTypeString, StringVal: "$INTEGRATION_JOB_NAME/$JOB_NAME"}},
 				{Name: cicdv1.CustomTaskSlackParamKeyIntegrationJob, Value: tektonv1alpha1.ArrayOrString{Type: tektonv1alpha1.ParamTypeString, StringVal: "test-ij-1"}},
 				{Name: cicdv1.CustomTaskSlackParamKeyIntegrationJobJob, Value: tektonv1alpha1.ArrayOrString{Type: tektonv1alpha1.ParamTypeString, StringVal: "test-job-1"}},
@@ -101,7 +95,7 @@ func TestSlackRunHandler_Handle(t *testing.T) {
 	}
 }
 
-func launchTestServer() error {
+func newTestServer() *httptest.Server {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -116,5 +110,5 @@ func launchTestServer() error {
 		}
 	})
 
-	return http.ListenAndServe("0.0.0.0:23233", router)
+	return httptest.NewServer(router)
 }
