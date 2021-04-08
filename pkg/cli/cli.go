@@ -41,7 +41,7 @@ func GetClient(cfg *Configs) (*rest.RESTClient, string, error) {
 }
 
 // ExecAndHandleError executes the request req and handles error
-func ExecAndHandleError(req *rest.Request) {
+func ExecAndHandleError(req *rest.Request, fn func([]byte)) {
 	raw, err := req.DoRaw(context.Background())
 	if err != nil {
 		resp := &utils.ErrorResponse{}
@@ -53,5 +53,9 @@ func ExecAndHandleError(req *rest.Request) {
 
 		fmt.Println(resp.Message)
 		os.Exit(1)
+	}
+
+	if fn != nil {
+		fn(raw)
 	}
 }

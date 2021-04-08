@@ -11,6 +11,7 @@ make cicdctl
 - [Run](#run)
 - [Approve](#approve)
 - [Reject](#reject)
+- [Webhook](#webhook)
 
 ### Run
 `Run` command triggers jobs of an `IntegrationConfig`.
@@ -24,10 +25,12 @@ make cicdctl
 #### Examples
 ```bash
 # Running preSubmit jobs
-cicdctl run pre -n default ic-test --head-branch test --base-branch master
+$ cicdctl run pre -n default ic-test --head-branch test --base-branch master
+Triggered pre jobs for IntegrationConfig default/ic-test
 
 # Running postSubmit jobs
-cicdctl run post -n default ic-test --branch master
+$ cicdctl run post -n default ic-test --branch master
+Triggered post jobs for IntegrationConfig default/ic-test
 ```
 
 ### Approve
@@ -36,7 +39,8 @@ cicdctl run post -n default ic-test --branch master
 `cicdctl approve [Approval Name] [Reason]`
 #### Examples
 ```bash
-cicdctl approve -n default approval-test 'just because'
+$ cicdctl approve -n default approval-test 'just because'
+Approved Approval default/approval-test
 ```
 
 ### Reject
@@ -45,6 +49,19 @@ cicdctl approve -n default approval-test 'just because'
 `cicdctl reject [Approval Name] [Reason]`
 #### Examples
 ```bash
-cicdctl reject -n default approval-test 'just because'
+$ cicdctl reject -n default approval-test 'just because'
+Rejected Approval default/approval-test
+```
+
+
+### Webhook
+`Webhook` command gets webhook server information from an IntegrationConfig
+#### Command
+`cicdctl webhook [IntegrationConfig Name]`
+#### Examples
+```bash
+$ cicdctl webhook -n default ic-test
+Webhook URL     : http://my-webhook.com/webhook/default/ic-test
+Webhook Secret  : xxxxxxxxxxxxx
 ```
 

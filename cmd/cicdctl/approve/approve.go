@@ -61,7 +61,7 @@ func (command *command) RunCommand(cmd *cobra.Command, args []string) {
 		Namespace(ns).
 		Name(approvals).
 		SubResource(cmd.Name()).
-		Body(body))
+		Body(body), nil)
 
 	fmt.Printf(strings.Title(cmd.Name())+"ed Approval %s/%s\n", ns, approvals)
 }

@@ -55,5 +55,11 @@ func NewHandler(parent wrapper.RouterWrapper, cli client.Client, logger logr.Log
 		return nil, err
 	}
 
+	// /integrationconfigs/<integrationconfig>/webhookurl
+	webhookURLWrapper := wrapper.New("/"+cicdv1.IntegrationConfigAPIWebhookURL, []string{http.MethodGet}, handler.webhookURLHandler)
+	if err := icWrapper.Add(webhookURLWrapper); err != nil {
+		return nil, err
+	}
+
 	return handler, nil
 }

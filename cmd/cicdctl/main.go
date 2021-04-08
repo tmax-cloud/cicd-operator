@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/tmax-cloud/cicd-operator/cmd/cicdctl/approve"
 	"github.com/tmax-cloud/cicd-operator/cmd/cicdctl/run"
+	"github.com/tmax-cloud/cicd-operator/cmd/cicdctl/webhook"
 	"github.com/tmax-cloud/cicd-operator/pkg/cli"
 	"k8s.io/klog"
 )
@@ -21,6 +22,7 @@ func main() {
 
 	approve.New(configs).AddToCommand(cmd)
 	run.New(configs).AddToCommand(cmd)
+	webhook.New(configs).AddToCommand(cmd)
 
 	// Set klog verbosity
 	klog.InitFlags(nil)
