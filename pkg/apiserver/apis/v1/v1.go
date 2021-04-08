@@ -65,19 +65,23 @@ func (h *handler) versionHandler(w http.ResponseWriter, _ *http.Request) {
 
 	apiResourceList.APIResources = []metav1.APIResource{
 		{
-			Name:       fmt.Sprintf("%s/approve", cicdv1.ApprovalKind),
+			Name:       fmt.Sprintf("%s/%s", cicdv1.ApprovalKind, cicdv1.ApprovalAPIApprove),
 			Namespaced: true,
 		},
 		{
-			Name:       fmt.Sprintf("%s/reject", cicdv1.ApprovalKind),
+			Name:       fmt.Sprintf("%s/%s", cicdv1.ApprovalKind, cicdv1.ApprovalAPIReject),
 			Namespaced: true,
 		},
 		{
-			Name:       fmt.Sprintf("%s/runpre", cicdv1.IntegrationConfigKind),
+			Name:       fmt.Sprintf("%s/%s", cicdv1.IntegrationConfigKind, cicdv1.IntegrationConfigAPIRunPre),
 			Namespaced: true,
 		},
 		{
-			Name:       fmt.Sprintf("%s/runpost", cicdv1.IntegrationConfigKind),
+			Name:       fmt.Sprintf("%s/%s", cicdv1.IntegrationConfigKind, cicdv1.IntegrationConfigAPIRunPost),
+			Namespaced: true,
+		},
+		{
+			Name:       fmt.Sprintf("%s/%s", cicdv1.IntegrationConfigKind, cicdv1.IntegrationConfigAPIWebhookURL),
 			Namespaced: true,
 		},
 	}

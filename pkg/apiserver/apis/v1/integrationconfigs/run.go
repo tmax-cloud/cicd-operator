@@ -32,7 +32,7 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 	reqID := utils.RandomString(10)
 	log := h.log.WithValues("request", reqID)
 
-	// Get ns/approvalName
+	// Get ns/resource name
 	vars := mux.Vars(req)
 
 	ns, nsExist := vars[apiserver.NamespaceParamKey]

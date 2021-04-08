@@ -107,7 +107,7 @@ func (command *command) RunCommand(args []string, subType string) {
 		Namespace(ns).
 		Name(ic).
 		SubResource(subResource).
-		Body(body))
+		Body(body), nil)
 
 	fmt.Printf("Triggered %s jobs for IntegrationConfig %s/%s\n", subType, ns, ic)
 }

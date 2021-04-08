@@ -160,8 +160,9 @@ func (i *IntegrationConfig) GetWebhookServerAddress() string {
 
 // IntegrationConfig's API kinds
 const (
-	IntegrationConfigAPIRunPre  = "runpre"
-	IntegrationConfigAPIRunPost = "runpost"
+	IntegrationConfigAPIRunPre     = "runpre"
+	IntegrationConfigAPIRunPost    = "runpost"
+	IntegrationConfigAPIWebhookURL = "webhookurl"
 )
 
 // IntegrationConfigAPIReqRunPreBody is a body struct for IntegrationConfig's api request
@@ -173,4 +174,10 @@ type IntegrationConfigAPIReqRunPreBody struct {
 // IntegrationConfigAPIReqRunPostBody is a body struct for IntegrationConfig's api request
 type IntegrationConfigAPIReqRunPostBody struct {
 	Branch string `json:"branch"`
+}
+
+// IntegrationConfigAPIReqWebhookURL is a body struct for IntegrationConfig's api request
+type IntegrationConfigAPIReqWebhookURL struct {
+	URL    string `json:"url"`
+	Secret string `json:"secret"`
 }
