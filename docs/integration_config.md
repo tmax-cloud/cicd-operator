@@ -23,6 +23,8 @@ This guide shows how to configure `IntegrationConfig` in detail.
 - [Configuring `workspaces`](#configuring-workspaces)
 - [Configuring `podTemplate`](#configuring-podtemplate)
 - [Triggering jobs](#triggering-jobs)
+  - [Option.1 Using `cicdctl`](#option1-using-cicdctl)
+  - [Option.2 Using `curl`](#option2-using-curl)
 
 ## Configuring `git`
 For example,
@@ -283,7 +285,12 @@ spec:
 ```
 
 ## Triggering jobs
-Although the jobs are triggered via git event, you can manually trigger them by calling http request.
+Although the jobs are triggered via git event, you can manually trigger them by calling API request.
+### Option.1 Using `cicdctl`
+```bash
+cicdctl run -n <Namespace> post <IntegrationConfig Name>
+```
+### Option.2 Using `curl`
 1. Find the user's token.
    If you are using ServiceAccount, you can find your token with following command
    ```bash

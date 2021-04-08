@@ -6,6 +6,8 @@ This guide lets you know how to use `Approval` feature.
 * [Reusing Approvers list](#reusing-approvers-list)
 * [Send mail before/after approval](#send-mail-beforeafter-approval)
 * [Approving/Rejecting the approval](#approvingrejecting-the-approval)
+  * [Option.1 Using `cicdctl`](#option-1-using-cicdctl)
+  * [Option.2 Using `curl`](#option-2-using-curl)
 
 ## Creating an `Approval` step
 Add following 'approval' job before the job which needs an approval in `IntegrationConfig`
@@ -72,7 +74,19 @@ Enable email feature, following the [installation guide](./installation.md#enabl
    SERVICE_ACCOUNT=<Name of the service account>
    kubectl get secret $(kubectl get serviceaccount $SERVICE_ACCOUNT -o jsonpath='{.secrets[].name}') -o jsonpath='{.data.token}' | base64 -d
    ```
+
 2. Run API call to Kubernetes API server
+   ### Option. 1 Using `cicdctl`
+   ```bash
+   TOKEN=<Token got from 1.>
+   
+   APPROVAL=<Name of the Approval object>
+   NAMESPACE=<Namespace where the Approval exists>
+   
+   cicdctl --token $TOKEN -n $NAMESPACE [approve|reject] $APPROVAL <Reason of the decision>
+   ```
+
+   ### Option. 2 Using `curl`
    ```bash
    KUBERNETES_API_SERVER=<Kubernetes api server host:port>
    TOKEN=<Token got from 1.>
