@@ -13,7 +13,6 @@ import (
 	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 	"time"
 )
 
@@ -27,7 +26,7 @@ type EmailRunHandler struct {
 // Handle sends email to the receivers
 func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := a.Log.WithValues("EmailRun", run.Namespace)
+	log := a.Log.WithValues("EmailRun", run.Name)
 
 	original := run.DeepCopy()
 
@@ -100,14 +99,25 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	job, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskEmailParamKeyIntegrationJobJob, tektonv1beta1.ParamTypeString)
 
 	// Substitute variables
-	title = strings.ReplaceAll(title, varIntegrationJobName, ij)
-	title = strings.ReplaceAll(title, varJobName, job)
-
-	content = strings.ReplaceAll(content, varIntegrationJobName, ij)
-	content = strings.ReplaceAll(content, varJobName, job)
+	compiledTitle, err := compileString(run.Namespace, ij, job, title, a.Client)
+	if err != nil {
+		log.Error(err, "")
+		cond.Status = corev1.ConditionFalse
+		cond.Reason = "CannotCompileTitle"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
+	}
+	compiledContent, err := compileString(run.Namespace, ij, job, content, a.Client)
+	if err != nil {
+		log.Error(err, "")
+		cond.Status = corev1.ConditionFalse
+		cond.Reason = "CannotCompileContent"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
+	}
 
 	// Send!
-	if err := mail.Send(receivers, title, content, isHTML, a.Client); err != nil {
+	if err := mail.Send(receivers, compiledTitle, compiledContent, isHTML, a.Client); err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
 		cond.Reason = "EmailError"

@@ -48,14 +48,14 @@ func generateDefaultEnvs(job *cicdv1.IntegrationJob) ([]corev1.EnvVar, error) {
 	if refs.Pull == nil {
 		// Push event
 		defaultEnvs = append(defaultEnvs, corev1.EnvVar{
-			Name: "CI_HEAD_REF", Value: refs.Base.Ref,
+			Name: "CI_HEAD_REF", Value: refs.Base.Ref.String(),
 		})
 	} else {
 		// Pull Request event
 		defaultEnvs = append(defaultEnvs, []corev1.EnvVar{
 			{Name: "CI_HEAD_SHA", Value: refs.Pull.Sha},
-			{Name: "CI_HEAD_REF", Value: refs.Pull.Ref},
-			{Name: "CI_BASE_REF", Value: refs.Base.Ref},
+			{Name: "CI_HEAD_REF", Value: refs.Pull.Ref.String()},
+			{Name: "CI_BASE_REF", Value: refs.Base.Ref.String()},
 		}...)
 	}
 

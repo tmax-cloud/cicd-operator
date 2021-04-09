@@ -90,7 +90,7 @@ type IntegrationJobSender struct {
 
 // IntegrationJobRefsBase refers to the base commit
 type IntegrationJobRefsBase struct {
-	Ref  string `json:"ref"`
+	Ref  GitRef `json:"ref"`
 	Link string `json:"link"`
 	Sha  string `json:"sha"`
 }
@@ -98,7 +98,7 @@ type IntegrationJobRefsBase struct {
 // IntegrationJobRefsPull refers to the pull request
 type IntegrationJobRefsPull struct {
 	ID     int                          `json:"id"`
-	Ref    string                       `json:"ref"`
+	Ref    GitRef                       `json:"ref"`
 	Sha    string                       `json:"sha"`
 	Link   string                       `json:"link"`
 	Author IntegrationJobRefsPullAuthor `json:"author"`

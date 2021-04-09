@@ -39,6 +39,22 @@ func TestSlackRunHandler_Handle(t *testing.T) {
 	utilruntime.Must(tektonv1beta1.AddToScheme(s))
 	utilruntime.Must(tektonv1alpha1.AddToScheme(s))
 
+	ij := &cicdv1.IntegrationJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-ij-1",
+			Namespace: testRunNamespace,
+		},
+		Spec: cicdv1.IntegrationJobSpec{
+			Refs: cicdv1.IntegrationJobRefs{
+				Base: cicdv1.IntegrationJobRefsBase{
+					Ref: cicdv1.GitRef("refs/tags/v0.2.3"),
+				},
+			},
+			Jobs: []cicdv1.Job{{}},
+		},
+	}
+	ij.Spec.Jobs[0].Name = "test-job-1"
+
 	run := &tektonv1alpha1.Run{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testSlackRunName,
@@ -58,7 +74,7 @@ func TestSlackRunHandler_Handle(t *testing.T) {
 		},
 	}
 
-	fakeCli := fake.NewFakeClientWithScheme(s, run)
+	fakeCli := fake.NewFakeClientWithScheme(s, run, ij)
 
 	slackRunHandler := SlackRunHandler{Scheme: s, Client: fakeCli, Log: ctrl.Log}
 

@@ -10,6 +10,8 @@ Add following 'email' job in `IntegrationConfig`
 You can use following variables as substitutions in the title, content.
 - `$INTEGRATION_JOB_NAME`: IntegrationJob's name
 - `$JOB_NAME`: Job's name
+
+Also, title and content are compiled using `IntegrationJob` struct.
 ```yaml
 - name: email
   email:
@@ -30,6 +32,8 @@ Add following 'email' job in `IntegrationConfig`.
 You can use following variables as substitutions in the message.
 - `$INTEGRATION_JOB_NAME`: IntegrationJob's name
 - `$JOB_NAME`: Job's name
+
+Also, message is compiled using `IntegrationJob` struct.
 ```yaml
 - name: slack
   slack:
