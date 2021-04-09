@@ -43,7 +43,7 @@ func New(c *cli.Configs) cli.Command {
 			if cmd.headBranch == "" {
 				log.Fatal("head-branch option should be set for pre")
 			}
-			cmd.RunCommand(args, subTypePost)
+			cmd.RunCommand(args, subTypePre)
 		},
 	}
 	preCommand.Flags().StringVar(&cmd.baseBranch, "base-branch", "", "Base branch for the PullRequest event")
@@ -58,7 +58,7 @@ func New(c *cli.Configs) cli.Command {
 			if cmd.headBranch != "" || cmd.baseBranch != "" {
 				log.Fatal("head-branch and base-branch options cannot be used for post")
 			}
-			cmd.RunCommand(args, subTypePre)
+			cmd.RunCommand(args, subTypePost)
 		},
 	}
 	postCommand.Flags().StringVar(&cmd.branch, "branch", "", "Branch for the Push event")
