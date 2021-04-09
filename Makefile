@@ -45,6 +45,9 @@ cicdctl:
 run: generate fmt vet manifests
 	go run ./main.go $(RUN_ARGS)
 
+run-cicdctl:
+	go run cmd/cicdctl/main.go $(RUN_ARGS)
+
 # Install CRDs into a cluster
 install: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
