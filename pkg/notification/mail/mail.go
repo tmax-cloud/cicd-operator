@@ -52,7 +52,7 @@ func Send(to []string, subject string, content string, isHTML bool, c client.Cli
 	header["To"] = toStr
 	header["Subject"] = subject
 	header["MIME-Version"] = "1.0"
-	header["Content-Type"] = fmt.Sprintf("%s; charset=\"utf-8\"", cType)
+	header["Content-Type"] = fmt.Sprintf("%s; charset=UTF-8", cType)
 
 	msg := ""
 	for k, v := range header {
