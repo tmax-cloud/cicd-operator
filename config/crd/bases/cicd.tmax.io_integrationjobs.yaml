@@ -3732,6 +3732,7 @@ spec:
                       link:
                         type: string
                       ref:
+                        description: GitRef is a git reference type
                         type: string
                       sha:
                         type: string
@@ -3760,6 +3761,7 @@ spec:
                       link:
                         type: string
                       ref:
+                        description: GitRef is a git reference type
                         type: string
                       sha:
                         type: string

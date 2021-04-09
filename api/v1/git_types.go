@@ -4,6 +4,7 @@ import (
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	"net/url"
+	"strings"
 )
 
 // Default hosts for remote git servers
@@ -83,3 +84,26 @@ const (
 	GitTypeGitHub = GitType("github")
 	GitTypeGitLab = GitType("gitlab")
 )
+
+// GitRef is a git reference type
+type GitRef string
+
+func (g GitRef) String() string {
+	return string(g)
+}
+
+// GetTag extracts tag from ref
+func (g GitRef) GetTag() string {
+	if strings.HasPrefix(g.String(), "refs/tags/") {
+		return strings.TrimPrefix(g.String(), "refs/tags/")
+	}
+	return ""
+}
+
+// GetBranch extracts branch from ref
+func (g GitRef) GetBranch() string {
+	if strings.HasPrefix(g.String(), "refs/heads/") {
+		return strings.TrimPrefix(g.String(), "refs/heads/")
+	}
+	return ""
+}

@@ -13,13 +13,7 @@ import (
 	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 	"time"
-)
-
-const (
-	varIntegrationJobName = "$INTEGRATION_JOB_NAME"
-	varJobName            = "$JOB_NAME"
 )
 
 // SlackRunHandler handles slack custom task
@@ -32,7 +26,7 @@ type SlackRunHandler struct {
 // Handle sends slack to the webhook
 func (a *SlackRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := a.Log.WithValues("SlackRun", run.Namespace)
+	log := a.Log.WithValues("SlackRun", run.Name)
 
 	original := run.DeepCopy()
 
@@ -89,11 +83,17 @@ func (a *SlackRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	job, _, _ := searchParam(run.Spec.Params, cicdv1.CustomTaskSlackParamKeyIntegrationJobJob, tektonv1beta1.ParamTypeString)
 
 	// Substitute variables
-	message = strings.ReplaceAll(message, varIntegrationJobName, ij)
-	message = strings.ReplaceAll(message, varJobName, job)
+	compiledMessage, err := compileString(run.Namespace, ij, job, message, a.Client)
+	if err != nil {
+		log.Error(err, "")
+		cond.Status = corev1.ConditionFalse
+		cond.Reason = "CannotCompileMessage"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
+	}
 
 	// Send!
-	if err := slack.SendMessage(url, message); err != nil {
+	if err := slack.SendMessage(url, compiledMessage); err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
 		cond.Reason = "EmailError"

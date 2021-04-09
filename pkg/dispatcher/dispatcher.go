@@ -82,12 +82,12 @@ func GeneratePreSubmit(pr *git.PullRequest, repo *git.Repository, sender *git.Us
 					Email: sender.Email,
 				},
 				Base: cicdv1.IntegrationJobRefsBase{
-					Ref:  pr.Base.Ref,
+					Ref:  cicdv1.GitRef(pr.Base.Ref),
 					Link: repo.URL,
 				},
 				Pull: &cicdv1.IntegrationJobRefsPull{
 					ID:   pr.ID,
-					Ref:  pr.Head.Ref,
+					Ref:  cicdv1.GitRef(pr.Head.Ref),
 					Sha:  pr.Head.Sha,
 					Link: pr.URL,
 					Author: cicdv1.IntegrationJobRefsPullAuthor{
@@ -128,7 +128,7 @@ func GeneratePostSubmit(push *git.Push, repo *git.Repository, sender *git.User, 
 					Email: sender.Email,
 				},
 				Base: cicdv1.IntegrationJobRefsBase{
-					Ref:  push.Ref,
+					Ref:  cicdv1.GitRef(push.Ref),
 					Link: repo.URL,
 					Sha:  push.Sha,
 				},
