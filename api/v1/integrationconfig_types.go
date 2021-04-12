@@ -60,8 +60,8 @@ type IntegrationConfigSpec struct {
 	// Jobs specify the tasks to be executed
 	Jobs IntegrationConfigJobs `json:"jobs"`
 
-	// Merge
-	// TODO
+	// MergeConfig specifies how to automate the PR merge
+	// TODO - MergeConfig *MergeConfig `json:"mergeConfig"`
 
 	// PodTemplate for the TaskRun pods. Same as tekton's pod template. Refer to https://github.com/tektoncd/pipeline/blob/master/docs/podtemplates.md
 	PodTemplate *pod.Template `json:"podTemplate,omitempty"`
