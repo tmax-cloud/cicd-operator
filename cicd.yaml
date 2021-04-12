@@ -16,6 +16,15 @@ spec:
           key: token
   secrets:
     - name: tmax-hub
+  mergeConfig:
+    method: squash
+    query:
+      blockLabels:
+        - hold
+      checks:
+        - test-code
+        - test-lint
+      approveRequired: true
   jobs:
     preSubmit:
     - name: test-code
@@ -80,3 +89,31 @@ spec:
       when:
         tag:
         - v.*
+      notification:
+        onSuccess:
+          email:
+            receivers:
+              - ck1_2@tmax.co.kr
+              - cqbqdd11519@gmail.com
+            title: "CI/CD Operator {{ .Spec.Refs.Base.Ref.GetTag }} 배포 안내 메일"
+            isHtml: true
+            content: |
+              <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+              <html xmlns="http://www.w3.org/1999/xhtml">
+               <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+                <title>CI/CD Operator {{ .Spec.Refs.Base.Ref.GetTag }} 배포 안내 메일</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+              </head>
+              <body>
+                <div style="font-size: 10pt; font-family: Verdana,Geneva,sans-serif">
+                  <div>안녕하세요, CK1-2팀 김성현입니다.<br>HyperCloud CI/CD Operator {{ .Spec.Refs.Base.Ref.GetTag }} 배포 안내 메일입니다.</div>
+                  <div>
+                    <ul>
+                      <li>이미지: tmaxcloudck/cicd-operator:{{ .Spec.Refs.Base.Ref.GetTag }}</li>
+                    </ul>
+                  </div>
+                  <div>수정 사항은 릴리즈 노트 <a href="{{ .Spec.Refs.Link }}/releases/tag/{{ .Spec.Refs.Base.Ref.GetTag }}" target="_blank">{{ .Spec.Refs.Link }}/releases/tag/{{ .Spec.Refs.Base.Ref.GetTag }}</a> 참조 부탁드립니다.<br><br>감사합니다.</div>
+                </div>
+              </body>
+              </html>
