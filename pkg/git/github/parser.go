@@ -21,10 +21,15 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 		sender.Email = userInfo.Email
 	}
 
+	var labels []git.IssueLabel
+	for _, l := range data.PullRequest.Labels {
+		labels = append(labels, git.IssueLabel{Name: l.Name})
+	}
+
 	base := git.Base{Ref: data.PullRequest.Base.Ref}
 	head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
 	repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.URL}
-	pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.URL, Base: base, Head: head, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action)}
+	pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.URL, Base: base, Head: head, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action), Labels: labels}
 	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest}, nil
 }
 
@@ -68,7 +73,7 @@ func (c *Client) parseIssueCommentWebhook(jsonString []byte) (*git.Webhook, erro
 		if err != nil {
 			return nil, err
 		}
-		pr, err = c.getPullRequestInfo(prID)
+		pr, err = c.GetPullRequest(prID)
 		if err != nil {
 			return nil, err
 		}

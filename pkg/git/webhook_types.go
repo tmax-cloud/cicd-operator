@@ -32,6 +32,8 @@ const (
 	PullRequestActionOpen        = PullRequestAction("opened")
 	PullRequestActionClose       = PullRequestAction("closed")
 	PullRequestActionSynchronize = PullRequestAction("synchronize")
+	PullRequestActionLabeled     = PullRequestAction("labeled")
+	PullRequestActionUnlabeled   = PullRequestAction("unlabeled")
 )
 
 // Webhook is a common structure for git webhooks
@@ -62,6 +64,7 @@ type PullRequest struct {
 	URL    string
 	Base   Base
 	Head   Head
+	Labels []IssueLabel
 }
 
 // IssueComment is a common structure for issue comment
@@ -69,6 +72,11 @@ type IssueComment struct {
 	Comment Comment
 	Issue   Issue
 	Sender  User
+}
+
+// IssueLabel is a label struct
+type IssueLabel struct {
+	Name string
 }
 
 // Comment is a comment body
@@ -111,4 +119,10 @@ type Head struct {
 type WebhookEntry struct {
 	ID  int
 	URL string
+}
+
+// CommitStatus is a commit status body
+type CommitStatus struct {
+	Context string
+	State   CommitStatusState
 }

@@ -13,15 +13,37 @@ type UserPermission struct {
 	AccessLevel int `json:"access_level"`
 }
 
-// CommitStatusBody is an API body for setting commits' status
-type CommitStatusBody struct {
+// CommitStatusRequest is an API body for setting commits' status
+type CommitStatusRequest struct {
 	State       string `json:"state"`
 	TargetURL   string `json:"target_url"`
 	Description string `json:"description"`
 	Context     string `json:"context"`
 }
 
+// CommitStatusResponse is a response body of getting commit status
+type CommitStatusResponse struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
 // CommentBody is a body structure for creating new comment
 type CommentBody struct {
 	Body string `json:"body"`
+}
+
+// MergeRequest is a body struct of a merge request
+type MergeRequest struct {
+	ID     int    `json:"id"`
+	Title  string `json:"title"`
+	State  string `json:"state"`
+	Author struct {
+		ID       int    `json:"id"`
+		UserName string `json:"username"`
+	} `json:"author"`
+	WebURL       string   `json:"web_url"`
+	TargetBranch string   `json:"target_branch"`
+	SourceBranch string   `json:"source_branch"`
+	SHA          string   `json:"sha"`
+	Labels       []string `json:"labels"`
 }

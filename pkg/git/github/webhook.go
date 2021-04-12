@@ -79,6 +79,9 @@ type PullRequest struct {
 	Base struct {
 		Ref string `json:"ref"`
 	} `json:"base"`
+	Labels []struct {
+		Name string `json:"name"`
+	} `json:"labels"`
 }
 
 // User is a sender of the event

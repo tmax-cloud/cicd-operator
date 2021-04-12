@@ -14,8 +14,15 @@ type MergeRequestWebhook struct {
 		} `json:"last_commit"`
 		State  string `json:"state"`
 		Action string `json:"action"`
+		OldRev string `json:"oldrev"`
 	} `json:"object_attributes"`
 	Project Project `json:"project"`
+	Labels  []struct {
+		Title string `json:"title"`
+	} `json:"labels"`
+	Changes struct {
+		Labels *struct{} `json:"labels"`
+	} `json:"changes"`
 }
 
 // PushWebhook is a gitlab-specific push event webhook body

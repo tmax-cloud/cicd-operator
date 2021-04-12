@@ -27,7 +27,11 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 	case "reopen":
 		action = git.PullRequestActionReOpen
 	case "update":
-		action = git.PullRequestActionSynchronize
+		if data.ObjectAttribute.OldRev != "" {
+			action = git.PullRequestActionSynchronize
+		} else if data.Changes.Labels != nil {
+			action = git.PullRequestActionLabeled // Maybe unlabeled... but doesn't matter
+		}
 	}
 	state := git.PullRequestState(data.ObjectAttribute.State)
 	switch string(state) {
@@ -36,7 +40,13 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 	case "closed":
 		state = git.PullRequestStateClosed
 	}
-	pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Project.WebURL, Base: base, Head: head, State: state, Action: action}
+
+	var labels []git.IssueLabel
+	for _, l := range data.Labels {
+		labels = append(labels, git.IssueLabel{Name: l.Title})
+	}
+
+	pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Project.WebURL, Base: base, Head: head, State: state, Action: action, Labels: labels}
 	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest}, nil
 }
 
