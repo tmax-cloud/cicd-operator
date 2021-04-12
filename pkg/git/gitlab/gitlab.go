@@ -121,9 +121,35 @@ func (c *Client) DeleteWebhook(id int) error {
 	return nil
 }
 
+// ListCommitStatuses lists commit status of the specific commit
+func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
+	var urlEncodePath = url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
+	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + urlEncodePath + "/repository/commits/" + ref + "/statuses"
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var statuses []CommitStatusResponse
+	if err := json.Unmarshal(raw, &statuses); err != nil {
+		return nil, err
+	}
+
+	var resp []git.CommitStatus
+	for _, s := range statuses {
+		resp = append(resp, git.CommitStatus{
+			Context: s.Name,
+			State:   git.CommitStatusState(s.Status),
+		})
+	}
+
+	return resp, nil
+}
+
 // SetCommitStatus sets commit status for the specific commit
 func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state git.CommitStatusState, description, targetURL string) error {
-	var commitStatusBody CommitStatusBody
+	var commitStatusBody CommitStatusRequest
 	var urlEncodePath = url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
 	var sha string
 	if integrationJob.Spec.Refs.Pull == nil {
@@ -222,6 +248,47 @@ func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, body stri
 		return err
 	}
 	return nil
+}
+
+// GetPullRequest gets pull request info
+func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
+	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), id)
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	var mr MergeRequest
+	if err := json.Unmarshal(raw, &mr); err != nil {
+		return nil, err
+	}
+
+	state := git.PullRequestState(mr.State)
+	switch string(state) {
+	case "opened":
+		state = git.PullRequestStateOpen
+	case "closed":
+		state = git.PullRequestStateClosed
+	}
+
+	var labels []git.IssueLabel
+	for _, l := range mr.Labels {
+		labels = append(labels, git.IssueLabel{Name: l})
+	}
+
+	return &git.PullRequest{
+		ID:    mr.ID,
+		Title: mr.Title,
+		State: state,
+		Sender: git.User{
+			ID:   mr.Author.ID,
+			Name: mr.Author.UserName,
+		},
+		URL:    mr.WebURL,
+		Base:   git.Base{Ref: mr.TargetBranch},
+		Head:   git.Head{Ref: mr.SourceBranch, Sha: mr.SHA},
+		Labels: labels,
+	}, nil
 }
 
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {

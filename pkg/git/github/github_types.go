@@ -12,12 +12,18 @@ type UserPermission struct {
 	Permission string `json:"permission"`
 }
 
-// CommitStatusBody is an API body for setting commits' status
-type CommitStatusBody struct {
+// CommitStatusRequest is an API body for setting commits' status
+type CommitStatusRequest struct {
 	State       string `json:"state"`
 	TargetURL   string `json:"target_url"`
 	Description string `json:"description"`
 	Context     string `json:"context"`
+}
+
+// CommitStatusResponse is a response body of getting commit status
+type CommitStatusResponse struct {
+	Context string `json:"context"`
+	State   string `json:"state"`
 }
 
 // CommentBody is a body structure for creating new comment

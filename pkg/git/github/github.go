@@ -114,9 +114,42 @@ func (c *Client) DeleteWebhook(id int) error {
 	return nil
 }
 
+// ListCommitStatuses lists commit status of the specific commit
+func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
+	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/commits/" + ref + "/statuses"
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var statuses []CommitStatusResponse
+	if err := json.Unmarshal(raw, &statuses); err != nil {
+		return nil, err
+	}
+
+	// Temp map for filtering duplicated contexts
+	tmp := map[string]struct{}{}
+
+	var resp []git.CommitStatus
+	for _, s := range statuses {
+		_, exist := tmp[s.Context]
+		if exist {
+			continue
+		}
+		tmp[s.Context] = struct{}{}
+		resp = append(resp, git.CommitStatus{
+			Context: s.Context,
+			State:   git.CommitStatusState(s.State),
+		})
+	}
+
+	return resp, nil
+}
+
 // SetCommitStatus sets commit status for the specific commit
 func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state git.CommitStatusState, description, targetURL string) error {
-	var commitStatusBody CommitStatusBody
+	var commitStatusBody CommitStatusRequest
 	var sha string
 	if integrationJob.Spec.Refs.Pull == nil {
 		sha = integrationJob.Spec.Refs.Base.Sha
@@ -129,7 +162,7 @@ func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context 
 		return nil
 	}
 
-	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + integrationJob.Spec.Refs.Repository + "/statuses/" + sha
+	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/statuses/" + sha
 
 	commitStatusBody.State = string(state)
 	commitStatusBody.TargetURL = targetURL
@@ -194,7 +227,8 @@ func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) erro
 	return nil
 }
 
-func (c *Client) getPullRequestInfo(id int) (*git.PullRequest, error) {
+// GetPullRequest gets PR given id
+func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 	apiURL := fmt.Sprintf("%s/repos/%s/pulls/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
 
 	data, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
@@ -211,6 +245,11 @@ func (c *Client) getPullRequestInfo(id int) (*git.PullRequest, error) {
 }
 
 func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
+	var labels []git.IssueLabel
+	for _, l := range pr.Labels {
+		labels = append(labels, git.IssueLabel{Name: l.Name})
+	}
+
 	return &git.PullRequest{
 		ID:    pr.Number,
 		Title: pr.Title,
@@ -219,9 +258,10 @@ func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 			ID:   pr.User.ID,
 			Name: pr.User.Name,
 		},
-		URL:  pr.URL,
-		Base: git.Base{Ref: pr.Base.Ref},
-		Head: git.Head{Ref: pr.Head.Ref, Sha: pr.Head.Sha},
+		URL:    pr.URL,
+		Base:   git.Base{Ref: pr.Base.Ref},
+		Head:   git.Head{Ref: pr.Head.Ref, Sha: pr.Head.Sha},
+		Labels: labels,
 	}
 }
 
