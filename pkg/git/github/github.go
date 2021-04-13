@@ -227,6 +227,31 @@ func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) erro
 	return nil
 }
 
+// ListPullRequests gets pull request list
+func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/pulls", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository)
+	if !onlyOpen {
+		apiURL += "?state=all"
+	}
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var prs []PullRequest
+	if err := json.Unmarshal(raw, &prs); err != nil {
+		return nil, err
+	}
+
+	var result []git.PullRequest
+	for _, pr := range prs {
+		result = append(result, *convertPullRequestToShared(&pr))
+	}
+
+	return result, nil
+}
+
 // GetPullRequest gets PR given id
 func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 	apiURL := fmt.Sprintf("%s/repos/%s/pulls/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
