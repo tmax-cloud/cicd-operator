@@ -19,4 +19,4 @@ Merger is a merge automation module for PullRequests.
 ### `query`
 `query` is a selector of PRs to be merged. (i.e., conditions of PRs to be merged)
 PRs are searched using the query and merged if all the CI checks are completed.
-There are 7 kinds of query. `labels`, `skipLabels`, `authors`, `skipAuthors`, `branches`, `skipBranches`, and `approveRequired`.
+There are 9 kinds of queries. `labels`, `skipLabels`, `authors`, `skipAuthors`, `branches`, `skipBranches`, `checks`, `optionalChecks`, and `approveRequired`.

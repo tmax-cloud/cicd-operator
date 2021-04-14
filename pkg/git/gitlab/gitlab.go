@@ -259,9 +259,9 @@ func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, body stri
 
 // ListPullRequests gets pull request list
 func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
-	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository))
+	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests?with_merge_status_recheck=true", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository))
 	if onlyOpen {
-		apiURL += "?state=opened"
+		apiURL += "&state=opened"
 	}
 
 	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
@@ -315,10 +315,11 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 			ID:   mr.Author.ID,
 			Name: mr.Author.UserName,
 		},
-		URL:    mr.WebURL,
-		Base:   git.Base{Ref: mr.TargetBranch},
-		Head:   git.Head{Ref: mr.SourceBranch, Sha: mr.SHA},
-		Labels: convertLabel(mr.Labels),
+		URL:       mr.WebURL,
+		Base:      git.Base{Ref: mr.TargetBranch},
+		Head:      git.Head{Ref: mr.SourceBranch, Sha: mr.SHA},
+		Labels:    convertLabel(mr.Labels),
+		Mergeable: !mr.HasConflicts,
 	}, nil
 }
 

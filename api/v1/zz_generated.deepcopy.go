@@ -374,6 +374,11 @@ func (in *IntegrationConfigSpec) DeepCopyInto(out *IntegrationConfigSpec) {
 		}
 	}
 	in.Jobs.DeepCopyInto(&out.Jobs)
+	if in.MergeConfig != nil {
+		in, out := &in.MergeConfig, &out.MergeConfig
+		*out = new(MergeConfig)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.PodTemplate != nil {
 		in, out := &in.PodTemplate, &out.PodTemplate
 		*out = new(pod.Template)
@@ -837,8 +842,8 @@ func (in *MergeQuery) DeepCopyInto(out *MergeQuery) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.SkipLabels != nil {
-		in, out := &in.SkipLabels, &out.SkipLabels
+	if in.BlockLabels != nil {
+		in, out := &in.BlockLabels, &out.BlockLabels
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
@@ -859,6 +864,16 @@ func (in *MergeQuery) DeepCopyInto(out *MergeQuery) {
 	}
 	if in.SkipBranches != nil {
 		in, out := &in.SkipBranches, &out.SkipBranches
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.Checks != nil {
+		in, out := &in.Checks, &out.Checks
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.OptionalChecks != nil {
+		in, out := &in.OptionalChecks, &out.OptionalChecks
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

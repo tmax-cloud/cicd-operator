@@ -3194,6 +3194,83 @@ spec:
                       type: object
                     type: array
                 type: object
+              mergeConfig:
+                description: MergeConfig specifies how to automate the PR merge
+                properties:
+                  commitTemplate:
+                    description: CommitTemplate is a message template for a merge
+                      commit. The commit message is compiled as a go template using
+                      git.PullRequest object
+                    type: string
+                  method:
+                    description: Method is a merge method
+                    enum:
+                    - squash
+                    - rebase
+                    - merge
+                    type: string
+                  query:
+                    description: Query is conditions for a open PR to be merged
+                    properties:
+                      approveRequired:
+                        description: ApproveRequired specifies whether to check github/gitlab's
+                          approval
+                        type: boolean
+                      authors:
+                        description: Authors specify the required authors of PR to
+                          be merged Authors and SkipAuthors are mutually exclusive
+                        items:
+                          type: string
+                        type: array
+                      blockLabels:
+                        description: BlockLabels specify the required labels of PR
+                          to be blocked for merge
+                        items:
+                          type: string
+                        type: array
+                      branches:
+                        description: Branches specify the required base branches of
+                          PR to be merged Branches and SkipBranches are mutually exclusive
+                        items:
+                          type: string
+                        type: array
+                      checks:
+                        description: Checks are checks needed to be passed for the
+                          PR to be merged. Checks and OptionalChecks are mutually
+                          exclusive
+                        items:
+                          type: string
+                        type: array
+                      labels:
+                        description: Labels specify the required labels of PR to be
+                          merged
+                        items:
+                          type: string
+                        type: array
+                      optionalChecks:
+                        description: OptionalChecks are checks that are not required.
+                          Checks and OptionalChecks are mutually exclusive
+                        items:
+                          type: string
+                        type: array
+                      skipAuthors:
+                        description: SkipAuthors specify the required authors of PR
+                          to be blocked for merge Authors and SkipAuthors are mutually
+                          exclusive
+                        items:
+                          type: string
+                        type: array
+                      skipBranches:
+                        description: SkipBranches specify the required base branches
+                          of PR to be blocked for merge Branches and SkipBranches
+                          are mutually exclusive
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                required:
+                - query
+                type: object
               podTemplate:
                 description: PodTemplate for the TaskRun pods. Same as tekton's pod
                   template. Refer to https://github.com/tektoncd/pipeline/blob/master/docs/podtemplates.md
