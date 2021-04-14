@@ -33,6 +33,7 @@ type Client interface {
 
 	// Pull Request
 
+	ListPullRequests(onlyOpen bool) ([]PullRequest, error)
 	GetPullRequest(id int) (*PullRequest, error)
 }
 

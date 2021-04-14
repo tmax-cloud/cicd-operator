@@ -138,9 +138,16 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 
 	var resp []git.CommitStatus
 	for _, s := range statuses {
+		state := git.CommitStatusState(s.Status)
+		switch s.Status {
+		case "running":
+			state = "pending"
+		case "failed", "canceled":
+			state = "failure"
+		}
 		resp = append(resp, git.CommitStatus{
 			Context: s.Name,
-			State:   git.CommitStatusState(s.Status),
+			State:   state,
 		})
 	}
 
@@ -250,6 +257,43 @@ func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, body stri
 	return nil
 }
 
+// ListPullRequests gets pull request list
+func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
+	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository))
+	if onlyOpen {
+		apiURL += "?state=opened"
+	}
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var mrs []MergeRequest
+	if err := json.Unmarshal(raw, &mrs); err != nil {
+		return nil, err
+	}
+
+	var result []git.PullRequest
+	for _, mr := range mrs {
+		result = append(result, git.PullRequest{
+			ID:    mr.ID,
+			Title: mr.Title,
+			State: convertState(mr.State),
+			Sender: git.User{
+				ID:   mr.Author.ID,
+				Name: mr.Author.UserName,
+			},
+			URL:    mr.WebURL,
+			Base:   git.Base{Ref: mr.TargetBranch},
+			Head:   git.Head{Ref: mr.SourceBranch, Sha: mr.SHA},
+			Labels: convertLabel(mr.Labels),
+		})
+	}
+
+	return result, nil
+}
+
 // GetPullRequest gets pull request info
 func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), id)
@@ -263,23 +307,10 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 		return nil, err
 	}
 
-	state := git.PullRequestState(mr.State)
-	switch string(state) {
-	case "opened":
-		state = git.PullRequestStateOpen
-	case "closed":
-		state = git.PullRequestStateClosed
-	}
-
-	var labels []git.IssueLabel
-	for _, l := range mr.Labels {
-		labels = append(labels, git.IssueLabel{Name: l})
-	}
-
 	return &git.PullRequest{
 		ID:    mr.ID,
 		Title: mr.Title,
-		State: state,
+		State: convertState(mr.State),
 		Sender: git.User{
 			ID:   mr.Author.ID,
 			Name: mr.Author.UserName,
@@ -287,12 +318,31 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 		URL:    mr.WebURL,
 		Base:   git.Base{Ref: mr.TargetBranch},
 		Head:   git.Head{Ref: mr.SourceBranch, Sha: mr.SHA},
-		Labels: labels,
+		Labels: convertLabel(mr.Labels),
 	}, nil
 }
 
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
 	return git.RequestHTTP(method, apiURL, c.header, data)
+}
+
+func convertState(original string) git.PullRequestState {
+	state := git.PullRequestState(original)
+	switch string(state) {
+	case "opened":
+		state = git.PullRequestStateOpen
+	case "closed":
+		state = git.PullRequestStateClosed
+	}
+	return state
+}
+
+func convertLabel(original []string) []git.IssueLabel {
+	var labels []git.IssueLabel
+	for _, l := range original {
+		labels = append(labels, git.IssueLabel{Name: l})
+	}
+	return labels
 }
 
 // Validate validates the webhook payload
