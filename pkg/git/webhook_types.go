@@ -56,15 +56,16 @@ type Push struct {
 
 // PullRequest is a common structure for pull request events
 type PullRequest struct {
-	ID     int
-	Title  string
-	State  PullRequestState
-	Action PullRequestAction
-	Sender User
-	URL    string
-	Base   Base
-	Head   Head
-	Labels []IssueLabel
+	ID        int
+	Title     string
+	State     PullRequestState
+	Action    PullRequestAction
+	Sender    User
+	URL       string
+	Base      Base
+	Head      Head
+	Labels    []IssueLabel
+	Mergeable bool
 }
 
 // IssueComment is a common structure for issue comment

@@ -46,4 +46,5 @@ type MergeRequest struct {
 	SourceBranch string   `json:"source_branch"`
 	SHA          string   `json:"sha"`
 	Labels       []string `json:"labels"`
+	HasConflicts bool     `json:"has_conflicts"`
 }

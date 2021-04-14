@@ -67,12 +67,14 @@ type Repo struct {
 
 // PullRequest is a pull request info
 type PullRequest struct {
-	Title  string `json:"title"`
-	Number int    `json:"number"`
-	State  string `json:"state"`
-	URL    string `json:"html_url"`
-	User   User   `json:"user"`
-	Head   struct {
+	Title     string `json:"title"`
+	Number    int    `json:"number"`
+	State     string `json:"state"`
+	URL       string `json:"html_url"`
+	Mergeable bool   `json:"mergeable"`
+	User      User   `json:"user"`
+	Draft     bool   `json:"draft"`
+	Head      struct {
 		Ref string `json:"ref"`
 		Sha string `json:"sha"`
 	} `json:"head"`

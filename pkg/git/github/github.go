@@ -246,7 +246,9 @@ func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 
 	var result []git.PullRequest
 	for _, pr := range prs {
-		result = append(result, *convertPullRequestToShared(&pr))
+		if !pr.Draft { // TODO - should it be here??
+			result = append(result, *convertPullRequestToShared(&pr))
+		}
 	}
 
 	return result, nil
@@ -283,10 +285,11 @@ func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 			ID:   pr.User.ID,
 			Name: pr.User.Name,
 		},
-		URL:    pr.URL,
-		Base:   git.Base{Ref: pr.Base.Ref},
-		Head:   git.Head{Ref: pr.Head.Ref, Sha: pr.Head.Sha},
-		Labels: labels,
+		URL:       pr.URL,
+		Base:      git.Base{Ref: pr.Base.Ref},
+		Head:      git.Head{Ref: pr.Head.Ref, Sha: pr.Head.Sha},
+		Labels:    labels,
+		Mergeable: pr.Mergeable,
 	}
 }
 
