@@ -64,13 +64,13 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (*git.Webho
 func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 	var apiURL = c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/hooks"
 
-	data, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	var entries []WebhookEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
+	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+		return &[]WebhookEntry{}
+	}, func(i interface{}) {
+		entries = append(entries, *i.(*[]WebhookEntry)...)
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -118,13 +118,13 @@ func (c *Client) DeleteWebhook(id int) error {
 func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/commits/" + ref + "/statuses"
 
-	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	var statuses []CommitStatusResponse
-	if err := json.Unmarshal(raw, &statuses); err != nil {
+	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+		return &[]CommitStatusResponse{}
+	}, func(i interface{}) {
+		statuses = append(statuses, *i.(*[]CommitStatusResponse)...)
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -234,13 +234,13 @@ func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 		apiURL += "?state=all"
 	}
 
-	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	var prs []PullRequest
-	if err := json.Unmarshal(raw, &prs); err != nil {
+	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+		return &[]PullRequest{}
+	}, func(i interface{}) {
+		prs = append(prs, *i.(*[]PullRequest)...)
+	})
+	if err != nil {
 		return nil, err
 	}
 

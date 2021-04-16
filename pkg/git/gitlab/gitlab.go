@@ -61,13 +61,13 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 	encodedRepoPath := url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks"
 
-	data, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	var entries []WebhookEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
+	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+		return &[]WebhookEntry{}
+	}, func(i interface{}) {
+		entries = append(entries, *i.(*[]WebhookEntry)...)
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -126,13 +126,13 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 	var urlEncodePath = url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + urlEncodePath + "/repository/commits/" + ref + "/statuses"
 
-	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	var statuses []CommitStatusResponse
-	if err := json.Unmarshal(raw, &statuses); err != nil {
+	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+		return &[]CommitStatusResponse{}
+	}, func(i interface{}) {
+		statuses = append(statuses, *i.(*[]CommitStatusResponse)...)
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -264,13 +264,13 @@ func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 		apiURL += "&state=opened"
 	}
 
-	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	var mrs []MergeRequest
-	if err := json.Unmarshal(raw, &mrs); err != nil {
+	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+		return &[]MergeRequest{}
+	}, func(i interface{}) {
+		mrs = append(mrs, *i.(*[]MergeRequest)...)
+	})
+	if err != nil {
 		return nil, err
 	}
 
