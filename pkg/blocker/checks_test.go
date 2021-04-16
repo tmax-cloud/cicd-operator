@@ -1,11 +1,29 @@
 package blocker
 
 import (
+	"fmt"
 	"github.com/bmizerany/assert"
+	"github.com/gorilla/mux"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"net/http"
+	"net/http/httptest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"strings"
 	"testing"
 )
+
+var (
+	sampleStatusesList = "[{\"id\":1111111111,\"state\":\"pending\",\"context\":\"test-1\",\"created_at\":\"2021-04-12T08:37:32Z\",\"updated_at\":\"2021-04-12T08:37:32Z\",\"creator\":{\"login\":\"sunghyunkim3\",\"id\":1111111,\"type\":\"User\",\"site_admin\":false}}]"
+	samplePR           = "{\"id\":611161419,\"html_url\":\"https://github.com/vingsu/cicd-test/pull/25\",\"number\":25,\"state\":\"open\",\"title\":\"newnew\",\"user\":{\"login\":\"cqbqdd11519\",\"id\":6166781},\"body\":\"\",\"labels\":[{\"id\":2905890093,\"node_id\":\"MDU6TGFiZWwyOTA1ODkwMDkz\",\"url\":\"https://api.github.com/repos/vingsu/cicd-test/labels/kind/test\",\"name\":\"kind/test\",\"color\":\"CF61D3\",\"default\":false,\"description\":\"\"}],\"milestone\":null,\"draft\":false,\"head\":{\"label\":\"vingsu:newnew\",\"ref\":\"newnew\",\"sha\":\"3196ccc37bcae94852079b04fcbfaf928341d6e9\",\"user\":{\"login\":\"vingsu\",\"id\":71878727},\"repo\":{\"id\":319253224,\"node_id\":\"MDEwOlJlcG9zaXRvcnkzMTkyNTMyMjQ=\",\"name\":\"cicd-test\",\"full_name\":\"vingsu/cicd-test\",\"private\":true,\"owner\":{\"login\":\"vingsu\",\"id\":71878727},\"html_url\":\"https://github.com/vingsu/cicd-test\"}},\"base\":{\"label\":\"vingsu:master\",\"ref\":\"master\",\"sha\":\"22ccae53032027186ba739dfaa473ee61a82b298\",\"user\":{\"login\":\"vingsu\",\"id\":71878727},\"repo\":{\"id\":319253224,\"node_id\":\"MDEwOlJlcG9zaXRvcnkzMTkyNTMyMjQ=\",\"name\":\"cicd-test\",\"full_name\":\"vingsu/cicd-test\",\"private\":true,\"owner\":{\"login\":\"vingsu\",\"id\":71878727},\"html_url\":\"https://github.com/vingsu/cicd-test\"}},\"merged\":false,\"mergeable\":false}"
+)
+
+var serverURL string
 
 func TestCheckConditions(t *testing.T) {
 	// Test 2
@@ -16,7 +34,7 @@ func TestCheckConditions(t *testing.T) {
 		Mergeable: true,
 	}
 	query := cicdv1.MergeQuery{}
-	result, msg := checkConditions(query, pr)
+	result, msg := checkConditionsSimple(query, pr)
 
 	assert.Equal(t, true, result, "Result")
 	assert.Equal(t, "", msg, "Message")
@@ -31,7 +49,7 @@ func TestCheckConditions(t *testing.T) {
 	query = cicdv1.MergeQuery{
 		Branches: []string{"master"},
 	}
-	result, msg = checkConditions(query, pr)
+	result, msg = checkConditionsSimple(query, pr)
 
 	assert.Equal(t, false, result, "Result")
 	assert.Equal(t, "Branch [newnew] is not in branches query.", msg, "Message")
@@ -46,7 +64,7 @@ func TestCheckConditions(t *testing.T) {
 	query = cicdv1.MergeQuery{
 		Branches: []string{"master", "newnew"},
 	}
-	result, msg = checkConditions(query, pr)
+	result, msg = checkConditionsSimple(query, pr)
 
 	assert.Equal(t, true, result, "Result")
 	assert.Equal(t, "", msg, "Message")
@@ -63,10 +81,39 @@ func TestCheckConditions(t *testing.T) {
 		Labels:          []string{"lgtm"},
 		ApproveRequired: true,
 	}
-	result, msg = checkConditions(query, pr)
+	result, msg = checkConditionsSimple(query, pr)
 
 	assert.Equal(t, false, result, "Result")
 	assert.Equal(t, "Label [approved] is required.", msg, "Message")
+}
+
+func TestCheckConditionsFull(t *testing.T) {
+	fakeCli, ic := checkTestEnv()
+	gitCli, err := utils.GetGitCli(ic, fakeCli)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test 1
+	status, msg, err := checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, false, status, "Full status")
+	assert.Equal(t, "Label [approved] is required. Merge conflicts exist. Checks [test-1] are not successful.", msg, "Full message")
+
+	// Test 2
+	samplePR = strings.ReplaceAll(samplePR, "\"mergeable\":false", "\"mergeable\":true")
+	samplePR = strings.ReplaceAll(samplePR, "kind/test", "approved")
+	sampleStatusesList = strings.ReplaceAll(sampleStatusesList, "pending", "success")
+	status, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, true, status, "Full status")
+	assert.Equal(t, "", msg, "Full message")
 }
 
 func TestCheckBranch(t *testing.T) {
@@ -404,4 +451,51 @@ func TestCheckChecks(t *testing.T) {
 
 	assert.Equal(t, true, result, "Result")
 	assert.Equal(t, "", msg, "Message")
+}
+
+func checkTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
+	r := mux.NewRouter()
+	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(req.URL.String()))
+	})
+	r.HandleFunc("/repos/{org}/{repo}/commits/{sha}/statuses", func(w http.ResponseWriter, req *http.Request) {
+		page := req.URL.Query().Get("page")
+		if page == "" || page == "1" {
+			w.Header().Set("Link", fmt.Sprintf("<%s/%s?state=all&per_page=100&page=2>; rel=\"next\", <%s/%s?state=all&per_page=100&page=3>; rel=\"last\"", serverURL, req.URL.Path, serverURL, req.URL.Path))
+		}
+		_, _ = w.Write([]byte(sampleStatusesList))
+	})
+	r.HandleFunc("/repos/{org}/{repo}/pulls/{id}", func(w http.ResponseWriter, req *http.Request) {
+		_, _ = w.Write([]byte(samplePR))
+	})
+	testSrv := httptest.NewServer(r)
+	serverURL = testSrv.URL
+
+	s := runtime.NewScheme()
+	utilruntime.Must(cicdv1.AddToScheme(s))
+
+	ic := &cicdv1.IntegrationConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-ic",
+			Namespace: "default",
+		},
+		Spec: cicdv1.IntegrationConfigSpec{
+			Git: cicdv1.GitConfig{
+				Type:       "github",
+				Repository: "tmax-cloud/cicd-test",
+				APIUrl:     serverURL,
+				Token:      &cicdv1.GitToken{Value: "dummy"},
+			},
+			MergeConfig: &cicdv1.MergeConfig{
+				Query: cicdv1.MergeQuery{
+					Labels:          []string{},
+					ApproveRequired: true,
+					Checks:          []string{"test-1"},
+				},
+			},
+		},
+	}
+
+	return fake.NewFakeClientWithScheme(s, ic), ic
 }
