@@ -49,6 +49,14 @@ const (
 // CommitStatusState is a commit status type
 type CommitStatusState string
 
+// CommitStatusStates
+const (
+	CommitStatusStateSuccess = CommitStatusState("success")
+	CommitStatusStateFailure = CommitStatusState("failure")
+	CommitStatusStateError   = CommitStatusState("error")
+	CommitStatusStatePending = CommitStatusState("pending")
+)
+
 // FakeSha is a fake SHA for a commit
 const (
 	FakeSha = "0000000000000000000000000000000000000000"

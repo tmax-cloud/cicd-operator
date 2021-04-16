@@ -6,7 +6,47 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
+
+// GetPaginatedRequest gets paginated APIs and accumulates them together
+func GetPaginatedRequest(apiURL string, header map[string]string, newObj func() interface{}, accumulate func(interface{})) error {
+	u, err := url.Parse(apiURL)
+	if err != nil {
+		return err
+	}
+	if u.RawQuery == "" {
+		u.RawQuery = "per_page=100"
+	} else {
+		u.RawQuery += "&per_page=100"
+	}
+	uri := u.String()
+	for {
+		data, h, err := RequestHTTP(http.MethodGet, uri, header, nil)
+		if err != nil {
+			return err
+		}
+
+		tmpObj := newObj()
+		if err := json.Unmarshal(data, tmpObj); err != nil {
+			return err
+		}
+
+		accumulate(tmpObj)
+
+		links := ParseLinkHeader(h.Get("Link"))
+		if links == nil {
+			break
+		}
+		next := links.Find("next")
+		if next == nil {
+			break
+		}
+		uri = next.URL
+	}
+
+	return nil
+}
 
 // RequestHTTP requests api call
 func RequestHTTP(method string, uri string, header map[string]string, data interface{}) ([]byte, http.Header, error) {
@@ -46,7 +86,7 @@ func RequestHTTP(method string, uri string, header map[string]string, data inter
 	// Check additional response header
 	var newErr error
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		newErr = fmt.Errorf("error requesting api, code %d, msg %s", resp.StatusCode, string(body))
+		newErr = fmt.Errorf("error requesting api [%s] %s, code %d, msg %s", method, uri, resp.StatusCode, string(body))
 	}
 
 	return body, resp.Header, newErr
