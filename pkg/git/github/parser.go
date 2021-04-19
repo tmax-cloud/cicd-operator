@@ -26,7 +26,7 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 		labels = append(labels, git.IssueLabel{Name: l.Name})
 	}
 
-	base := git.Base{Ref: data.PullRequest.Base.Ref}
+	base := git.Base{Ref: data.PullRequest.Base.Ref, Sha: data.PullRequest.Base.Sha}
 	head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
 	repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.URL}
 	pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, Sender: sender, URL: data.Repo.URL, Base: base, Head: head, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action), Labels: labels}

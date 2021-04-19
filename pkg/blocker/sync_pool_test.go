@@ -55,6 +55,7 @@ func TestBlocker_syncPRs(t *testing.T) {
 		User:   github.User{Name: "test"},
 		Base: struct {
 			Ref string `json:"ref"`
+			Sha string `json:"sha"`
 		}{Ref: "master"},
 		Labels: []struct {
 			Name string `json:"name"`
@@ -138,6 +139,7 @@ func testEnv() client.Client {
 		Draft:  false,
 		Base: struct {
 			Ref string `json:"ref"`
+			Sha string `json:"sha"`
 		}{Ref: "master"},
 		Labels: []struct {
 			Name string `json:"name"`

@@ -83,6 +83,7 @@ func GeneratePreSubmit(pr *git.PullRequest, repo *git.Repository, sender *git.Us
 				},
 				Base: cicdv1.IntegrationJobRefsBase{
 					Ref:  cicdv1.GitRef(pr.Base.Ref),
+					Sha:  pr.Base.Sha,
 					Link: repo.URL,
 				},
 				Pull: &cicdv1.IntegrationJobRefsPull{

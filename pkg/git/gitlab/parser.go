@@ -10,12 +10,18 @@ import (
 
 func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error) {
 	var data MergeRequestWebhook
-
 	if err := json.Unmarshal(jsonString, &data); err != nil {
 		return nil, err
 	}
+
+	// Get Target branch
+	baseBranch, err := c.getBranch(data.ObjectAttribute.BaseRef)
+	if err != nil {
+		return nil, err
+	}
+
 	sender := git.User{Name: data.User.Name, Email: data.User.Email}
-	base := git.Base{Ref: data.ObjectAttribute.BaseRef}
+	base := git.Base{Ref: data.ObjectAttribute.BaseRef, Sha: baseBranch.Commit.ID}
 	head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
 	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
 	action := git.PullRequestAction(data.ObjectAttribute.Action)
@@ -94,9 +100,15 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 	// Get Merge Request user info
 	var pr *git.PullRequest
 	if data.MergeRequest.TargetBranch != "" {
+		// Get User info
 		mrAuthor, err := c.GetUserInfo(strconv.Itoa(data.MergeRequest.AuthorID))
 		if err != nil {
 			mrAuthor = &git.User{ID: data.MergeRequest.AuthorID}
+		}
+		// Get Target branch
+		baseBranch, err := c.getBranch(data.MergeRequest.TargetBranch)
+		if err != nil {
+			return nil, err
 		}
 		pr = &git.PullRequest{
 			ID:     data.MergeRequest.ID,
@@ -106,6 +118,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 			URL:    data.MergeRequest.URL,
 			Base: git.Base{
 				Ref: data.MergeRequest.TargetBranch,
+				Sha: baseBranch.Commit.ID,
 			},
 			Head: git.Head{
 				Ref: data.MergeRequest.SourceBranch,

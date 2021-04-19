@@ -129,6 +129,7 @@ func buildPullRequestWebhook(body io.ReadCloser, user string) (*git.PullRequest,
 		},
 		Base: git.Base{
 			Ref: baseBranch,
+			Sha: git.FakeSha,
 		},
 		Head: git.Head{
 			Ref: headBranch,
