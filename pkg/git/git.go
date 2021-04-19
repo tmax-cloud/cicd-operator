@@ -2,8 +2,6 @@ package git
 
 import (
 	"net/http"
-
-	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
 
 // Client is a git client interface
@@ -20,7 +18,7 @@ type Client interface {
 	// Commit Status
 
 	ListCommitStatuses(ref string) ([]CommitStatus, error)
-	SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state CommitStatusState, description, targetURL string) error
+	SetCommitStatus(sha, context string, state CommitStatusState, description, targetURL string) error
 
 	// Users
 

@@ -155,15 +155,9 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 }
 
 // SetCommitStatus sets commit status for the specific commit
-func (c *Client) SetCommitStatus(integrationJob *cicdv1.IntegrationJob, context string, state git.CommitStatusState, description, targetURL string) error {
+func (c *Client) SetCommitStatus(sha, context string, state git.CommitStatusState, description, targetURL string) error {
 	var commitStatusBody CommitStatusRequest
 	var urlEncodePath = url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
-	var sha string
-	if integrationJob.Spec.Refs.Pull == nil {
-		sha = integrationJob.Spec.Refs.Base.Sha
-	} else {
-		sha = integrationJob.Spec.Refs.Pull.Sha
-	}
 
 	// Don't set commit status if its' sha is a fake
 	if sha == git.FakeSha {

@@ -381,12 +381,21 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 	// If state is changed, update git commit status
 	for i, j := range job.Status.Jobs {
 		if stateChanged[i] {
+			// Truncate message
 			msg := j.Message
 			if len(msg) > 140 {
 				msg = msg[:139]
 			}
-			log.Info(fmt.Sprintf("Setting commit status %s to %s", j.State, cfg.Spec.Git.Repository))
-			if err := gitCli.SetCommitStatus(job, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name)); err != nil {
+
+			// Get SHA of the commit
+			var sha string
+			if job.Spec.Refs.Pull == nil {
+				sha = job.Spec.Refs.Base.Sha
+			} else {
+				sha = job.Spec.Refs.Pull.Sha
+			}
+			log.Info(fmt.Sprintf("Setting commit status %s:%s to %s's %s", j.Name, j.State, cfg.Spec.Git.Repository, sha))
+			if err := gitCli.SetCommitStatus(sha, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name)); err != nil {
 				log.Error(err, "")
 			}
 		}
