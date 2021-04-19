@@ -24,9 +24,14 @@ import (
 
 var log = logf.Log.WithName("pipeline-manager")
 
+// DefaultWorkingDir is a default value for 'working directory' of a container (tekton's step)
+const DefaultWorkingDir = "/tekton/home/integ-source"
+
+// Job messages
 const (
-	// DefaultWorkingDir is a default value for 'working directory' of a container (tekton's step)
-	DefaultWorkingDir = "/tekton/home/integ-source"
+	JobMessagePending    = "Job is running"
+	JobMessageSuccessful = "Job succeeded"
+	JobMessageFailure    = "Job failed"
 )
 
 // PipelineManager manages pipelines
@@ -320,12 +325,14 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobSt
 			jobStatus.StartTime = rStatus.StartTime.DeepCopy()
 			jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
 			if len(rStatus.Conditions) > 0 {
-				jobStatus.Message = rStatus.Conditions[0].Message
+				jobStatus.Message = JobMessagePending
 				switch tektonv1beta1.TaskRunReason(rStatus.Conditions[0].Reason) {
 				case tektonv1beta1.TaskRunReasonSuccessful:
 					jobStatus.State = cicdv1.CommitStatusStateSuccess
+					jobStatus.Message = JobMessageSuccessful
 				case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
 					jobStatus.State = cicdv1.CommitStatusStateFailure
+					jobStatus.Message = JobMessageFailure
 				}
 			}
 			jobStatus.Containers = nil
@@ -344,12 +351,14 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobSt
 				jobStatus.StartTime = rStatus.StartTime.DeepCopy()
 				jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
 				if len(rStatus.Conditions) > 0 {
-					jobStatus.Message = rStatus.Conditions[0].Message
+					jobStatus.Message = JobMessagePending
 					switch rStatus.Conditions[0].Status {
 					case corev1.ConditionTrue:
 						jobStatus.State = cicdv1.CommitStatusStateSuccess
+						jobStatus.Message = JobMessageSuccessful
 					case corev1.ConditionFalse:
 						jobStatus.State = cicdv1.CommitStatusStateFailure
+						jobStatus.Message = JobMessageFailure
 					}
 				}
 				break
