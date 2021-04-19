@@ -34,7 +34,7 @@ type CommentBody struct {
 
 // MergeRequest is a body struct of a merge request
 type MergeRequest struct {
-	ID     int    `json:"id"`
+	ID     int    `json:"iid"`
 	Title  string `json:"title"`
 	State  string `json:"state"`
 	Author struct {
