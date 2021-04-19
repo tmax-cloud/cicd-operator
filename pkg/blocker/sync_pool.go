@@ -93,7 +93,7 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 		pr.PullRequest = rawPR
 
 		// Check conditions (labels, author, branch, conflict)
-		isCandidate, addMsg := checkConditions(ic.Spec.MergeConfig.Query, &rawPR)
+		isCandidate, addMsg := checkConditionsSimple(ic.Spec.MergeConfig.Query, &rawPR)
 
 		// Add to/delete from merge Pool
 		if isCandidate {

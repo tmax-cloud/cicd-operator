@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func checkConditions(q cicdv1.MergeQuery, pr *git.PullRequest) (bool, string) {
+// checkConditionsSimple checks labels, approved, author, branch conditions for a PR to be in a merge pool
+func checkConditionsSimple(q cicdv1.MergeQuery, pr *git.PullRequest) (bool, string) {
 	var messages []string
 
 	// Check labels
@@ -36,6 +37,43 @@ func checkConditions(q cicdv1.MergeQuery, pr *git.PullRequest) (bool, string) {
 	}
 
 	return passLabelChecks && passAuthorCheck && passBranchCheck, strings.Join(messages, " ")
+}
+
+// checkConditionsFull is a checkConditionsSimple + commit status check + merge conflict check
+func checkConditionsFull(q cicdv1.MergeQuery, id int, client git.Client) (bool, string, error) {
+	// GET PullRequest
+	pr, err := client.GetPullRequest(id)
+	if err != nil {
+		return false, "", err
+	}
+
+	// GET PR statuses
+	checks, err := client.ListCommitStatuses(pr.Head.Sha)
+	if err != nil {
+		return false, "", err
+	}
+
+	var messages []string
+
+	// Check labels (, approved), branch, author
+	simpleResult, simpleMessage := checkConditionsSimple(q, pr)
+	if simpleMessage != "" {
+		messages = append(messages, simpleMessage)
+	}
+
+	// Check merge conflict
+	passMergeConflict := pr.Mergeable
+	if !passMergeConflict {
+		messages = append(messages, "Merge conflicts exist.")
+	}
+
+	// Check commit statuses
+	passCommitStatus, commitStatusMsg := checkChecks(checks, q)
+	if commitStatusMsg != "" {
+		messages = append(messages, commitStatusMsg)
+	}
+
+	return simpleResult && passMergeConflict && passCommitStatus, strings.Join(messages, " "), nil
 }
 
 func checkBranch(b string, q cicdv1.MergeQuery) (bool, string) {
