@@ -110,16 +110,32 @@ func checkAuthor(author string, q cicdv1.MergeQuery) (bool, string) {
 func checkLabels(labels []string, q cicdv1.MergeQuery) (bool, string) {
 	isProperLabels := true
 	msg := ""
-	for _, l := range q.Labels {
-		if !containsString(l, labels) {
-			isProperLabels = false
-			msg = fmt.Sprintf("Label [%s] is required.", l)
+
+	if len(q.Labels) > 0 {
+		var missing []string
+		for _, l := range q.Labels {
+			if !containsString(l, labels) {
+				isProperLabels = false
+				missing = append(missing, l)
+			}
+		}
+		if len(missing) > 0 {
+			msg = fmt.Sprintf("Label [%s] is required.", strings.Join(missing, ","))
 		}
 	}
-	for _, l := range q.BlockLabels {
-		if containsString(l, labels) {
-			isProperLabels = false
-			msg = fmt.Sprintf("Label [%s] is blocking the merge.", l)
+	if len(q.BlockLabels) > 0 {
+		var blocking []string
+		for _, l := range q.BlockLabels {
+			if containsString(l, labels) {
+				isProperLabels = false
+				blocking = append(blocking, l)
+			}
+		}
+		if len(blocking) > 0 {
+			if msg != "" {
+				msg += " "
+			}
+			msg += fmt.Sprintf("Label [%s] is blocking the merge.", strings.Join(blocking, ","))
 		}
 	}
 

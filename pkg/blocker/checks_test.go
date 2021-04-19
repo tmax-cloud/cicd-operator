@@ -308,7 +308,7 @@ func TestCheckLabels(t *testing.T) {
 	result, msg = checkLabels(labels, query)
 
 	assert.Equal(t, false, result, "Result")
-	assert.Equal(t, "Label [hold] is blocking the merge.", msg, "Message")
+	assert.Equal(t, "Label [lgtm,approved] is required. Label [hold] is blocking the merge.", msg, "Message")
 
 	// Test 7
 	labels = []string{

@@ -3,9 +3,11 @@ package blocker
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/bmizerany/assert"
 	"github.com/gorilla/mux"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,30 +24,30 @@ import (
 var testPRs []github.PullRequest
 
 func TestBlocker_syncPRs(t *testing.T) {
-	fakeCli := testEnv()
+	fakeCli, repoURL := syncPoolTestEnv()
 	blocker := New(fakeCli)
 	pools := blocker.Pools
 
 	// Initial
 	blocker.syncPRs()
-	assert.Equal(t, 1, len(pools["default/test"].PullRequests), "PRList length")
-	assert.Equal(t, 0, len(pools["default/test"].MergePool[CheckStatusUnknown]), "Unknown merge pool length")
+	assert.Equal(t, 1, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
+	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// Hold
 	testPRs[0].Labels = append(testPRs[0].Labels, struct {
 		Name string `json:"name"`
 	}{Name: "hold"})
 	blocker.syncPRs()
-	assert.Equal(t, 1, len(pools["default/test"].PullRequests), "PRList length")
-	assert.Equal(t, 0, len(pools["default/test"].MergePool[CheckStatusUnknown]), "Unknown merge pool length")
+	assert.Equal(t, 1, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
+	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// LGTM
 	testPRs[0].Labels = []struct {
 		Name string `json:"name"`
 	}{{Name: "lgtm"}}
 	blocker.syncPRs()
-	assert.Equal(t, 1, len(pools["default/test"].PullRequests), "PRList length")
-	assert.Equal(t, 1, len(pools["default/test"].MergePool[CheckStatusUnknown]), "Unknown merge pool length")
+	assert.Equal(t, 1, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
+	assert.Equal(t, 1, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// New PR
 	testPRs = append(testPRs, github.PullRequest{
@@ -64,22 +66,22 @@ func TestBlocker_syncPRs(t *testing.T) {
 		},
 	})
 	blocker.syncPRs()
-	assert.Equal(t, 2, len(pools["default/test"].PullRequests), "PRList length")
-	assert.Equal(t, 1, len(pools["default/test"].MergePool[CheckStatusUnknown]), "Unknown merge pool length")
+	assert.Equal(t, 2, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
+	assert.Equal(t, 1, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// LGTM 2
 	testPRs[1].Labels = []struct {
 		Name string `json:"name"`
 	}{{Name: "lgtm"}}
 	blocker.syncPRs()
-	assert.Equal(t, 2, len(pools["default/test"].PullRequests), "PRList length")
-	assert.Equal(t, 2, len(pools["default/test"].MergePool[CheckStatusUnknown]), "Unknown merge pool length")
+	assert.Equal(t, 2, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
+	assert.Equal(t, 2, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// Deleted PR (closed maybe)
 	testPRs = nil
 	blocker.syncPRs()
-	assert.Equal(t, 0, len(pools["default/test"].PullRequests), "PRList length")
-	assert.Equal(t, 0, len(pools["default/test"].MergePool[CheckStatusUnknown]), "Unknown merge pool length")
+	assert.Equal(t, 0, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
+	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// Deleted ic
 	if err := fakeCli.Delete(context.Background(), &cicdv1.IntegrationConfig{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"}}); err != nil {
@@ -89,7 +91,7 @@ func TestBlocker_syncPRs(t *testing.T) {
 	assert.Equal(t, 0, len(pools), "IC length")
 }
 
-func testEnv() client.Client {
+func syncPoolTestEnv() (client.Client, string) {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	r := mux.NewRouter()
@@ -147,5 +149,5 @@ func testEnv() client.Client {
 		},
 	}}
 
-	return fake.NewFakeClientWithScheme(s, ic)
+	return fake.NewFakeClientWithScheme(s, ic), fmt.Sprintf("%s/%s", testSrv.URL, ic.Spec.Git.Repository)
 }

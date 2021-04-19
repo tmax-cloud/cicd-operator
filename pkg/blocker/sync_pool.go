@@ -5,6 +5,8 @@ import (
 	"fmt"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"time"
 )
 
 // sync_pool.go contains blocker's methods for synchronizing PR pools.
@@ -14,15 +16,19 @@ import (
 // If all the conditions are met, it is added to a merge pool.
 
 func (b *blocker) loopSyncPRs() {
-	// TODO - call b.syncPRs() every SyncDuration
-	//wait := time.After(time.Until(lastSyncStart.Add(SyncDuration)))
-	//for {
-	//	<- wait
-	//	b.syncPRs()
-	//}
+	b.log.Info("Starting syncPR loop")
+	b.syncPRs()
+	for {
+		// TODO - configurable time
+		<-time.After(time.Until(b.lasPoolSync.Add(time.Duration(1) * time.Minute)))
+		b.syncPRs()
+	}
 }
 
 func (b *blocker) syncPRs() {
+	// Update lastPoolSync
+	b.lasPoolSync = time.Now()
+
 	ics := &cicdv1.IntegrationConfigList{}
 	if err := b.client.List(context.Background(), ics); err != nil {
 		b.log.Error(err, "")
@@ -30,27 +36,32 @@ func (b *blocker) syncPRs() {
 	}
 
 	// For each IntegrationConfig
-	var icKeys []string
+	doneKeys := map[string]struct{}{}
 	for _, ic := range ics.Items {
 		// Skip if token is nil or merge automation is not activated
 		if ic.Spec.Git.Token == nil || ic.Spec.MergeConfig == nil {
 			continue
 		}
-		icKeys = append(icKeys, string(poolKey(&ic)))
+		key := string(genPoolKey(&ic))
+		_, done := doneKeys[key]
+		if done {
+			continue
+		}
+		doneKeys[key] = struct{}{}
 
 		b.syncOnePool(&ic)
 	}
 
 	// Delete redundant pools (i.e., pools for deleted IntegrationConfigs)
 	for key := range b.Pools {
-		if !containsString(string(key), icKeys) {
+		if _, done := doneKeys[string(key)]; !done {
 			delete(b.Pools, key)
 		}
 	}
 }
 
 func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
-	log := b.log.WithValues("namespace", ic.Namespace, "name", ic.Name)
+	log := b.log.WithName("pool").WithValues("repo", genPoolKey(ic))
 	log.Info("Synchronizing PR pool")
 
 	gitCli, err := utils.GetGitCli(ic, b.client)
@@ -60,9 +71,9 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 	}
 
 	// Init PRPool
-	key := poolKey(ic)
+	key := genPoolKey(ic)
 	if b.Pools[key] == nil {
-		b.Pools[key] = NewPRPool()
+		b.Pools[key] = NewPRPool(ic.Namespace, ic.Name)
 	}
 
 	pool := b.Pools[key]
@@ -85,7 +96,7 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 		if pr == nil {
 			// This should be the one and only place where a PullRequest is created/added to pool.PullRequests
 			pr = &PullRequest{
-				BlockerStatus:      cicdv1.CommitStatusStatePending,
+				BlockerStatus:      git.CommitStatusStatePending,
 				BlockerDescription: defaultBlockerMessage,
 			}
 			pool.PullRequests[rawPR.ID] = pr
@@ -101,18 +112,27 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 			if pool.MergePool.Search(pr.ID) == nil {
 				pool.MergePool.Add(pr)
 			}
-
-			// Set default message
-			pr.BlockerDescription = defaultBlockerMessage
+			// Don't set status here!
+			// Sync_status will do the job for the prs in the merge pool
 		} else {
 			// Delete from merge pool
 			pool.MergePool.Delete(pr.ID)
 
+			// Set status
+			if pr.BlockerStatus != git.CommitStatusStatePending {
+				pr.blockerCacheDirty = true
+			}
+			pr.BlockerStatus = git.CommitStatusStatePending
+
 			// Append msg
-			pr.BlockerDescription = fmt.Sprintf("%s %s", defaultBlockerMessage, addMsg)
+			desc := fmt.Sprintf("%s %s", defaultBlockerMessage, addMsg)
+			if pr.BlockerDescription != desc {
+				pr.blockerCacheDirty = true
+			}
+			pr.BlockerDescription = desc
 		}
 
-		log.Info(fmt.Sprintf("[#%d](%.20s) - %s/%s", pr.ID, pr.Title, pr.BlockerStatus, pr.BlockerDescription))
+		log.Info(fmt.Sprintf("\t[#%d](%.20s) - %s/%s", pr.ID, pr.Title, pr.BlockerStatus, pr.BlockerDescription))
 	}
 
 	// Delete redundant PRs (i.e., closed/merged ones)
