@@ -73,17 +73,17 @@ func TestClient_ListPullRequests(t *testing.T) {
 	}
 
 	assert.Equal(t, 6, len(prs), "Number of prs")
-	assert.Equal(t, 95464030, prs[0].ID, "PR ID")
+	assert.Equal(t, 3, prs[0].ID, "PR ID")
 	assert.Equal(t, "Newnew", prs[0].Title, "PR Title")
-	assert.Equal(t, 95463922, prs[1].ID, "PR ID")
+	assert.Equal(t, 2, prs[1].ID, "PR ID")
 	assert.Equal(t, "Newnew", prs[1].Title, "PR Title")
-	assert.Equal(t, 95462727, prs[2].ID, "PR ID")
+	assert.Equal(t, 1, prs[2].ID, "PR ID")
 	assert.Equal(t, "newnew", prs[2].Title, "PR Title")
-	assert.Equal(t, 95464030, prs[3].ID, "PR ID")
+	assert.Equal(t, 3, prs[3].ID, "PR ID")
 	assert.Equal(t, "Newnew", prs[3].Title, "PR Title")
-	assert.Equal(t, 95463922, prs[4].ID, "PR ID")
+	assert.Equal(t, 2, prs[4].ID, "PR ID")
 	assert.Equal(t, "Newnew", prs[4].Title, "PR Title")
-	assert.Equal(t, 95462727, prs[5].ID, "PR ID")
+	assert.Equal(t, 1, prs[5].ID, "PR ID")
 	assert.Equal(t, "newnew", prs[5].Title, "PR Title")
 }
 
