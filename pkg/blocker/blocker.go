@@ -1,12 +1,15 @@
 package blocker
 
 import (
+	"fmt"
 	"github.com/go-logr/logr"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sync"
+	"time"
 )
 
 const (
@@ -27,16 +30,18 @@ type blocker struct {
 
 	// Pools contains PR pools for each IntegrationConfigs existing in the cluster.
 	// It is kind of a cache of PRs
-	Pools map[PoolKey]*PRPool
+	Pools map[poolKey]*PRPool
+
+	lasPoolSync time.Time
 }
 
 // New creates a new blocker
 func New(c client.Client) *blocker {
 	return &blocker{
-		client: c,
-		log:    logf.Log.WithName("blocker"),
-
-		Pools: map[PoolKey]*PRPool{},
+		client:      c,
+		log:         logf.Log.WithName("blocker"),
+		lasPoolSync: time.Now(),
+		Pools:       map[poolKey]*PRPool{},
 	}
 }
 
@@ -47,17 +52,20 @@ func (b *blocker) Start() {
 	// TODO - go b.loopMerge()
 }
 
-// PoolKey is a key for PR pools.
-type PoolKey string
+// poolKey is a key for PR pools.
+type poolKey string
 
-// poolKey generates a default key for the IntegrationConfig (i.e., <Namespace>/<Name>)
-func poolKey(ic *cicdv1.IntegrationConfig) PoolKey {
-	return PoolKey(ic.Namespace + "/" + ic.Name)
+// genPoolKey generates a default key for the IntegrationConfig (i.e., <APIUrl>/<Repository>)
+func genPoolKey(ic *cicdv1.IntegrationConfig) poolKey {
+	return poolKey(fmt.Sprintf("%s/%s", ic.Spec.Git.GetAPIUrl(), ic.Spec.Git.Repository))
 }
 
 // PRPool is a PullRequest pool(=cache) of an IntegrationConfig
 type PRPool struct {
 	lock sync.Mutex
+
+	// NamespacedName stores a name and a namespace of source IntegrationConfig
+	types.NamespacedName
 
 	// PullRequests store all open PullRequests for an IntegrationConfig, including those who does not meet conditions.
 	PullRequests map[int]*PullRequest
@@ -67,63 +75,51 @@ type PRPool struct {
 }
 
 // NewPRPool creates a new PRPool
-func NewPRPool() *PRPool {
+func NewPRPool(ns, name string) *PRPool {
 	return &PRPool{
-		PullRequests: map[int]*PullRequest{},
-		MergePool:    NewMergePool(),
+		PullRequests:   map[int]*PullRequest{},
+		MergePool:      NewMergePool(),
+		NamespacedName: types.NamespacedName{Name: name, Namespace: ns},
 	}
 }
 
-// CheckStatus is a commit status enum
-type CheckStatus int
-
-// CheckStatus enum values
-const (
-	CheckStatusUnknown = iota
-	CheckStatusPending
-	CheckStatusSuccess
-	CheckStatusFailure
-	checkStatusLimit
-)
-
 // MergePool is a pool for PRs.
-// Keys are checkStatus - pr.ID
-type MergePool map[CheckStatus]map[int]*PullRequest
+// Keys are git.CommitStatusState - pr.ID
+type MergePool map[git.CommitStatusState]map[int]*PullRequest
 
 // NewMergePool creates a new MergePool
 func NewMergePool() MergePool {
-	prs := map[CheckStatus]map[int]*PullRequest{}
-	for p := CheckStatus(0); p < checkStatusLimit; p++ {
-		prs[p] = map[int]*PullRequest{}
-	}
+	prs := map[git.CommitStatusState]map[int]*PullRequest{}
+	prs[git.CommitStatusStatePending] = map[int]*PullRequest{}
+	prs[git.CommitStatusStateSuccess] = map[int]*PullRequest{}
+	prs[git.CommitStatusStateFailure] = map[int]*PullRequest{}
+	prs[git.CommitStatusStateError] = map[int]*PullRequest{}
 	return prs
 }
 
 // Search searches a given PR from the MergePool.
 // Returns nil if it does not exist
 func (m MergePool) Search(id int) *PullRequest {
-	var pr *PullRequest
-	for p := CheckStatus(0); p < checkStatusLimit; p++ {
-		tmp, exist := m[p][id]
+	for _, prs := range m {
+		pr, exist := prs[id]
 		if exist {
-			pr = tmp
-			break
+			return pr
 		}
 	}
-	return pr
+	return nil
 }
 
 // Add adds a PullRequest to the MergePool
 func (m MergePool) Add(pr *PullRequest) {
-	m[pr.CheckStatus][pr.ID] = pr
+	m[pr.BlockerStatus][pr.ID] = pr
 }
 
 // Delete deletes a given PR from the MergePool
 func (m MergePool) Delete(id int) {
-	for p := CheckStatus(0); p < checkStatusLimit; p++ {
-		_, exist := m[p][id]
+	for key := range m {
+		_, exist := m[key][id]
 		if exist {
-			delete(m[p], id)
+			delete(m[key], id)
 		}
 	}
 }
@@ -132,8 +128,10 @@ func (m MergePool) Delete(id int) {
 type PullRequest struct {
 	git.PullRequest
 
-	BlockerStatus      cicdv1.CommitStatusState
+	// BlockerStatus and BlockerDescription is for caching the commit status values
+	BlockerStatus      git.CommitStatusState
 	BlockerDescription string
 
-	CheckStatus
+	// blockerCacheDirty specifies if the commit status should be updated
+	blockerCacheDirty bool
 }
