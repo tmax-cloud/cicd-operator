@@ -108,6 +108,7 @@ type User struct {
 // Base is a reference for base commit
 type Base struct {
 	Ref string
+	Sha string
 }
 
 // Head is a reference for head commit

@@ -280,7 +280,7 @@ func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 			Name: pr.User.Name,
 		},
 		URL:       pr.URL,
-		Base:      git.Base{Ref: pr.Base.Ref},
+		Base:      git.Base{Ref: pr.Base.Ref, Sha: pr.Base.Sha},
 		Head:      git.Head{Ref: pr.Head.Ref, Sha: pr.Head.Sha},
 		Labels:    labels,
 		Mergeable: pr.Mergeable,

@@ -48,3 +48,11 @@ type MergeRequest struct {
 	Labels       []string `json:"labels"`
 	HasConflicts bool     `json:"has_conflicts"`
 }
+
+type branchResponse struct {
+	Name   string `json:"name"`
+	Commit struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+	}
+}
