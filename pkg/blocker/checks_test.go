@@ -210,9 +210,9 @@ func TestCheckAuthor(t *testing.T) {
 
 func TestCheckLabels(t *testing.T) {
 	// Test 1
-	labels := []string{
-		"lgtm",
-		"hold",
+	labels := map[string]struct{}{
+		"lgtm": {},
+		"hold": {},
 	}
 	query := cicdv1.MergeQuery{
 		Labels:      []string{},
@@ -224,7 +224,7 @@ func TestCheckLabels(t *testing.T) {
 	assert.Equal(t, "", msg, "Message")
 
 	// Test 2
-	labels = []string{}
+	labels = nil
 	query = cicdv1.MergeQuery{
 		Labels: []string{
 			"lgtm",
@@ -239,8 +239,8 @@ func TestCheckLabels(t *testing.T) {
 	assert.Equal(t, "Label [lgtm] is required.", msg, "Message")
 
 	// Test 3
-	labels = []string{
-		"lgtm",
+	labels = map[string]struct{}{
+		"lgtm": {},
 	}
 	query = cicdv1.MergeQuery{
 		Labels: []string{
@@ -256,9 +256,9 @@ func TestCheckLabels(t *testing.T) {
 	assert.Equal(t, "", msg, "Message")
 
 	// Test 4
-	labels = []string{
-		"lgtm",
-		"hold",
+	labels = map[string]struct{}{
+		"lgtm": {},
+		"hold": {},
 	}
 	query = cicdv1.MergeQuery{
 		Labels: []string{
@@ -274,9 +274,9 @@ func TestCheckLabels(t *testing.T) {
 	assert.Equal(t, "Label [hold] is blocking the merge.", msg, "Message")
 
 	// Test 5
-	labels = []string{
-		"lgtm",
-		"kind/bug",
+	labels = map[string]struct{}{
+		"lgtm":     {},
+		"kind/bug": {},
 	}
 	query = cicdv1.MergeQuery{
 		Labels: []string{
@@ -293,8 +293,8 @@ func TestCheckLabels(t *testing.T) {
 	assert.Equal(t, "Label [approved] is required.", msg, "Message")
 
 	// Test 6
-	labels = []string{
-		"hold",
+	labels = map[string]struct{}{
+		"hold": {},
 	}
 	query = cicdv1.MergeQuery{
 		Labels: []string{
@@ -311,10 +311,10 @@ func TestCheckLabels(t *testing.T) {
 	assert.Equal(t, "Label [lgtm,approved] is required. Label [hold] is blocking the merge.", msg, "Message")
 
 	// Test 7
-	labels = []string{
-		"lgtm",
-		"approved",
-		"hold",
+	labels = map[string]struct{}{
+		"lgtm":     {},
+		"approved": {},
+		"hold":     {},
 	}
 	query = cicdv1.MergeQuery{
 		Labels: []string{
@@ -331,9 +331,9 @@ func TestCheckLabels(t *testing.T) {
 	assert.Equal(t, "Label [hold] is blocking the merge.", msg, "Message")
 
 	// Test 8
-	labels = []string{
-		"lgtm",
-		"approved",
+	labels = map[string]struct{}{
+		"lgtm":     {},
+		"approved": {},
 	}
 	query = cicdv1.MergeQuery{
 		Labels: []string{
@@ -352,9 +352,9 @@ func TestCheckLabels(t *testing.T) {
 
 func TestCheckChecks(t *testing.T) {
 	// Test 1
-	statuses := []git.CommitStatus{
-		{Context: "test-lint", State: "pending"},
-		{Context: "test-unit", State: "success"},
+	statuses := map[string]git.CommitStatusState{
+		"test-lint": "pending",
+		"test-unit": "success",
 	}
 	query := cicdv1.MergeQuery{
 		Checks: []string{},
@@ -365,9 +365,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-lint] are not successful.", msg, "Message")
 
 	// Test 2
-	statuses = []git.CommitStatus{
-		{Context: "test-lint", State: "pending"},
-		{Context: "test-unit", State: "success"},
+	statuses = map[string]git.CommitStatusState{
+		"test-lint": "pending",
+		"test-unit": "success",
 	}
 	query = cicdv1.MergeQuery{
 		OptionalChecks: []string{
@@ -380,9 +380,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "", msg, "Message")
 
 	// Test 3
-	statuses = []git.CommitStatus{
-		{Context: "test-lint", State: "pending"},
-		{Context: "test-unit", State: "success"},
+	statuses = map[string]git.CommitStatusState{
+		"test-lint": "pending",
+		"test-unit": "success",
 	}
 	query = cicdv1.MergeQuery{
 		Checks: []string{
@@ -395,9 +395,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "", msg, "Message")
 
 	// Test 4
-	statuses = []git.CommitStatus{
-		{Context: "test-lint", State: "pending"},
-		{Context: "test-unit", State: "pending"},
+	statuses = map[string]git.CommitStatusState{
+		"test-lint": "pending",
+		"test-unit": "pending",
 	}
 	query = cicdv1.MergeQuery{
 		Checks: []string{
@@ -410,9 +410,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-unit] are not successful.", msg, "Message")
 
 	// Test 5
-	statuses = []git.CommitStatus{
-		{Context: "test-lint", State: "pending"},
-		{Context: "test-unit", State: "pending"},
+	statuses = map[string]git.CommitStatusState{
+		"test-lint": "pending",
+		"test-unit": "pending",
 	}
 	query = cicdv1.MergeQuery{}
 	result, msg = checkChecks(statuses, query)
@@ -421,9 +421,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-lint,test-unit] are not successful.", msg, "Message")
 
 	// Test 6
-	statuses = []git.CommitStatus{
-		{Context: "test-lint", State: "pending"},
-		{Context: "test-unit", State: "pending"},
+	statuses = map[string]git.CommitStatusState{
+		"test-lint": "pending",
+		"test-unit": "pending",
 	}
 	query = cicdv1.MergeQuery{
 		Checks: []string{
@@ -437,10 +437,10 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-lint,test-unit] are not successful.", msg, "Message")
 
 	// Test 7
-	statuses = []git.CommitStatus{
-		{Context: blockerContext, State: "pending"},
-		{Context: "test-lint", State: "pending"},
-		{Context: "test-unit", State: "success"},
+	statuses = map[string]git.CommitStatusState{
+		blockerContext: "pending",
+		"test-lint":    "pending",
+		"test-unit":    "success",
 	}
 	query = cicdv1.MergeQuery{
 		OptionalChecks: []string{
@@ -451,6 +451,21 @@ func TestCheckChecks(t *testing.T) {
 
 	assert.Equal(t, true, result, "Result")
 	assert.Equal(t, "", msg, "Message")
+
+	// Test 8
+	statuses = map[string]git.CommitStatusState{
+		blockerContext: "pending",
+		"test-lint":    "pending",
+	}
+	query = cicdv1.MergeQuery{
+		Checks: []string{
+			"test-unit",
+		},
+	}
+	result, msg = checkChecks(statuses, query)
+
+	assert.Equal(t, false, result, "Result")
+	assert.Equal(t, "Checks [test-unit] are not successful.", msg, "Message")
 }
 
 func checkTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
