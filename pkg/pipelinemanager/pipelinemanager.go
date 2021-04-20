@@ -34,6 +34,12 @@ const (
 	JobMessageFailure    = "Job failed"
 )
 
+const (
+	statusDescriptionBaseSHAKey = "BaseSHA:"
+	statusDescriptionMaxLength  = 140
+	statusDescriptionEllipse    = "... "
+)
+
 // PipelineManager manages pipelines
 type PipelineManager struct {
 	Client client.Client
@@ -381,10 +387,9 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 	// If state is changed, update git commit status
 	for i, j := range job.Status.Jobs {
 		if stateChanged[i] {
-			// Truncate message
 			msg := j.Message
-			if len(msg) > 140 {
-				msg = msg[:139]
+			if job.Spec.Refs.Pull != nil {
+				msg = appendBaseShaToDescription(msg, job.Spec.Refs.Base.Sha)
 			}
 
 			// Get SHA of the commit
@@ -402,6 +407,37 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 	}
 
 	return nil
+}
+
+// appendBaseShaToDescription appends Base SHA to the commit statuses' description.
+// Merger can use this base SHA to check if the tests of the pull request is done against the most recent commit of the
+// target branch before merging it.
+func appendBaseShaToDescription(desc, sha string) string {
+	if sha == "" {
+		// Truncate message
+		if len(desc) > statusDescriptionMaxLength {
+			return desc[:statusDescriptionMaxLength]
+		}
+		return desc
+	}
+
+	base := statusDescriptionBaseSHAKey + sha
+
+	// Truncate if msg is too long
+	ellipseBase := statusDescriptionEllipse + base
+	maxDescLen := statusDescriptionMaxLength - len(ellipseBase)
+	if len(desc) > maxDescLen {
+		return desc[:maxDescLen] + ellipseBase
+	}
+
+	// Add space if it's too short
+	numSpace := statusDescriptionMaxLength - len(base) - len(desc)
+	space := ""
+	for i := 0; i < numSpace; i++ {
+		space += " "
+	}
+
+	return desc + space + base
 }
 
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch;delete
