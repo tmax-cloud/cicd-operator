@@ -306,8 +306,8 @@ func (p *PipelineManager) reflectJobStatus(pr *tektonv1beta1.PipelineRun, j *cic
 
 	// Only update if taskRun's status exists
 	if runStatus != nil {
-		// If something is changed, commit status should be posted
-		changed = !jStatus.Equals(runStatus)
+		// If something is changed, commit status should be posted (except for message - message is decided by the state)
+		changed = jStatus.State != runStatus.State || !jStatus.StartTime.Equal(runStatus.StartTime) || !jStatus.CompletionTime.Equal(runStatus.CompletionTime)
 		runStatus.DeepCopyInto(jStatus)
 
 		// Handle post-run notifications for the completed jobs
@@ -331,14 +331,12 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobSt
 			jobStatus.StartTime = rStatus.StartTime.DeepCopy()
 			jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
 			if len(rStatus.Conditions) > 0 {
-				jobStatus.Message = JobMessagePending
+				jobStatus.Message = rStatus.Conditions[0].Message
 				switch tektonv1beta1.TaskRunReason(rStatus.Conditions[0].Reason) {
 				case tektonv1beta1.TaskRunReasonSuccessful:
 					jobStatus.State = cicdv1.CommitStatusStateSuccess
-					jobStatus.Message = JobMessageSuccessful
 				case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
 					jobStatus.State = cicdv1.CommitStatusStateFailure
-					jobStatus.Message = JobMessageFailure
 				}
 			}
 			jobStatus.Containers = nil
@@ -357,14 +355,12 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobSt
 				jobStatus.StartTime = rStatus.StartTime.DeepCopy()
 				jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
 				if len(rStatus.Conditions) > 0 {
-					jobStatus.Message = JobMessagePending
+					jobStatus.Message = rStatus.Conditions[0].Message
 					switch rStatus.Conditions[0].Status {
 					case corev1.ConditionTrue:
 						jobStatus.State = cicdv1.CommitStatusStateSuccess
-						jobStatus.Message = JobMessageSuccessful
 					case corev1.ConditionFalse:
 						jobStatus.State = cicdv1.CommitStatusStateFailure
-						jobStatus.Message = JobMessageFailure
 					}
 				}
 				break
@@ -387,7 +383,14 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 	// If state is changed, update git commit status
 	for i, j := range job.Status.Jobs {
 		if stateChanged[i] {
-			msg := j.Message
+			// Set simple message
+			msg := JobMessagePending
+			switch j.State {
+			case cicdv1.CommitStatusStateSuccess:
+				msg = JobMessageSuccessful
+			case cicdv1.CommitStatusStateFailure:
+				msg = JobMessageFailure
+			}
 			if job.Spec.Refs.Pull != nil {
 				msg = appendBaseShaToDescription(msg, job.Spec.Refs.Base.Sha)
 			}
