@@ -12,9 +12,9 @@ func checkConditionsSimple(q cicdv1.MergeQuery, pr *git.PullRequest) (bool, stri
 	var messages []string
 
 	// Check labels
-	var labels []string
+	labels := map[string]struct{}{}
 	for _, l := range pr.Labels {
-		labels = append(labels, l.Name)
+		labels[l.Name] = struct{}{}
 	}
 	if q.ApproveRequired { // Check 'approved' label if approval is required
 		q.Labels = append(q.Labels, "approved")
@@ -48,9 +48,13 @@ func checkConditionsFull(q cicdv1.MergeQuery, id int, client git.Client) (bool, 
 	}
 
 	// GET PR statuses
-	checks, err := client.ListCommitStatuses(pr.Head.Sha)
+	checksSlice, err := client.ListCommitStatuses(pr.Head.Sha)
 	if err != nil {
 		return false, "", err
+	}
+	checks := map[string]git.CommitStatusState{}
+	for _, c := range checksSlice {
+		checks[c.Context] = c.State
 	}
 
 	var messages []string
@@ -107,14 +111,15 @@ func checkAuthor(author string, q cicdv1.MergeQuery) (bool, string) {
 	return isProperAuthor, msg
 }
 
-func checkLabels(labels []string, q cicdv1.MergeQuery) (bool, string) {
+func checkLabels(labels map[string]struct{}, q cicdv1.MergeQuery) (bool, string) {
 	isProperLabels := true
 	msg := ""
 
 	if len(q.Labels) > 0 {
 		var missing []string
 		for _, l := range q.Labels {
-			if !containsString(l, labels) {
+			_, exist := labels[l]
+			if !exist {
 				isProperLabels = false
 				missing = append(missing, l)
 			}
@@ -126,7 +131,8 @@ func checkLabels(labels []string, q cicdv1.MergeQuery) (bool, string) {
 	if len(q.BlockLabels) > 0 {
 		var blocking []string
 		for _, l := range q.BlockLabels {
-			if containsString(l, labels) {
+			_, exist := labels[l]
+			if exist {
 				isProperLabels = false
 				blocking = append(blocking, l)
 			}
@@ -142,34 +148,33 @@ func checkLabels(labels []string, q cicdv1.MergeQuery) (bool, string) {
 	return isProperLabels, msg
 }
 
-func checkChecks(statuses []git.CommitStatus, q cicdv1.MergeQuery) (bool, string) {
+func checkChecks(statuses map[string]git.CommitStatusState, q cicdv1.MergeQuery) (bool, string) {
 	var unmetChecks []string
 	passAllRequiredChecks := true
 	if len(q.Checks) > 0 {
 		// Check for the required checks
 		for _, c := range q.Checks {
-			for _, s := range statuses {
-				if s.Context == blockerContext {
-					continue
+			s, exist := statuses[c]
+			if exist {
+				if s != "success" {
+					passAllRequiredChecks = false
+					unmetChecks = append(unmetChecks, c)
 				}
-				if s.Context == c {
-					if s.State != "success" {
-						passAllRequiredChecks = false
-						unmetChecks = append(unmetChecks, s.Context)
-					}
-					break
-				}
+			} else {
+				// Handle if the check is not registered yet
+				passAllRequiredChecks = false
+				unmetChecks = append(unmetChecks, c)
 			}
 		}
 	} else {
 		// Check for the other checks
-		for _, s := range statuses {
-			if s.Context == blockerContext {
+		for context, state := range statuses {
+			if context == blockerContext {
 				continue
 			}
-			if s.State != "success" && !containsString(s.Context, q.OptionalChecks) {
+			if state != "success" && !containsString(context, q.OptionalChecks) {
 				passAllRequiredChecks = false
-				unmetChecks = append(unmetChecks, s.Context)
+				unmetChecks = append(unmetChecks, context)
 			}
 		}
 	}
