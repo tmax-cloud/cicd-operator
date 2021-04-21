@@ -4,6 +4,7 @@ import (
 	"fmt"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"sort"
 	"strings"
 )
 
@@ -40,17 +41,18 @@ func checkConditionsSimple(q cicdv1.MergeQuery, pr *git.PullRequest) (bool, stri
 }
 
 // checkConditionsFull is a checkConditionsSimple + commit status check + merge conflict check
-func checkConditionsFull(q cicdv1.MergeQuery, id int, client git.Client) (bool, string, error) {
+// Return: status / removeFromMergePool / description / error
+func checkConditionsFull(q cicdv1.MergeQuery, id int, client git.Client) (bool, bool, string, error) {
 	// GET PullRequest
 	pr, err := client.GetPullRequest(id)
 	if err != nil {
-		return false, "", err
+		return false, false, "", err
 	}
 
 	// GET PR statuses
 	checksSlice, err := client.ListCommitStatuses(pr.Head.Sha)
 	if err != nil {
-		return false, "", err
+		return false, false, "", err
 	}
 	checks := map[string]git.CommitStatusState{}
 	for _, c := range checksSlice {
@@ -63,6 +65,9 @@ func checkConditionsFull(q cicdv1.MergeQuery, id int, client git.Client) (bool, 
 	simpleResult, simpleMessage := checkConditionsSimple(q, pr)
 	if simpleMessage != "" {
 		messages = append(messages, simpleMessage)
+	}
+	if !simpleResult {
+		return false, true, strings.Join(messages, " "), nil
 	}
 
 	// Check merge conflict
@@ -77,7 +82,7 @@ func checkConditionsFull(q cicdv1.MergeQuery, id int, client git.Client) (bool, 
 		messages = append(messages, commitStatusMsg)
 	}
 
-	return simpleResult && passMergeConflict && passCommitStatus, strings.Join(messages, " "), nil
+	return simpleResult && passMergeConflict && passCommitStatus, false, strings.Join(messages, " "), nil
 }
 
 func checkBranch(b string, q cicdv1.MergeQuery) (bool, string) {
@@ -125,6 +130,7 @@ func checkLabels(labels map[string]struct{}, q cicdv1.MergeQuery) (bool, string)
 			}
 		}
 		if len(missing) > 0 {
+			sort.Strings(missing)
 			msg = fmt.Sprintf("Label [%s] is required.", strings.Join(missing, ","))
 		}
 	}
@@ -141,6 +147,7 @@ func checkLabels(labels map[string]struct{}, q cicdv1.MergeQuery) (bool, string)
 			if msg != "" {
 				msg += " "
 			}
+			sort.Strings(blocking)
 			msg += fmt.Sprintf("Label [%s] is blocking the merge.", strings.Join(blocking, ","))
 		}
 	}
@@ -181,6 +188,7 @@ func checkChecks(statuses map[string]git.CommitStatusState, q cicdv1.MergeQuery)
 
 	msg := ""
 	if !passAllRequiredChecks {
+		sort.Strings(unmetChecks)
 		msg = fmt.Sprintf("Checks [%s] are not successful.", strings.Join(unmetChecks, ","))
 	}
 
@@ -188,15 +196,6 @@ func checkChecks(statuses map[string]git.CommitStatusState, q cicdv1.MergeQuery)
 }
 
 func containsString(needle string, arr []string) bool {
-	for _, e := range arr {
-		if e == needle {
-			return true
-		}
-	}
-	return false
-}
-
-func containsInt(needle int, arr []int) bool {
 	for _, e := range arr {
 		if e == needle {
 			return true
