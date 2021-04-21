@@ -19,10 +19,10 @@ const (
 
 // blocker blocks PRs to be merged. TODO - Need a cool name
 // There are 3 main roles for blocker.
-//   1. Sync Pools with github/gitlab's open PullRequests list for each v1.IntegrationConfig.
-//   2. Check commit statuses/merge conflicts for PRs which meet all the conditions of v1.MergeQuery.
+//   1. (Pool Syncer) Sync Pools with github/gitlab's open PullRequests list for each v1.IntegrationConfig.
+//   2. (Status Syncer) Check commit statuses/merge conflicts for PRs which meet all the conditions of v1.MergeQuery.
 //      (We say the PRs are in 'MergePool')
-//   3. Merge PRs in the merge pool with successful commit statuses and no merge conflicts.
+//   3. (Merger) Merge PRs in the merge pool with successful commit statuses and no merge conflicts.
 // These three roles run in their own goroutine, periodically.
 type blocker struct {
 	client client.Client
@@ -32,23 +32,27 @@ type blocker struct {
 	// It is kind of a cache of PRs
 	Pools map[poolKey]*PRPool
 
-	lasPoolSync time.Time
+	lastPoolSync time.Time
+
+	// poolSynced is a channel from PoolSyncer to StatusSyncer, which indicates the completion of pool sync
+	poolSynced chan struct{}
 }
 
 // New creates a new blocker
 func New(c client.Client) *blocker {
 	return &blocker{
-		client:      c,
-		log:         logf.Log.WithName("blocker"),
-		lasPoolSync: time.Now(),
-		Pools:       map[poolKey]*PRPool{},
+		client:       c,
+		log:          logf.Log.WithName("blocker"),
+		lastPoolSync: time.Now(),
+		poolSynced:   make(chan struct{}, 1),
+		Pools:        map[poolKey]*PRPool{},
 	}
 }
 
 // Start executes three main components of the blocker
 func (b *blocker) Start() {
 	go b.loopSyncPRs()
-	// TODO - go b.loopSyncMergePoolStatus()
+	go b.loopSyncMergePoolStatus()
 	// TODO - go b.loopMerge()
 }
 
@@ -84,7 +88,7 @@ func NewPRPool(ns, name string) *PRPool {
 }
 
 // MergePool is a pool for PRs.
-// Keys are git.CommitStatusState - pr.ID
+// Keys are git.CommitStatusState (same as PullRequest.BlockerStatus) - pr.ID
 type MergePool map[git.CommitStatusState]map[int]*PullRequest
 
 // NewMergePool creates a new MergePool
@@ -92,8 +96,6 @@ func NewMergePool() MergePool {
 	prs := map[git.CommitStatusState]map[int]*PullRequest{}
 	prs[git.CommitStatusStatePending] = map[int]*PullRequest{}
 	prs[git.CommitStatusStateSuccess] = map[int]*PullRequest{}
-	prs[git.CommitStatusStateFailure] = map[int]*PullRequest{}
-	prs[git.CommitStatusStateError] = map[int]*PullRequest{}
 	return prs
 }
 
@@ -129,6 +131,7 @@ type PullRequest struct {
 	git.PullRequest
 
 	// BlockerStatus and BlockerDescription is for caching the commit status values
+	// Only available statuses are pending and success - no failure/error
 	BlockerStatus      git.CommitStatusState
 	BlockerDescription string
 

@@ -95,24 +95,36 @@ func TestCheckConditionsFull(t *testing.T) {
 	}
 
 	// Test 1
-	status, msg, err := checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
+	status, removeFromMergePool, msg, err := checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assert.Equal(t, false, status, "Full status")
-	assert.Equal(t, "Label [approved] is required. Merge conflicts exist. Checks [test-1] are not successful.", msg, "Full message")
+	assert.Equal(t, true, removeFromMergePool, "Remove from merge pool")
+	assert.Equal(t, "Label [approved] is required.", msg, "Full message")
 
 	// Test 2
-	samplePR = strings.ReplaceAll(samplePR, "\"mergeable\":false", "\"mergeable\":true")
 	samplePR = strings.ReplaceAll(samplePR, "kind/test", "approved")
+	status, removeFromMergePool, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, false, status, "Full status")
+	assert.Equal(t, false, removeFromMergePool, "Remove from merge pool")
+	assert.Equal(t, "Merge conflicts exist. Checks [test-1] are not successful.", msg, "Full message")
+
+	// Test 3
+	samplePR = strings.ReplaceAll(samplePR, "\"mergeable\":false", "\"mergeable\":true")
 	sampleStatusesList = strings.ReplaceAll(sampleStatusesList, "pending", "success")
-	status, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
+	status, removeFromMergePool, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assert.Equal(t, true, status, "Full status")
+	assert.Equal(t, false, removeFromMergePool, "Remove from merge pool")
 	assert.Equal(t, "", msg, "Full message")
 }
 
@@ -308,7 +320,7 @@ func TestCheckLabels(t *testing.T) {
 	result, msg = checkLabels(labels, query)
 
 	assert.Equal(t, false, result, "Result")
-	assert.Equal(t, "Label [lgtm,approved] is required. Label [hold] is blocking the merge.", msg, "Message")
+	assert.Equal(t, "Label [approved,lgtm] is required. Label [hold] is blocking the merge.", msg, "Message")
 
 	// Test 7
 	labels = map[string]struct{}{

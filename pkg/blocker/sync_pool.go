@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"time"
@@ -17,25 +18,26 @@ import (
 
 func (b *blocker) loopSyncPRs() {
 	b.log.Info("Starting syncPR loop")
-	b.syncPRs()
 	for {
-		// TODO - configurable time
-		<-time.After(time.Until(b.lasPoolSync.Add(time.Duration(1) * time.Minute)))
+		<-time.After(time.Until(b.lastPoolSync.Add(time.Duration(configs.MergeSyncPeriod) * time.Minute)))
 		b.syncPRs()
 	}
 }
 
 func (b *blocker) syncPRs() {
+	log := b.log.WithName("pool")
+	log.Info("Synchronizing PR pool")
+
 	// Update lastPoolSync
-	b.lasPoolSync = time.Now()
+	b.lastPoolSync = time.Now()
 
 	ics := &cicdv1.IntegrationConfigList{}
 	if err := b.client.List(context.Background(), ics); err != nil {
-		b.log.Error(err, "")
+		log.Error(err, "")
 		return
 	}
 
-	// For each IntegrationConfig
+	// For each repository - sync PRs and put some into a merge pool
 	doneKeys := map[string]struct{}{}
 	for _, ic := range ics.Items {
 		// Skip if token is nil or merge automation is not activated
@@ -58,11 +60,15 @@ func (b *blocker) syncPRs() {
 			delete(b.Pools, key)
 		}
 	}
+
+	// Notify that a sync is done
+	if len(b.poolSynced) < cap(b.poolSynced) {
+		b.poolSynced <- struct{}{}
+	}
 }
 
 func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 	log := b.log.WithName("pool").WithValues("repo", genPoolKey(ic))
-	log.Info("Synchronizing PR pool")
 
 	gitCli, err := utils.GetGitCli(ic, b.client)
 	if err != nil {
@@ -87,9 +93,10 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 	pool.lock.Lock()
 	defer pool.lock.Unlock()
 
-	var prIDs []int
+	// For each PRs - check status
+	prIDs := map[int]struct{}{}
 	for _, rawPR := range prs {
-		prIDs = append(prIDs, rawPR.ID)
+		prIDs[rawPR.ID] = struct{}{}
 
 		// Initiate PullRequest object
 		pr := pool.PullRequests[rawPR.ID]
@@ -132,12 +139,13 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 			pr.BlockerDescription = desc
 		}
 
-		log.Info(fmt.Sprintf("\t[#%d](%.20s) - %s/%s", pr.ID, pr.Title, pr.BlockerStatus, pr.BlockerDescription))
+		log.Info(fmt.Sprintf("\t[#%d](%.20s) - merge candidate: %t", pr.ID, pr.Title, isCandidate))
 	}
 
 	// Delete redundant PRs (i.e., closed/merged ones)
 	for id := range pool.PullRequests {
-		if !containsInt(id, prIDs) {
+		_, exist := prIDs[id]
+		if !exist {
 			pool.MergePool.Delete(id)
 			delete(pool.PullRequests, id)
 		}

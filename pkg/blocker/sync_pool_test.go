@@ -14,6 +14,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -21,7 +22,7 @@ import (
 	"testing"
 )
 
-var testPRs []github.PullRequest
+var testSyncPoolPRs []github.PullRequest
 
 func TestBlocker_syncPRs(t *testing.T) {
 	fakeCli, repoURL := syncPoolTestEnv()
@@ -34,7 +35,7 @@ func TestBlocker_syncPRs(t *testing.T) {
 	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// Hold
-	testPRs[0].Labels = append(testPRs[0].Labels, struct {
+	testSyncPoolPRs[0].Labels = append(testSyncPoolPRs[0].Labels, struct {
 		Name string `json:"name"`
 	}{Name: "hold"})
 	blocker.syncPRs()
@@ -42,7 +43,7 @@ func TestBlocker_syncPRs(t *testing.T) {
 	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// LGTM
-	testPRs[0].Labels = []struct {
+	testSyncPoolPRs[0].Labels = []struct {
 		Name string `json:"name"`
 	}{{Name: "lgtm"}}
 	blocker.syncPRs()
@@ -50,7 +51,7 @@ func TestBlocker_syncPRs(t *testing.T) {
 	assert.Equal(t, 1, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// New PR
-	testPRs = append(testPRs, github.PullRequest{
+	testSyncPoolPRs = append(testSyncPoolPRs, github.PullRequest{
 		Number: 24,
 		Title:  "[fix] Fix bugs",
 		State:  "open",
@@ -71,7 +72,7 @@ func TestBlocker_syncPRs(t *testing.T) {
 	assert.Equal(t, 1, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// LGTM 2
-	testPRs[1].Labels = []struct {
+	testSyncPoolPRs[1].Labels = []struct {
 		Name string `json:"name"`
 	}{{Name: "lgtm"}}
 	blocker.syncPRs()
@@ -79,7 +80,7 @@ func TestBlocker_syncPRs(t *testing.T) {
 	assert.Equal(t, 2, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
 
 	// Deleted PR (closed maybe)
-	testPRs = nil
+	testSyncPoolPRs = nil
 	blocker.syncPRs()
 	assert.Equal(t, 0, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
 	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
@@ -93,7 +94,9 @@ func TestBlocker_syncPRs(t *testing.T) {
 }
 
 func syncPoolTestEnv() (client.Client, string) {
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	if _, exist := os.LookupEnv("CI"); !exist {
+		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -101,7 +104,7 @@ func syncPoolTestEnv() (client.Client, string) {
 		_, _ = w.Write([]byte(req.URL.String()))
 	})
 	r.HandleFunc("/repos/{org}/{repo}/pulls", func(w http.ResponseWriter, _ *http.Request) {
-		b, _ := json.Marshal(testPRs)
+		b, _ := json.Marshal(testSyncPoolPRs)
 		_, _ = w.Write(b)
 	})
 	testSrv := httptest.NewServer(r)
@@ -133,7 +136,7 @@ func syncPoolTestEnv() (client.Client, string) {
 		},
 	}
 
-	testPRs = []github.PullRequest{{
+	testSyncPoolPRs = []github.PullRequest{{
 		Number: 23,
 		Title:  "[feat] New feature",
 		State:  "open",
