@@ -155,7 +155,7 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 }
 
 // SetCommitStatus sets commit status for the specific commit
-func (c *Client) SetCommitStatus(sha, context string, state git.CommitStatusState, description, targetURL string) error {
+func (c *Client) SetCommitStatus(sha string, status git.CommitStatus) error {
 	var commitStatusBody CommitStatusRequest
 	var urlEncodePath = url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository)
 
@@ -165,17 +165,17 @@ func (c *Client) SetCommitStatus(sha, context string, state git.CommitStatusStat
 	}
 
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + urlEncodePath + "/statuses/" + sha
-	switch cicdv1.CommitStatusState(state) {
+	switch cicdv1.CommitStatusState(status.State) {
 	case cicdv1.CommitStatusStatePending:
 		commitStatusBody.State = "running"
 	case cicdv1.CommitStatusStateFailure, cicdv1.CommitStatusStateError:
 		commitStatusBody.State = "failed"
 	default:
-		commitStatusBody.State = string(state)
+		commitStatusBody.State = string(status.State)
 	}
-	commitStatusBody.TargetURL = targetURL
-	commitStatusBody.Description = description
-	commitStatusBody.Context = context
+	commitStatusBody.TargetURL = status.TargetURL
+	commitStatusBody.Description = status.TargetURL
+	commitStatusBody.Context = status.Context
 
 	// Cannot transition status via :run from :running
 	if _, _, err := c.requestHTTP(http.MethodPost, apiURL, commitStatusBody); err != nil && !strings.Contains(strings.ToLower(err.Error()), "cannot transition status via") {
@@ -315,6 +315,47 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 		Labels:    convertLabel(mr.Labels),
 		Mergeable: !mr.HasConflicts,
 	}, nil
+}
+
+// SetLabel sets label to the issue id
+func (c *Client) SetLabel(issueType git.IssueType, id int, label string) error {
+	var t string
+	switch issueType {
+	case git.IssueTypeIssue:
+		t = "issues"
+	case git.IssueTypePullRequest:
+		t = "merge_requests"
+	default:
+		return fmt.Errorf("issue type %s is not supported", issueType)
+	}
+
+	apiUrl := fmt.Sprintf("%s/api/v4/projects/%s/%s/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), t, id)
+
+	if _, _, err := c.requestHTTP(http.MethodPut, apiUrl, UpdateMergeRequest{AddLabels: label}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteLabel deletes label from the issue id
+func (c *Client) DeleteLabel(issueType git.IssueType, id int, label string) error {
+	var t string
+	switch issueType {
+	case git.IssueTypeIssue:
+		t = "issues"
+	case git.IssueTypePullRequest:
+		t = "merge_requests"
+	default:
+		return fmt.Errorf("issue type %s is not supported", issueType)
+	}
+
+	apiUrl := fmt.Sprintf("%s/api/v4/projects/%s/%s/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), t, id)
+
+	if _, _, err := c.requestHTTP(http.MethodPut, apiUrl, UpdateMergeRequest{RemoveLabels: label}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) getBranch(branch string) (*branchResponse, error) {

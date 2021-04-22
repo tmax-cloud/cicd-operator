@@ -125,6 +125,8 @@ type WebhookEntry struct {
 
 // CommitStatus is a commit status body
 type CommitStatus struct {
-	Context string
-	State   CommitStatusState
+	Context     string
+	State       CommitStatusState
+	Description string
+	TargetURL   string
 }

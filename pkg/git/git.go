@@ -18,7 +18,7 @@ type Client interface {
 	// Commit Status
 
 	ListCommitStatuses(ref string) ([]CommitStatus, error)
-	SetCommitStatus(sha, context string, state CommitStatusState, description, targetURL string) error
+	SetCommitStatus(sha string, status CommitStatus) error
 
 	// Users
 
@@ -33,6 +33,11 @@ type Client interface {
 
 	ListPullRequests(onlyOpen bool) ([]PullRequest, error)
 	GetPullRequest(id int) (*PullRequest, error)
+
+	// Issue Labels
+
+	SetLabel(issueType IssueType, id int, label string) error
+	DeleteLabel(issueType IssueType, id int, label string) error
 }
 
 // IssueType is a type of the issue

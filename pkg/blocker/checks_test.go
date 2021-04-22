@@ -1,29 +1,24 @@
 package blocker
 
 import (
-	"fmt"
 	"github.com/bmizerany/assert"
-	"github.com/gorilla/mux"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	gitfake "github.com/tmax-cloud/cicd-operator/pkg/git/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"net/http"
-	"net/http/httptest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"strings"
 	"testing"
 )
 
-var (
-	sampleStatusesList = "[{\"id\":1111111111,\"state\":\"pending\",\"context\":\"test-1\",\"created_at\":\"2021-04-12T08:37:32Z\",\"updated_at\":\"2021-04-12T08:37:32Z\",\"creator\":{\"login\":\"sunghyunkim3\",\"id\":1111111,\"type\":\"User\",\"site_admin\":false}}]"
-	samplePR           = "{\"id\":611161419,\"html_url\":\"https://github.com/vingsu/cicd-test/pull/25\",\"number\":25,\"state\":\"open\",\"title\":\"newnew\",\"user\":{\"login\":\"cqbqdd11519\",\"id\":6166781},\"body\":\"\",\"labels\":[{\"id\":2905890093,\"node_id\":\"MDU6TGFiZWwyOTA1ODkwMDkz\",\"url\":\"https://api.github.com/repos/vingsu/cicd-test/labels/kind/test\",\"name\":\"kind/test\",\"color\":\"CF61D3\",\"default\":false,\"description\":\"\"}],\"milestone\":null,\"draft\":false,\"head\":{\"label\":\"vingsu:newnew\",\"ref\":\"newnew\",\"sha\":\"3196ccc37bcae94852079b04fcbfaf928341d6e9\",\"user\":{\"login\":\"vingsu\",\"id\":71878727},\"repo\":{\"id\":319253224,\"node_id\":\"MDEwOlJlcG9zaXRvcnkzMTkyNTMyMjQ=\",\"name\":\"cicd-test\",\"full_name\":\"vingsu/cicd-test\",\"private\":true,\"owner\":{\"login\":\"vingsu\",\"id\":71878727},\"html_url\":\"https://github.com/vingsu/cicd-test\"}},\"base\":{\"label\":\"vingsu:master\",\"ref\":\"master\",\"sha\":\"22ccae53032027186ba739dfaa473ee61a82b298\",\"user\":{\"login\":\"vingsu\",\"id\":71878727},\"repo\":{\"id\":319253224,\"node_id\":\"MDEwOlJlcG9zaXRvcnkzMTkyNTMyMjQ=\",\"name\":\"cicd-test\",\"full_name\":\"vingsu/cicd-test\",\"private\":true,\"owner\":{\"login\":\"vingsu\",\"id\":71878727},\"html_url\":\"https://github.com/vingsu/cicd-test\"}},\"merged\":false,\"mergeable\":false}"
+const (
+	testRepo = "tmax-cloud/cicd-test"
+	testPRID = 25
+	testSHA  = "1896d4e0deaed7cda867f42935934ee13e370012"
 )
-
-var serverURL string
 
 func TestCheckConditions(t *testing.T) {
 	// Test 2
@@ -95,7 +90,7 @@ func TestCheckConditionsFull(t *testing.T) {
 	}
 
 	// Test 1
-	status, removeFromMergePool, msg, err := checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
+	status, removeFromMergePool, msg, err := checkConditionsFull(ic.Spec.MergeConfig.Query, testPRID, gitCli)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,8 +100,8 @@ func TestCheckConditionsFull(t *testing.T) {
 	assert.Equal(t, "Label [approved] is required.", msg, "Full message")
 
 	// Test 2
-	samplePR = strings.ReplaceAll(samplePR, "kind/test", "approved")
-	status, removeFromMergePool, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
+	gitfake.Repos[testRepo].PullRequests[testPRID].Labels = []git.IssueLabel{{Name: "approved"}}
+	status, removeFromMergePool, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, testPRID, gitCli)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,9 +111,9 @@ func TestCheckConditionsFull(t *testing.T) {
 	assert.Equal(t, "Merge conflicts exist. Checks [test-1] are not successful.", msg, "Full message")
 
 	// Test 3
-	samplePR = strings.ReplaceAll(samplePR, "\"mergeable\":false", "\"mergeable\":true")
-	sampleStatusesList = strings.ReplaceAll(sampleStatusesList, "pending", "success")
-	status, removeFromMergePool, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, 25, gitCli)
+	gitfake.Repos[testRepo].PullRequests[testPRID].Mergeable = true
+	gitfake.Repos[testRepo].CommitStatuses[testSHA] = []git.CommitStatus{{Context: "test-1", State: "success"}}
+	status, removeFromMergePool, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, testPRID, gitCli)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -481,23 +476,21 @@ func TestCheckChecks(t *testing.T) {
 }
 
 func checkTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
-	r := mux.NewRouter()
-	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(req.URL.String()))
-	})
-	r.HandleFunc("/repos/{org}/{repo}/commits/{sha}/statuses", func(w http.ResponseWriter, req *http.Request) {
-		page := req.URL.Query().Get("page")
-		if page == "" || page == "1" {
-			w.Header().Set("Link", fmt.Sprintf("<%s/%s?state=all&per_page=100&page=2>; rel=\"next\", <%s/%s?state=all&per_page=100&page=3>; rel=\"last\"", serverURL, req.URL.Path, serverURL, req.URL.Path))
-		}
-		_, _ = w.Write([]byte(sampleStatusesList))
-	})
-	r.HandleFunc("/repos/{org}/{repo}/pulls/{id}", func(w http.ResponseWriter, req *http.Request) {
-		_, _ = w.Write([]byte(samplePR))
-	})
-	testSrv := httptest.NewServer(r)
-	serverURL = testSrv.URL
+	gitfake.Repos = map[string]gitfake.Repo{
+		testRepo: {
+			Webhooks:     map[int]git.WebhookEntry{},
+			UserCanWrite: map[string]bool{},
+
+			PullRequests:   map[int]*git.PullRequest{},
+			CommitStatuses: map[string][]git.CommitStatus{},
+			Comments:       map[int][]git.IssueComment{},
+		},
+	}
+	gitfake.Repos[testRepo].PullRequests[testPRID] = &git.PullRequest{
+		Head:   git.Head{Sha: testSHA},
+		Labels: []git.IssueLabel{{Name: "kind/bug"}},
+	}
+	gitfake.Repos[testRepo].CommitStatuses[testSHA] = nil
 
 	s := runtime.NewScheme()
 	utilruntime.Must(cicdv1.AddToScheme(s))
@@ -509,9 +502,8 @@ func checkTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
 		},
 		Spec: cicdv1.IntegrationConfigSpec{
 			Git: cicdv1.GitConfig{
-				Type:       "github",
-				Repository: "tmax-cloud/cicd-test",
-				APIUrl:     serverURL,
+				Type:       cicdv1.GitTypeFake,
+				Repository: testRepo,
 				Token:      &cicdv1.GitToken{Value: "dummy"},
 			},
 			MergeConfig: &cicdv1.MergeConfig{

@@ -2,18 +2,13 @@ package blocker
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"github.com/bmizerany/assert"
-	"github.com/gorilla/mux"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
+	gitfake "github.com/tmax-cloud/cicd-operator/pkg/git/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,68 +17,61 @@ import (
 	"testing"
 )
 
-var testSyncPoolPRs []github.PullRequest
-
 func TestBlocker_syncPRs(t *testing.T) {
-	fakeCli, repoURL := syncPoolTestEnv()
+	fakeCli, ic := syncPoolTestEnv()
 	blocker := New(fakeCli)
 	pools := blocker.Pools
 
 	// Initial
 	blocker.syncPRs()
-	assert.Equal(t, 1, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
-	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
+	assert.Equal(t, 1, len(pools[genPoolKey(ic)].PullRequests), "PRList length")
+	assert.Equal(t, 0, len(pools[genPoolKey(ic)].MergePool[git.CommitStatusStatePending]), "Pending merge pool length")
 
 	// Hold
-	testSyncPoolPRs[0].Labels = append(testSyncPoolPRs[0].Labels, struct {
-		Name string `json:"name"`
-	}{Name: "hold"})
+	gitfake.Repos[testRepo].PullRequests[testPRID].Labels = append(gitfake.Repos[testRepo].PullRequests[testPRID].Labels, git.IssueLabel{Name: "hold"})
 	blocker.syncPRs()
-	assert.Equal(t, 1, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
-	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
+	assert.Equal(t, 1, len(pools[genPoolKey(ic)].PullRequests), "PRList length")
+	assert.Equal(t, 0, len(pools[genPoolKey(ic)].MergePool[git.CommitStatusStatePending]), "Pending merge pool length")
 
 	// LGTM
-	testSyncPoolPRs[0].Labels = []struct {
-		Name string `json:"name"`
-	}{{Name: "lgtm"}}
+	if err := gitfake.DeleteLabel(testRepo, testPRID, "hold"); err != nil {
+		t.Fatal(err)
+	}
+
+	gitfake.Repos[testRepo].PullRequests[testPRID].Labels = append(gitfake.Repos[testRepo].PullRequests[testPRID].Labels, git.IssueLabel{Name: "lgtm"})
 	blocker.syncPRs()
-	assert.Equal(t, 1, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
-	assert.Equal(t, 1, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
+	assert.Equal(t, 1, len(pools[genPoolKey(ic)].PullRequests), "PRList length")
+	assert.Equal(t, 1, len(pools[genPoolKey(ic)].MergePool[git.CommitStatusStatePending]), "Pending merge pool length")
 
 	// New PR
-	testSyncPoolPRs = append(testSyncPoolPRs, github.PullRequest{
-		Number: 24,
+	newPRID := 24
+	gitfake.Repos[testRepo].PullRequests[newPRID] = &git.PullRequest{
+		ID:     newPRID,
 		Title:  "[fix] Fix bugs",
 		State:  "open",
-		User:   github.User{Name: "test"},
-		Base: struct {
-			Ref string `json:"ref"`
-			Sha string `json:"sha"`
-		}{Ref: "master"},
-		Labels: []struct {
-			Name string `json:"name"`
-		}{
+		Sender: git.User{Name: "test"},
+		Base:   git.Base{Ref: "master"},
+		Labels: []git.IssueLabel{
 			{Name: "kind/bug"},
 			{Name: "size/L"},
 		},
-	})
+	}
 	blocker.syncPRs()
-	assert.Equal(t, 2, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
-	assert.Equal(t, 1, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
+	assert.Equal(t, 2, len(pools[genPoolKey(ic)].PullRequests), "PRList length")
+	assert.Equal(t, 1, len(pools[genPoolKey(ic)].MergePool[git.CommitStatusStatePending]), "Pending merge pool length")
 
 	// LGTM 2
-	testSyncPoolPRs[1].Labels = []struct {
-		Name string `json:"name"`
-	}{{Name: "lgtm"}}
+	gitfake.Repos[testRepo].PullRequests[newPRID].Labels = []git.IssueLabel{{Name: "lgtm"}}
 	blocker.syncPRs()
-	assert.Equal(t, 2, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
-	assert.Equal(t, 2, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
+	assert.Equal(t, 2, len(pools[genPoolKey(ic)].PullRequests), "PRList length")
+	assert.Equal(t, 2, len(pools[genPoolKey(ic)].MergePool[git.CommitStatusStatePending]), "Pending merge pool length")
 
 	// Deleted PR (closed maybe)
-	testSyncPoolPRs = nil
+	delete(gitfake.Repos[testRepo].PullRequests, testPRID)
+	delete(gitfake.Repos[testRepo].PullRequests, newPRID)
 	blocker.syncPRs()
-	assert.Equal(t, 0, len(pools[poolKey(repoURL)].PullRequests), "PRList length")
-	assert.Equal(t, 0, len(pools[poolKey(repoURL)].MergePool[git.CommitStatusStatePending]), "Unknown merge pool length")
+	assert.Equal(t, 0, len(pools[genPoolKey(ic)].PullRequests), "PRList length")
+	assert.Equal(t, 0, len(pools[genPoolKey(ic)].MergePool[git.CommitStatusStatePending]), "Pending merge pool length")
 
 	// Deleted ic
 	if err := fakeCli.Delete(context.Background(), &cicdv1.IntegrationConfig{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"}}); err != nil {
@@ -93,21 +81,33 @@ func TestBlocker_syncPRs(t *testing.T) {
 	assert.Equal(t, 0, len(pools), "IC length")
 }
 
-func syncPoolTestEnv() (client.Client, string) {
+func syncPoolTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
 	if _, exist := os.LookupEnv("CI"); !exist {
 		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	}
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(req.URL.String()))
-	})
-	r.HandleFunc("/repos/{org}/{repo}/pulls", func(w http.ResponseWriter, _ *http.Request) {
-		b, _ := json.Marshal(testSyncPoolPRs)
-		_, _ = w.Write(b)
-	})
-	testSrv := httptest.NewServer(r)
+	gitfake.Repos = map[string]gitfake.Repo{
+		testRepo: {
+			Webhooks:     map[int]git.WebhookEntry{},
+			UserCanWrite: map[string]bool{},
+
+			PullRequests:   map[int]*git.PullRequest{},
+			CommitStatuses: map[string][]git.CommitStatus{},
+			Comments:       map[int][]git.IssueComment{},
+		},
+	}
+
+	gitfake.Repos[testRepo].PullRequests[testPRID] = &git.PullRequest{
+		ID:     testPRID,
+		Title:  "[feat] New feature",
+		State:  "open",
+		Sender: git.User{Name: "test"},
+		Base:   git.Base{Ref: "master"},
+		Labels: []git.IssueLabel{
+			{Name: "kind/feat"},
+			{Name: "size/L"},
+		},
+	}
 
 	s := runtime.NewScheme()
 	utilruntime.Must(cicdv1.AddToScheme(s))
@@ -119,9 +119,8 @@ func syncPoolTestEnv() (client.Client, string) {
 		},
 		Spec: cicdv1.IntegrationConfigSpec{
 			Git: cicdv1.GitConfig{
-				Type:       "github",
-				Repository: "tmax-cloud/cicd-operator",
-				APIUrl:     testSrv.URL,
+				Type:       cicdv1.GitTypeFake,
+				Repository: testRepo,
 				Token:      &cicdv1.GitToken{Value: "dummy"},
 			},
 			MergeConfig: &cicdv1.MergeConfig{
@@ -136,23 +135,5 @@ func syncPoolTestEnv() (client.Client, string) {
 		},
 	}
 
-	testSyncPoolPRs = []github.PullRequest{{
-		Number: 23,
-		Title:  "[feat] New feature",
-		State:  "open",
-		User:   github.User{Name: "test"},
-		Draft:  false,
-		Base: struct {
-			Ref string `json:"ref"`
-			Sha string `json:"sha"`
-		}{Ref: "master"},
-		Labels: []struct {
-			Name string `json:"name"`
-		}{
-			{Name: "kind/feat"},
-			{Name: "size/L"},
-		},
-	}}
-
-	return fake.NewFakeClientWithScheme(s, ic), fmt.Sprintf("%s/%s", testSrv.URL, ic.Spec.Git.Repository)
+	return fake.NewFakeClientWithScheme(s, ic), ic
 }

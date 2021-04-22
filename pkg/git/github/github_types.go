@@ -30,3 +30,8 @@ type CommitStatusResponse struct {
 type CommentBody struct {
 	Body string `json:"body"`
 }
+
+// LabelBody is a body structure for setting a label to issues/prs
+type LabelBody struct {
+	Name string `json:"name"`
+}

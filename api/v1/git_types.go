@@ -83,6 +83,7 @@ type GitType string
 const (
 	GitTypeGitHub = GitType("github")
 	GitTypeGitLab = GitType("gitlab")
+	GitTypeFake   = GitType("fake")
 )
 
 // GitRef is a git reference type
