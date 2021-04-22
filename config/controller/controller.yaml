@@ -73,7 +73,7 @@ spec:
     spec:
       containers:
       - command:
-        - /manager
+        - /controller
         image: tmaxcloudck/cicd-operator:latest
         imagePullPolicy: Always
         name: manager

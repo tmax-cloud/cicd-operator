@@ -117,7 +117,7 @@ func (c *Client) parsePullRequestReviewWebhook(jsonString []byte) (*git.Webhook,
 		sender = &git.User{Name: review.Sender.Name, ID: review.Sender.ID}
 	}
 
-	return &git.Webhook{EventType: git.EventTypeIssueComment, Repo: git.Repository{
+	return &git.Webhook{EventType: git.EventTypePullRequestReview, Repo: git.Repository{
 		Name: review.Repo.Name,
 		URL:  review.Repo.URL,
 	}, IssueComment: &git.IssueComment{
@@ -125,6 +125,7 @@ func (c *Client) parsePullRequestReviewWebhook(jsonString []byte) (*git.Webhook,
 			Body:      review.Review.Body,
 			CreatedAt: review.Review.SubmittedAt,
 		},
+		ReviewState: git.PullRequestReviewState(review.Review.State),
 		Issue: git.Issue{
 			PullRequest: convertPullRequestToShared(&review.PullRequest),
 		},
@@ -149,7 +150,7 @@ func (c *Client) parsePullRequestReviewCommentWebhook(jsonString []byte) (*git.W
 		sender = &git.User{Name: reviewComment.Sender.Name, ID: reviewComment.Sender.ID}
 	}
 
-	return &git.Webhook{EventType: git.EventTypeIssueComment, Repo: git.Repository{
+	return &git.Webhook{EventType: git.EventTypePullRequestReviewComment, Repo: git.Repository{
 		Name: reviewComment.Repo.Name,
 		URL:  reviewComment.Repo.URL,
 	}, IssueComment: &git.IssueComment{

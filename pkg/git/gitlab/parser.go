@@ -38,6 +38,8 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 		} else if data.Changes.Labels != nil {
 			action = git.PullRequestActionLabeled // Maybe unlabeled... but doesn't matter
 		}
+	case "approved", "unapproved":
+		return c.parsePullRequestReviewWebhook(data)
 	}
 	state := git.PullRequestState(data.ObjectAttribute.State)
 	switch string(state) {
@@ -139,9 +141,65 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 			PullRequest: pr,
 		},
 		Sender: git.User{
-			ID:    data.ObjectAttributes.AuthorID,
+			ID:    data.User.ID,
 			Name:  data.User.Name,
 			Email: data.User.Email,
 		},
 	}}, nil
+}
+
+func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.Webhook, error) {
+	state := git.PullRequestState(data.ObjectAttribute.State)
+	switch string(state) {
+	case "opened":
+		state = git.PullRequestStateOpen
+	case "closed":
+		state = git.PullRequestStateClosed
+	}
+
+	// Get User info
+	mrAuthor, err := c.GetUserInfo(strconv.Itoa(data.ObjectAttribute.AuthorID))
+	if err != nil {
+		mrAuthor = &git.User{ID: data.ObjectAttribute.AuthorID}
+	}
+	// Get Target branch
+	baseBranch, err := c.getBranch(data.ObjectAttribute.BaseRef)
+	if err != nil {
+		return nil, err
+	}
+
+	reviewState := git.PullRequestReviewState(data.ObjectAttribute.Action)
+	switch reviewState {
+	case "approved":
+		reviewState = git.PullRequestReviewStateApproved
+	case "unapproved":
+		reviewState = git.PullRequestReviewStateUnapproved
+	}
+
+	return &git.Webhook{
+		EventType: git.EventTypePullRequestReview,
+		Repo: git.Repository{
+			Name: data.Project.Name,
+			URL:  data.Project.WebURL,
+		},
+		IssueComment: &git.IssueComment{
+			ReviewState: reviewState,
+			Issue: git.Issue{
+				PullRequest: &git.PullRequest{
+					ID:     data.ObjectAttribute.ID,
+					Title:  data.ObjectAttribute.Title,
+					Sender: *mrAuthor,
+					URL:    data.Project.WebURL,
+					Base:   git.Base{Ref: data.ObjectAttribute.BaseRef, Sha: baseBranch.Commit.ID},
+					Head:   git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha},
+					State:  state,
+				},
+			},
+			Sender: git.User{
+				ID:    data.User.ID,
+				Name:  data.User.Name,
+				Email: data.User.Email,
+			},
+		},
+	}, nil
 }

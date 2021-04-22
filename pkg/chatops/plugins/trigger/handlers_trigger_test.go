@@ -1,11 +1,11 @@
-package chatops
+package trigger
 
 import (
 	"context"
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	"github.com/tmax-cloud/cicd-operator/pkg/server"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -24,34 +24,35 @@ const (
 	testUserEmail = "test@test.com"
 )
 
-func TestChatOps_Handle(t *testing.T) {
+func TestChatOps_handleTrigger(t *testing.T) {
 	s := runtime.NewScheme()
 	utilruntime.Must(cicdv1.AddToScheme(s))
 
 	ic := buildTestJobs()
-	wh := buildTestWebhook()
+	wh := buildTestWebhookForTrigger()
 
 	fakeCli := fake.NewFakeClientWithScheme(s, ic)
-	chatOps := New(fakeCli)
+
+	handler := &Handler{Client: fakeCli}
 
 	// /retest
-	testJob(t, chatOps, fakeCli, wh, ic, "/retest", func(ij *cicdv1.IntegrationJob) {
+	testJobTrigger(t, handler, fakeCli, wh, ic, chatops.Command{Type: "retest"}, func(ij *cicdv1.IntegrationJob) {
 		assert.Equal(t, 6, len(ij.Spec.Jobs))
 	})
 
 	// /test
-	testJob(t, chatOps, fakeCli, wh, ic, "/test", func(ij *cicdv1.IntegrationJob) {
+	testJobTrigger(t, handler, fakeCli, wh, ic, chatops.Command{Type: "test"}, func(ij *cicdv1.IntegrationJob) {
 		assert.Equal(t, 6, len(ij.Spec.Jobs))
 	})
 
 	// /test a-1
-	testJob(t, chatOps, fakeCli, wh, ic, "/test a-1", func(ij *cicdv1.IntegrationJob) {
+	testJobTrigger(t, handler, fakeCli, wh, ic, chatops.Command{Type: "test", Args: []string{"a-1"}}, func(ij *cicdv1.IntegrationJob) {
 		assert.Equal(t, 1, len(ij.Spec.Jobs))
 		assert.Equal(t, "a-1", ij.Spec.Jobs[0].Name)
 	})
 
 	// /test a-2
-	testJob(t, chatOps, fakeCli, wh, ic, "/test a-2", func(ij *cicdv1.IntegrationJob) {
+	testJobTrigger(t, handler, fakeCli, wh, ic, chatops.Command{Type: "test", Args: []string{"a-2"}}, func(ij *cicdv1.IntegrationJob) {
 		assert.Equal(t, 2, len(ij.Spec.Jobs))
 		assert.Equal(t, "a-1", ij.Spec.Jobs[0].Name)
 		assert.Equal(t, "a-2", ij.Spec.Jobs[1].Name)
@@ -60,7 +61,7 @@ func TestChatOps_Handle(t *testing.T) {
 	})
 
 	// /test b-2
-	testJob(t, chatOps, fakeCli, wh, ic, "/test b-2", func(ij *cicdv1.IntegrationJob) {
+	testJobTrigger(t, handler, fakeCli, wh, ic, chatops.Command{Type: "test", Args: []string{"b-2"}}, func(ij *cicdv1.IntegrationJob) {
 		assert.Equal(t, 2, len(ij.Spec.Jobs))
 		assert.Equal(t, "b-1", ij.Spec.Jobs[0].Name)
 		assert.Equal(t, "b-2", ij.Spec.Jobs[1].Name)
@@ -69,7 +70,7 @@ func TestChatOps_Handle(t *testing.T) {
 	})
 
 	// /test a-4
-	testJob(t, chatOps, fakeCli, wh, ic, "/test a-4", func(ij *cicdv1.IntegrationJob) {
+	testJobTrigger(t, handler, fakeCli, wh, ic, chatops.Command{Type: "test", Args: []string{"a-4"}}, func(ij *cicdv1.IntegrationJob) {
 		assert.Equal(t, 4, len(ij.Spec.Jobs))
 		assert.Equal(t, "a-1", ij.Spec.Jobs[0].Name)
 		assert.Equal(t, "a-2", ij.Spec.Jobs[1].Name)
@@ -85,12 +86,11 @@ func TestChatOps_Handle(t *testing.T) {
 	})
 }
 
-type verifier func(ij *cicdv1.IntegrationJob)
+type testTriggerVerifier func(ij *cicdv1.IntegrationJob)
 
-func testJob(t *testing.T, chatOps server.Plugin, fakeCli client.Client, wh *git.Webhook, ic *cicdv1.IntegrationConfig, command string, verifyFunc verifier) {
+func testJobTrigger(t *testing.T, handler *Handler, fakeCli client.Client, wh *git.Webhook, ic *cicdv1.IntegrationConfig, command chatops.Command, verifyFunc testTriggerVerifier) {
 	var ijList cicdv1.IntegrationJobList
-	wh.IssueComment.Comment.Body = command
-	if err := chatOps.Handle(wh, ic); err != nil {
+	if err := handler.HandleChatOps(command, wh, ic); err != nil {
 		t.Fatal(err)
 	}
 	if err := fakeCli.List(context.Background(), &ijList); err != nil {
@@ -149,7 +149,7 @@ func buildTestJobs() *cicdv1.IntegrationConfig {
 	return ic
 }
 
-func buildTestWebhook() *git.Webhook {
+func buildTestWebhookForTrigger() *git.Webhook {
 	return &git.Webhook{
 		EventType: git.EventTypeIssueComment,
 		Repo: git.Repository{

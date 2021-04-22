@@ -104,17 +104,20 @@ compare-sha-gen:
 	@if [ "${GENSHA_AFTER}" = "${GENSHA}" ]; then echo "zz_generated.deepcopy.go is not changed"; else echo "zz_generated.deepcopy.go file is changed"; exit 1; fi
 
 save-sha-crd:
-	$(eval CRDSHA1=$(shell sha512sum config/crd/bases/cicd.tmax.io_integrationconfigs.yaml))
-	$(eval CRDSHA2=$(shell sha512sum config/crd/bases/cicd.tmax.io_integrationjobs.yaml))
-	$(eval CRDSHA3=$(shell sha512sum config/release.yaml))
+	$(eval CRDSHA1=$(shell sha512sum config/crd/cicd.tmax.io_integrationconfigs.yaml))
+	$(eval CRDSHA2=$(shell sha512sum config/crd/cicd.tmax.io_integrationjobs.yaml))
+	$(eval CRDSHA3=$(shell sha512sum config/crd/cicd.tmax.io_approvals.yaml))
+	$(eval CRDSHA4=$(shell sha512sum config/release.yaml))
 
 compare-sha-crd:
-	$(eval CRDSHA1_AFTER=$(shell sha512sum config/crd/bases/cicd.tmax.io_integrationconfigs.yaml))
-	$(eval CRDSHA2_AFTER=$(shell sha512sum config/crd/bases/cicd.tmax.io_integrationjobs.yaml))
-	$(eval CRDSHA3_AFTER=$(shell sha512sum config/release.yaml))
+	$(eval CRDSHA1_AFTER=$(shell sha512sum config/crd/cicd.tmax.io_integrationconfigs.yaml))
+	$(eval CRDSHA2_AFTER=$(shell sha512sum config/crd/cicd.tmax.io_integrationjobs.yaml))
+	$(eval CRDSHA3_AFTER=$(shell sha512sum config/crd/cicd.tmax.io_approvals.yaml))
+	$(eval CRDSHA4_AFTER=$(shell sha512sum config/release.yaml))
 	@if [ "${CRDSHA1_AFTER}" = "${CRDSHA1}" ]; then echo "cicd.tmax.io_integrationconfigs.yaml is not changed"; else echo "cicd.tmax.io_integrationconfigs.yaml file is changed"; exit 1; fi
 	@if [ "${CRDSHA2_AFTER}" = "${CRDSHA2}" ]; then echo "cicd.tmax.io_integrationjobs.yaml is not changed"; else echo "cicd.tmax.io_integrationjobs.yaml file is changed"; exit 1; fi
-	@if [ "${CRDSHA3_AFTER}" = "${CRDSHA3}" ]; then echo "config/release.yaml is not changed"; else echo "config/release.yaml file is changed"; exit 1; fi
+	@if [ "${CRDSHA3_AFTER}" = "${CRDSHA3}" ]; then echo "cicd.tmax.io_approvals.yaml is not changed"; else echo "cicd.tmax.io_approvals.yaml file is changed"; exit 1; fi
+	@if [ "${CRDSHA4_AFTER}" = "${CRDSHA4}" ]; then echo "config/release.yaml is not changed"; else echo "config/release.yaml file is changed"; exit 1; fi
 
 save-sha-mod:
 	$(eval MODSHA=$(shell sha512sum go.mod))
