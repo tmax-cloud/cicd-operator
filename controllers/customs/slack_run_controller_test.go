@@ -92,10 +92,6 @@ func TestSlackRunHandler_Handle(t *testing.T) {
 		t.Fatal("cond is nil")
 	}
 
-	t.Log(cond.Status)
-	t.Log(cond.Reason)
-	t.Log(cond.Message)
-
 	assert.Equal(t, corev1.ConditionTrue, cond.Status)
 	assert.Equal(t, "SentSlack", cond.Reason)
 	assert.Equal(t, "", cond.Message)

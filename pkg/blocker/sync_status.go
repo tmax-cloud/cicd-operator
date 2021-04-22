@@ -112,7 +112,7 @@ func (b *blocker) reportCommitStatus(pool *PRPool, ic *cicdv1.IntegrationConfig,
 			pr.blockerCacheDirty = false
 			blockerURL := "" // TODO
 			log.Info(fmt.Sprintf("Setting commit status %s:%s:%s to %s's %s", blockerContext, pr.BlockerStatus, pr.BlockerDescription, pool.NamespacedName.String(), pr.Head.Sha))
-			if err := gitCli.SetCommitStatus(pr.Head.Sha, blockerContext, pr.BlockerStatus, pr.BlockerDescription, blockerURL); err != nil {
+			if err := gitCli.SetCommitStatus(pr.Head.Sha, git.CommitStatus{Context: blockerContext, State: pr.BlockerStatus, Description: pr.BlockerDescription, TargetURL: blockerURL}); err != nil {
 				log.Error(err, "")
 				continue
 			}

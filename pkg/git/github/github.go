@@ -148,7 +148,7 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 }
 
 // SetCommitStatus sets commit status for the specific commit
-func (c *Client) SetCommitStatus(sha, context string, state git.CommitStatusState, description, targetURL string) error {
+func (c *Client) SetCommitStatus(sha string, status git.CommitStatus) error {
 	var commitStatusBody CommitStatusRequest
 
 	// Don't set commit status if its' sha is a fake
@@ -158,10 +158,10 @@ func (c *Client) SetCommitStatus(sha, context string, state git.CommitStatusStat
 
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/statuses/" + sha
 
-	commitStatusBody.State = string(state)
-	commitStatusBody.TargetURL = targetURL
-	commitStatusBody.Description = description
-	commitStatusBody.Context = context
+	commitStatusBody.State = string(status.State)
+	commitStatusBody.TargetURL = status.TargetURL
+	commitStatusBody.Description = status.Description
+	commitStatusBody.Context = status.Context
 
 	if _, _, err := c.requestHTTP(http.MethodPost, apiURL, commitStatusBody); err != nil {
 		return err
@@ -263,6 +263,30 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 	}
 
 	return convertPullRequestToShared(pr), nil
+}
+
+// SetLabel sets label to the issue id
+func (c *Client) SetLabel(_ git.IssueType, id int, label string) error {
+	apiURL := fmt.Sprintf("%s/repos/%s/issues/%d/labels", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
+
+	_, _, err := c.requestHTTP(http.MethodPost, apiURL, []LabelBody{{Name: label}})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteLabel deletes label from the issue id
+func (c *Client) DeleteLabel(_ git.IssueType, id int, label string) error {
+	apiURL := fmt.Sprintf("%s/repos/%s/issues/%d/labels/%s", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id, label)
+
+	_, _, err := c.requestHTTP(http.MethodDelete, apiURL, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {

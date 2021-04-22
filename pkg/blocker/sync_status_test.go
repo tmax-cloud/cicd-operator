@@ -1,18 +1,13 @@
 package blocker
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/bmizerany/assert"
-	"github.com/gorilla/mux"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
+	gitfake "github.com/tmax-cloud/cicd-operator/pkg/git/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,21 +16,8 @@ import (
 	"testing"
 )
 
-var testSyncStatusPR = github.PullRequest{
-	Head: struct {
-		Ref string `json:"ref"`
-		Sha string `json:"sha"`
-	}{Ref: "newnew", Sha: git.FakeSha},
-	Base: struct {
-		Ref string `json:"ref"`
-		Sha string `json:"sha"`
-	}{Ref: "master", Sha: git.FakeSha},
-	Mergeable: true,
-}
-var testSyncStatusStatuses []github.CommitStatusResponse
-
 func TestBlocker_syncMergePoolStatus(t *testing.T) {
-	fakeCli, ic, _ := syncStatusTestEnv()
+	fakeCli, ic := syncStatusTestEnv()
 	blocker := New(fakeCli)
 
 	key := genPoolKey(ic)
@@ -60,6 +42,7 @@ func TestBlocker_syncMergePoolStatus(t *testing.T) {
 	}
 	pool.PullRequests[25] = pr
 	pool.MergePool[git.CommitStatusStatePending][25] = pr
+	gitfake.Repos[testRepo].CommitStatuses[testSHA] = []git.CommitStatus{{Context: ""}}
 
 	// Test 1
 	blocker.syncMergePoolStatus()
@@ -69,11 +52,12 @@ func TestBlocker_syncMergePoolStatus(t *testing.T) {
 	assert.Equal(t, "Label [approved,lgtm] is required.", pool.PullRequests[25].BlockerDescription, "Blocker status description")
 
 	// Test 2
-	testSyncStatusPR.Mergeable = false
-	testSyncStatusPR.Labels = []struct {
-		Name string `json:"name"`
-	}{{Name: "lgtm"}, {Name: "approved"}}
-	pool.MergePool[git.CommitStatusStatePending][25] = pr
+	gitfake.Repos[testRepo].PullRequests[testPRID].Mergeable = false
+	gitfake.Repos[testRepo].PullRequests[testPRID].Labels = []git.IssueLabel{
+		{Name: "lgtm"},
+		{Name: "approved"},
+	}
+	pool.MergePool[git.CommitStatusStatePending][testPRID] = pr
 	blocker.syncMergePoolStatus()
 	assert.Equal(t, 1, len(pool.PullRequests), "PR length")
 	assert.Equal(t, 1, len(pool.MergePool[git.CommitStatusStatePending]), "Pending length")
@@ -81,9 +65,9 @@ func TestBlocker_syncMergePoolStatus(t *testing.T) {
 	assert.Equal(t, "Merge conflicts exist. Checks [test-unit] are not successful.", pool.PullRequests[25].BlockerDescription, "Blocker status description")
 
 	// Test 3
-	testSyncStatusPR.Mergeable = true
-	testSyncStatusStatuses = append(testSyncStatusStatuses, github.CommitStatusResponse{Context: "test-unit", State: "success"})
-	pool.MergePool[git.CommitStatusStatePending][25] = pr
+	gitfake.Repos[testRepo].PullRequests[testPRID].Mergeable = true
+	gitfake.Repos[testRepo].CommitStatuses[testSHA] = []git.CommitStatus{{Context: "test-unit", State: "success"}}
+	pool.MergePool[git.CommitStatusStatePending][testPRID] = pr
 	blocker.syncMergePoolStatus()
 	assert.Equal(t, 1, len(pool.PullRequests), "PR length")
 	assert.Equal(t, 0, len(pool.MergePool[git.CommitStatusStatePending]), "Pending length")
@@ -91,26 +75,28 @@ func TestBlocker_syncMergePoolStatus(t *testing.T) {
 	assert.Equal(t, "In merge pool.", pool.PullRequests[25].BlockerDescription, "Blocker status description")
 }
 
-func syncStatusTestEnv() (client.Client, *cicdv1.IntegrationConfig, string) {
+func syncStatusTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
 	if _, exist := os.LookupEnv("CI"); !exist {
 		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	}
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(req.URL.String()))
-	})
-	r.HandleFunc("/repos/{org}/{repo}/pulls/{id}", func(w http.ResponseWriter, _ *http.Request) {
-		b, _ := json.Marshal(testSyncStatusPR)
-		_, _ = w.Write(b)
-	})
-	r.HandleFunc("/repos/{org}/{repos}/commits/{sha}/statuses", func(w http.ResponseWriter, req *http.Request) {
-		b, _ := json.Marshal(testSyncStatusStatuses)
-		_, _ = w.Write(b)
-	})
-	r.HandleFunc("/repos/{org}/{repos}/statuses/{sha}", func(_ http.ResponseWriter, _ *http.Request) {})
-	testSrv := httptest.NewServer(r)
+	gitfake.Repos = map[string]gitfake.Repo{
+		testRepo: {
+			Webhooks:     map[int]git.WebhookEntry{},
+			UserCanWrite: map[string]bool{},
+
+			PullRequests: map[int]*git.PullRequest{
+				testPRID: {
+					ID:        testPRID,
+					Head:      git.Head{Ref: "newnew", Sha: testSHA},
+					Base:      git.Base{Ref: "master", Sha: git.FakeSha},
+					Mergeable: true,
+				},
+			},
+			CommitStatuses: map[string][]git.CommitStatus{},
+			Comments:       map[int][]git.IssueComment{},
+		},
+	}
 
 	s := runtime.NewScheme()
 	utilruntime.Must(cicdv1.AddToScheme(s))
@@ -122,9 +108,8 @@ func syncStatusTestEnv() (client.Client, *cicdv1.IntegrationConfig, string) {
 		},
 		Spec: cicdv1.IntegrationConfigSpec{
 			Git: cicdv1.GitConfig{
-				Type:       "github",
-				Repository: "tmax-cloud/cicd-operator",
-				APIUrl:     testSrv.URL,
+				Type:       cicdv1.GitTypeFake,
+				Repository: testRepo,
 				Token:      &cicdv1.GitToken{Value: "dummy"},
 			},
 			MergeConfig: &cicdv1.MergeConfig{
@@ -140,5 +125,5 @@ func syncStatusTestEnv() (client.Client, *cicdv1.IntegrationConfig, string) {
 		},
 	}
 
-	return fake.NewFakeClientWithScheme(s, ic), ic, fmt.Sprintf("%s/%s", testSrv.URL, ic.Spec.Git.Repository)
+	return fake.NewFakeClientWithScheme(s, ic), ic
 }

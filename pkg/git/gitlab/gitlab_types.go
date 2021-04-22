@@ -32,6 +32,12 @@ type CommentBody struct {
 	Body string `json:"body"`
 }
 
+// UpdateMergeRequest is a struct to update a merge request
+type UpdateMergeRequest struct {
+	AddLabels    string `json:"add_labels"`
+	RemoveLabels string `json:"remove_labels"`
+}
+
 // MergeRequest is a body struct of a merge request
 type MergeRequest struct {
 	ID     int    `json:"iid"`

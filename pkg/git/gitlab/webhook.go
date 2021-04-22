@@ -46,7 +46,7 @@ type NoteHook struct {
 		UpdatedAt gitlabTime `json:"updated_at"`
 	} `json:"object_attributes"`
 	MergeRequest struct {
-		ID           int    `json:"id"`
+		ID           int    `json:"iid"`
 		Title        string `json:"title"`
 		State        string `json:"state"`
 		URL          string `json:"url"`

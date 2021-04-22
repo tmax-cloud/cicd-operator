@@ -403,7 +403,7 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 				sha = job.Spec.Refs.Pull.Sha
 			}
 			log.Info(fmt.Sprintf("Setting commit status %s:%s to %s's %s", j.Name, j.State, cfg.Spec.Git.Repository, sha))
-			if err := gitCli.SetCommitStatus(sha, j.Name, git.CommitStatusState(j.State), msg, job.GetReportServerAddress(j.Name)); err != nil {
+			if err := gitCli.SetCommitStatus(sha, git.CommitStatus{Context: j.Name, State: git.CommitStatusState(j.State), Description: msg, TargetURL: job.GetReportServerAddress(j.Name)}); err != nil {
 				log.Error(err, "")
 			}
 		}
