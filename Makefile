@@ -1,16 +1,6 @@
 # Current Operator version
 VERSION ?= v0.2.3
 REGISTRY ?= tmaxcloudck
-# Default bundle image tag
-BUNDLE_IMG ?= controller-bundle:$(VERSION)
-# Options for 'bundle-build'
-ifneq ($(origin CHANNELS), undefined)
-BUNDLE_CHANNELS := --channels=$(CHANNELS)
-endif
-ifneq ($(origin DEFAULT_CHANNEL), undefined)
-BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
-endif
-BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
 IMG ?= $(REGISTRY)/cicd-operator:$(VERSION)
@@ -24,18 +14,14 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+all: controller cicdctl
 
 # Run tests
-ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
-test: generate fmt vet manifests
-	mkdir -p $(ENVTEST_ASSETS_DIR)
-	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+test: test-crd test-gen test-verify test-unit test-lint
 
-# Build manager binary
-manager: generate fmt vet
-	go build -o bin/manager main.go
+# Build controller binary
+controller: generate fmt vet
+	go build -o bin/controller cmd/controller/main.go
 
 # Build cicdctl binary
 cicdctl:
@@ -48,22 +34,9 @@ run: generate fmt vet manifests
 run-cicdctl:
 	go run cmd/cicdctl/main.go $(RUN_ARGS)
 
-# Install CRDs into a cluster
-install: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
-
-# Uninstall CRDs from a cluster
-uninstall: manifests kustomize
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
-
-# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
-
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=cicd-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=cicd-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd
 	./hack/release-manifest.sh $(VERSION)
 
 # Run go fmt against code
@@ -79,8 +52,8 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-docker-build: test
-	docker build . -t ${IMG}
+docker-build:
+	docker build . -f build/controller/Dockerfile -t ${IMG}
 
 # Push the docker image
 docker-push:
@@ -102,35 +75,6 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
-
-kustomize:
-ifeq (, $(shell which kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
-endif
-
-# Generate bundle manifests and metadata, then validate generated files.
-.PHONY: bundle
-bundle: manifests
-	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
-	operator-sdk bundle validate ./bundle
-
-# Build the bundle image.
-.PHONY: bundle-build
-bundle-build:
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
-
 
 # Custom targets for CI/CD operator
 .PHONY: test-gen test-crd test-verify test-lint test-unit
