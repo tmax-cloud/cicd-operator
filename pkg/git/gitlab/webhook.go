@@ -5,8 +5,9 @@ type MergeRequestWebhook struct {
 	Kind            string `json:"kind"`
 	User            User   `json:"user"`
 	ObjectAttribute struct {
+		AuthorID   int    `json:"author_id"`
 		Title      string `json:"title"`
-		ID         int    `json:"id"`
+		ID         int    `json:"iid"`
 		BaseRef    string `json:"target_branch"`
 		HeadRef    string `json:"source_branch"`
 		LastCommit struct {
@@ -67,6 +68,7 @@ type Project struct {
 
 // User is a user who triggered merge request event
 type User struct {
+	ID    int    `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
 }

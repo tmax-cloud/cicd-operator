@@ -11,6 +11,9 @@ type PullRequestState string
 // PullRequestAction is an action of the pull request event
 type PullRequestAction string
 
+// PullRequestReviewState is a state of the pr's review
+type PullRequestReviewState string
+
 // Event Types
 const (
 	EventTypePullRequest              = EventType("pull_request")
@@ -34,6 +37,12 @@ const (
 	PullRequestActionSynchronize = PullRequestAction("synchronize")
 	PullRequestActionLabeled     = PullRequestAction("labeled")
 	PullRequestActionUnlabeled   = PullRequestAction("unlabeled")
+)
+
+// Pull Request review state
+const (
+	PullRequestReviewStateApproved   = PullRequestReviewState("approved")
+	PullRequestReviewStateUnapproved = PullRequestReviewState("changes_requested")
 )
 
 // Webhook is a common structure for git webhooks
@@ -70,9 +79,10 @@ type PullRequest struct {
 
 // IssueComment is a common structure for issue comment
 type IssueComment struct {
-	Comment Comment
-	Issue   Issue
-	Sender  User
+	Comment     Comment
+	Issue       Issue
+	Sender      User
+	ReviewState PullRequestReviewState
 }
 
 // IssueLabel is a label struct

@@ -40,6 +40,7 @@ type PullRequestReviewWebhook struct {
 	Review struct {
 		Body        string       `json:"body"`
 		SubmittedAt *metav1.Time `json:"submitted_at"`
+		State       string       `json:"state"`
 	} `json:"review"`
 	PullRequest PullRequest `json:"pull_request"`
 	Repo        Repo        `json:"repository"`

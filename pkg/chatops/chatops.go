@@ -10,18 +10,15 @@ import (
 // chatOps triggers tests/retests via comments
 type chatOps struct {
 	client   client.Client
-	handlers map[commandType]commandHandler
+	handlers map[string]CommandHandler
 }
 
 // New is a constructor fo chatOps
 func New(c client.Client) *chatOps {
 	co := &chatOps{
 		client:   c,
-		handlers: map[commandType]commandHandler{},
+		handlers: map[string]CommandHandler{},
 	}
-
-	co.registerCommandHandler(commandTypeTest, co.handleTestCommand)
-	co.registerCommandHandler(commandTypeRetest, co.handleRetestCommand)
 
 	return co
 }
@@ -49,16 +46,16 @@ func (c *chatOps) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfig)
 }
 
 // extractCommands extracts commands (i.e. /[a-z], e.g., /test /retest /assign) from the comment body
-func (c *chatOps) extractCommands(comment string) []command {
-	var commands []command
+func (c *chatOps) extractCommands(comment string) []Command {
+	var commands []Command
 
 	lines := strings.Split(comment, "\n")
 
 	for _, l := range lines {
 		if len(l) > 2 && l[0] == '/' && 'a' <= l[1] && l[1] <= 'z' {
 			tokens := strings.Split(l, " ")
-			commands = append(commands, command{
-				Type: commandType(tokens[0][1:]),
+			commands = append(commands, Command{
+				Type: tokens[0][1:],
 				Args: tokens[1:],
 			})
 		}
@@ -67,6 +64,6 @@ func (c *chatOps) extractCommands(comment string) []command {
 	return commands
 }
 
-func (c *chatOps) registerCommandHandler(command commandType, handler commandHandler) {
+func (c *chatOps) RegisterCommandHandler(command string, handler CommandHandler) {
 	c.handlers[command] = handler
 }

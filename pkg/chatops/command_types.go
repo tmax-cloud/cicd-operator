@@ -5,17 +5,11 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 )
 
-type commandType string
-
-const (
-	commandTypeTest   = commandType("test")
-	commandTypeRetest = commandType("retest")
-)
-
-// command is a structure extracted by the comment body
-type command struct {
-	Type commandType
+// Command is a structure extracted by the comment body
+type Command struct {
+	Type string
 	Args []string
 }
 
-type commandHandler func(command command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error
+// CommandHandler is a handler function type for chat ops events
+type CommandHandler func(command Command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error
