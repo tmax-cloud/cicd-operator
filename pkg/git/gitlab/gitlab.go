@@ -358,7 +358,8 @@ func (c *Client) DeleteLabel(issueType git.IssueType, id int, label string) erro
 	return nil
 }
 
-func (c *Client) getBranch(branch string) (*branchResponse, error) {
+// GetBranch gets branch info
+func (c *Client) GetBranch(branch string) (*git.Branch, error) {
 	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/repository/branches/%s", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), branch)
 
 	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
@@ -366,12 +367,12 @@ func (c *Client) getBranch(branch string) (*branchResponse, error) {
 		return nil, err
 	}
 
-	var resp branchResponse
+	var resp BranchResponse
 	if err := json.Unmarshal(raw, &resp); err != nil {
 		return nil, err
 	}
 
-	return &resp, nil
+	return &git.Branch{Name: resp.Name, CommitID: resp.Commit.ID}, nil
 }
 
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {

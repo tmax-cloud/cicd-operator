@@ -55,7 +55,8 @@ type MergeRequest struct {
 	HasConflicts bool     `json:"has_conflicts"`
 }
 
-type branchResponse struct {
+// BranchResponse is a respond struct for branch request
+type BranchResponse struct {
 	Name   string `json:"name"`
 	Commit struct {
 		ID    string `json:"id"`

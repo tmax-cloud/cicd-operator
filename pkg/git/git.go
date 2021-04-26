@@ -38,6 +38,10 @@ type Client interface {
 
 	SetLabel(issueType IssueType, id int, label string) error
 	DeleteLabel(issueType IssueType, id int, label string) error
+
+	// Branch
+
+	GetBranch(branch string) (*Branch, error)
 }
 
 // IssueType is a type of the issue

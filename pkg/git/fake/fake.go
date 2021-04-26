@@ -12,13 +12,14 @@ import (
 
 // Store as global variables - only for testing! test data should be able to be set from the outside
 var (
-	Users map[string]git.User
-	Repos map[string]Repo
+	Users    map[string]*git.User
+	Repos    map[string]*Repo
+	Branches map[string]*git.Branch
 )
 
 // Repo is a repository storage
 type Repo struct {
-	Webhooks     map[int]git.WebhookEntry
+	Webhooks     map[int]*git.WebhookEntry
 	UserCanWrite map[string]bool
 
 	PullRequests   map[int]*git.PullRequest
@@ -44,6 +45,9 @@ func (c *Client) ParseWebhook(_ http.Header, _ []byte) (*git.Webhook, error) {
 
 // ListWebhook lists registered webhooks
 func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
+	if Repos == nil {
+		return nil, fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return nil, fmt.Errorf("404 no such repository")
@@ -51,25 +55,35 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 
 	var res []git.WebhookEntry
 	for _, w := range repo.Webhooks {
-		res = append(res, w)
+		res = append(res, *w)
 	}
 	return res, nil
 }
 
 // RegisterWebhook registers our webhook server to the remote git server
 func (c *Client) RegisterWebhook(url string) error {
+	if Repos == nil {
+		return fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return fmt.Errorf("404 no such repository")
 	}
 
+	if repo.Webhooks == nil {
+		return fmt.Errorf("webhooks not initialized")
+	}
+
 	id := rand.Intn(100)
-	repo.Webhooks[id] = git.WebhookEntry{ID: id, URL: url}
+	repo.Webhooks[id] = &git.WebhookEntry{ID: id, URL: url}
 	return nil
 }
 
 // DeleteWebhook deletes registered webhook
 func (c *Client) DeleteWebhook(id int) error {
+	if Repos == nil {
+		return fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return fmt.Errorf("404 no such repository")
@@ -81,9 +95,16 @@ func (c *Client) DeleteWebhook(id int) error {
 
 // ListCommitStatuses lists commit status of the specific commit
 func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
+	if Repos == nil {
+		return nil, fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return nil, fmt.Errorf("404 no such repository")
+	}
+
+	if repo.CommitStatuses == nil {
+		return nil, fmt.Errorf("commit statuses not initialized")
 	}
 
 	statuses, exist := repo.CommitStatuses[ref]
@@ -95,9 +116,16 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 
 // SetCommitStatus sets commit status for the specific commit
 func (c *Client) SetCommitStatus(sha string, status git.CommitStatus) error {
+	if Repos == nil {
+		return fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return fmt.Errorf("404 no such repository")
+	}
+
+	if repo.CommitStatuses == nil {
+		return fmt.Errorf("commit statuses not initialized")
 	}
 
 	repo.CommitStatuses[sha] = append(repo.CommitStatuses[sha], status)
@@ -106,18 +134,28 @@ func (c *Client) SetCommitStatus(sha string, status git.CommitStatus) error {
 
 // GetUserInfo gets a user's information
 func (c *Client) GetUserInfo(userName string) (*git.User, error) {
+	if Users == nil {
+		return nil, fmt.Errorf("users not initialized")
+	}
 	u, exist := Users[userName]
 	if !exist {
 		return nil, fmt.Errorf("404 no such user")
 	}
-	return &u, nil
+	return u, nil
 }
 
 // CanUserWriteToRepo decides if the user has write permission on the repo
 func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
+	if Repos == nil {
+		return false, fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return false, fmt.Errorf("404 no such repository")
+	}
+
+	if repo.UserCanWrite == nil {
+		return false, fmt.Errorf("userCanWrite not initialized")
 	}
 
 	privilege, exist := repo.UserCanWrite[user.Name]
@@ -130,9 +168,16 @@ func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
 
 // RegisterComment registers comment to an issue
 func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) error {
+	if Repos == nil {
+		return fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return fmt.Errorf("404 no such repository")
+	}
+
+	if repo.Comments == nil {
+		return fmt.Errorf("comments not initialized")
 	}
 
 	t := metav1.Now()
@@ -150,6 +195,9 @@ func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) erro
 
 // ListPullRequests gets pull request list
 func (c *Client) ListPullRequests(_ bool) ([]git.PullRequest, error) {
+	if Repos == nil {
+		return nil, fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return nil, fmt.Errorf("404 no such repository")
@@ -165,9 +213,16 @@ func (c *Client) ListPullRequests(_ bool) ([]git.PullRequest, error) {
 
 // GetPullRequest gets PR given id
 func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
+	if Repos == nil {
+		return nil, fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return nil, fmt.Errorf("404 no such repository")
+	}
+
+	if repo.PullRequests == nil {
+		return nil, fmt.Errorf("pull requests not initialized")
 	}
 
 	pr, exist := repo.PullRequests[id]
@@ -180,9 +235,16 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 
 // SetLabel sets label to the issue id
 func (c *Client) SetLabel(_ git.IssueType, id int, label string) error {
+	if Repos == nil {
+		return fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
 	if !repoExist {
 		return fmt.Errorf("404 no such repository")
+	}
+
+	if repo.PullRequests == nil {
+		return fmt.Errorf("pull requests not initialized")
 	}
 
 	pr, exist := repo.PullRequests[id]
@@ -200,11 +262,30 @@ func (c *Client) DeleteLabel(_ git.IssueType, id int, label string) error {
 	return DeleteLabel(c.IntegrationConfig.Spec.Git.Repository, id, label)
 }
 
+// GetBranch returns branch info
+func (c *Client) GetBranch(branch string) (*git.Branch, error) {
+	if Branches == nil {
+		return nil, fmt.Errorf("branches not initialized")
+	}
+	b, exist := Branches[branch]
+	if !exist {
+		return nil, fmt.Errorf("404 no such branch")
+	}
+	return b, nil
+}
+
 // DeleteLabel deletes label from a pull request
 func DeleteLabel(repoName string, id int, label string) error {
+	if Repos == nil {
+		return fmt.Errorf("repos not initialized")
+	}
 	repo, repoExist := Repos[repoName]
 	if !repoExist {
 		return fmt.Errorf("404 no such repository")
+	}
+
+	if repo.PullRequests == nil {
+		return fmt.Errorf("pull requests not initialized")
 	}
 
 	pr, exist := repo.PullRequests[id]

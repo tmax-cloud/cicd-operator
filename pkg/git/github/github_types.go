@@ -35,3 +35,11 @@ type CommentBody struct {
 type LabelBody struct {
 	Name string `json:"name"`
 }
+
+// BranchResponse is a respond struct for branch request
+type BranchResponse struct {
+	Name   string `json:"name"`
+	Commit struct {
+		Sha string `json:"sha"`
+	} `json:"commit"`
+}

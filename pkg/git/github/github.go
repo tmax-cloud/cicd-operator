@@ -289,6 +289,22 @@ func (c *Client) DeleteLabel(_ git.IssueType, id int, label string) error {
 	return nil
 }
 
+func (c *Client) GetBranch(branch string) (*git.Branch, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/branches/%s", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, branch)
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &BranchResponse{}
+	if err := json.Unmarshal(raw, resp); err != nil {
+		return nil, err
+	}
+
+	return &git.Branch{Name: resp.Name, CommitID: resp.Commit.Sha}, nil
+}
+
 func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 	var labels []git.IssueLabel
 	for _, l := range pr.Labels {
