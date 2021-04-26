@@ -55,10 +55,20 @@ type MergeRequest struct {
 	HasConflicts bool     `json:"has_conflicts"`
 }
 
-type branchResponse struct {
+// BranchResponse is a respond struct for branch request
+type BranchResponse struct {
 	Name   string `json:"name"`
 	Commit struct {
 		ID    string `json:"id"`
 		Title string `json:"title"`
 	}
+}
+
+// MergeAcceptRequest is a request struct to merge a merge request
+type MergeAcceptRequest struct {
+	MergeCommitMessage  string `json:"merge_commit_message"`
+	SquashCommitMessage string `json:"squash_commit_message"`
+	Squash              bool   `json:"squash"`
+	Sha                 string `json:"sha"`
+	RemoveSourceBranch  bool   `json:"should_remove_source_branch"`
 }

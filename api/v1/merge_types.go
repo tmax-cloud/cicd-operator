@@ -1,10 +1,12 @@
 package v1
 
+import "github.com/tmax-cloud/cicd-operator/pkg/git"
+
 // MergeConfig is a config struct of the merge automation feature
 type MergeConfig struct {
 	// Method is a merge method
-	// +kubebuilder:validation:Enum=squash;rebase;merge
-	Method MergeMethod `json:"method,omitempty"`
+	// +kubebuilder:validation:Enum=squash;merge
+	Method git.MergeMethod `json:"method,omitempty"`
 
 	// CommitTemplate is a message template for a merge commit.
 	// The commit message is compiled as a go template using git.PullRequest object
@@ -13,16 +15,6 @@ type MergeConfig struct {
 	// Query is conditions for a open PR to be merged
 	Query MergeQuery `json:"query"`
 }
-
-// MergeMethod is method kind
-type MergeMethod string
-
-// MergeMethod types
-const (
-	MergeMethodSquash = MergeMethod("squash")
-	MergeMethodRebase = MergeMethod("rebase")
-	MergeMethodMerge  = MergeMethod("merge")
-)
 
 // MergeQuery defines conditions for a open PR to be merged
 type MergeQuery struct {

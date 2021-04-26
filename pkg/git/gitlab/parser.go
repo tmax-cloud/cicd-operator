@@ -15,13 +15,13 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 	}
 
 	// Get Target branch
-	baseBranch, err := c.getBranch(data.ObjectAttribute.BaseRef)
+	baseBranch, err := c.GetBranch(data.ObjectAttribute.BaseRef)
 	if err != nil {
 		return nil, err
 	}
 
 	sender := git.User{Name: data.User.Name, Email: data.User.Email}
-	base := git.Base{Ref: data.ObjectAttribute.BaseRef, Sha: baseBranch.Commit.ID}
+	base := git.Base{Ref: data.ObjectAttribute.BaseRef, Sha: baseBranch.CommitID}
 	head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
 	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
 	action := git.PullRequestAction(data.ObjectAttribute.Action)
@@ -108,7 +108,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 			mrAuthor = &git.User{ID: data.MergeRequest.AuthorID}
 		}
 		// Get Target branch
-		baseBranch, err := c.getBranch(data.MergeRequest.TargetBranch)
+		baseBranch, err := c.GetBranch(data.MergeRequest.TargetBranch)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +120,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 			URL:    data.MergeRequest.URL,
 			Base: git.Base{
 				Ref: data.MergeRequest.TargetBranch,
-				Sha: baseBranch.Commit.ID,
+				Sha: baseBranch.CommitID,
 			},
 			Head: git.Head{
 				Ref: data.MergeRequest.SourceBranch,
@@ -163,7 +163,7 @@ func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.W
 		mrAuthor = &git.User{ID: data.ObjectAttribute.AuthorID}
 	}
 	// Get Target branch
-	baseBranch, err := c.getBranch(data.ObjectAttribute.BaseRef)
+	baseBranch, err := c.GetBranch(data.ObjectAttribute.BaseRef)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.W
 					Title:  data.ObjectAttribute.Title,
 					Sender: *mrAuthor,
 					URL:    data.Project.WebURL,
-					Base:   git.Base{Ref: data.ObjectAttribute.BaseRef, Sha: baseBranch.Commit.ID},
+					Base:   git.Base{Ref: data.ObjectAttribute.BaseRef, Sha: baseBranch.CommitID},
 					Head:   git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha},
 					State:  state,
 				},

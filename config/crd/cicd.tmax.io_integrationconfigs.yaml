@@ -3206,7 +3206,6 @@ spec:
                     description: Method is a merge method
                     enum:
                     - squash
-                    - rebase
                     - merge
                     type: string
                   query:

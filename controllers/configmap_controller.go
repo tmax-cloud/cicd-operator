@@ -168,7 +168,6 @@ func (r *ConfigReconciler) reconcileConfig(cm *corev1.ConfigMap) error {
 		"mergeSyncPeriod":           {Type: cfgTypeInt, IntVal: &configs.MergeSyncPeriod, IntDefault: 1},                               // Merge automation sync period
 		"mergeBlockLabel":           {Type: cfgTypeString, StringVal: &configs.MergeBlockLabel, StringDefault: "ma/block"},             // Merge automation block label
 		"mergeKindSquashLabel":      {Type: cfgTypeString, StringVal: &configs.MergeKindSquashLabel, StringDefault: "ma/merge-squash"}, // Merge kind squash label
-		"mergeKindRebaseLabel":      {Type: cfgTypeString, StringVal: &configs.MergeKindRebaseLabel, StringDefault: "ma/merge-rebase"}, // Merge kind squash label
 		"mergeKindMergeLabel":       {Type: cfgTypeString, StringVal: &configs.MergeKindMergeLabel, StringDefault: "ma/merge-merge"},   // Merge kind squash label
 	}
 

@@ -293,7 +293,7 @@ Merge automation can be configured using `mergeConfig`.
 ### `method`
 `method` field specifies the method to merge the PR.
 > Optional  
-> Available values: `squash`, `rebase`, `merge`  
+> Available values: `squash`, `merge`  
 > Default: `merge`
 
 ### `commitTemplate`

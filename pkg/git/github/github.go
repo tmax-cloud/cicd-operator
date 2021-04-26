@@ -265,6 +265,30 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 	return convertPullRequestToShared(pr), nil
 }
 
+// MergePullRequest merges a pull request
+func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, message string) error {
+	apiURL := fmt.Sprintf("%s/repos/%s/pulls/%d/merge", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
+
+	tokens := strings.Split(message, "\n\n")
+
+	body := &MergeRequest{
+		CommitTitle: tokens[0],
+		MergeMethod: string(method),
+		Sha:         sha,
+	}
+
+	if len(tokens) > 1 {
+		body.CommitMessage = strings.Join(tokens[1:], "\n\n")
+	}
+
+	_, _, err := c.requestHTTP(http.MethodPut, apiURL, body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // SetLabel sets label to the issue id
 func (c *Client) SetLabel(_ git.IssueType, id int, label string) error {
 	apiURL := fmt.Sprintf("%s/repos/%s/issues/%d/labels", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
@@ -287,6 +311,23 @@ func (c *Client) DeleteLabel(_ git.IssueType, id int, label string) error {
 	}
 
 	return nil
+}
+
+// GetBranch gets branch info
+func (c *Client) GetBranch(branch string) (*git.Branch, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/branches/%s", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, branch)
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &BranchResponse{}
+	if err := json.Unmarshal(raw, resp); err != nil {
+		return nil, err
+	}
+
+	return &git.Branch{Name: resp.Name, CommitID: resp.Commit.Sha}, nil
 }
 
 func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {

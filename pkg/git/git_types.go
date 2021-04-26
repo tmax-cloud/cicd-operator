@@ -140,3 +140,9 @@ type CommitStatus struct {
 	Description string
 	TargetURL   string
 }
+
+// Branch is a branch info
+type Branch struct {
+	Name     string
+	CommitID string
+}
