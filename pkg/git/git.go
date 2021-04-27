@@ -33,11 +33,16 @@ type Client interface {
 
 	ListPullRequests(onlyOpen bool) ([]PullRequest, error)
 	GetPullRequest(id int) (*PullRequest, error)
+	MergePullRequest(id int, sha string, method MergeMethod, message string) error
 
 	// Issue Labels
 
 	SetLabel(issueType IssueType, id int, label string) error
 	DeleteLabel(issueType IssueType, id int, label string) error
+
+	// Branch
+
+	GetBranch(branch string) (*Branch, error)
 }
 
 // IssueType is a type of the issue
@@ -63,4 +68,13 @@ const (
 // FakeSha is a fake SHA for a commit
 const (
 	FakeSha = "0000000000000000000000000000000000000000"
+)
+
+// MergeMethod is method kind
+type MergeMethod string
+
+// MergeMethod types
+const (
+	MergeMethodSquash = MergeMethod("squash")
+	MergeMethodMerge  = MergeMethod("merge")
 )

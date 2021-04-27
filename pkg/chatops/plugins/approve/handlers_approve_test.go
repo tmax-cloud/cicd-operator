@@ -37,12 +37,12 @@ func TestChatOps_handleApprove(t *testing.T) {
 
 	handler := &Handler{Client: fakeCli}
 
-	gitfake.Users = map[string]git.User{
+	gitfake.Users = map[string]*git.User{
 		testUserName: {ID: testUserID, Name: testUserName, Email: testUserEmail},
 	}
-	gitfake.Repos = map[string]gitfake.Repo{
+	gitfake.Repos = map[string]*gitfake.Repo{
 		testRepo: {
-			Webhooks:     map[int]git.WebhookEntry{},
+			Webhooks:     map[int]*git.WebhookEntry{},
 			UserCanWrite: map[string]bool{},
 
 			PullRequests: map[int]*git.PullRequest{
@@ -65,9 +65,9 @@ func TestChatOps_handleApprove(t *testing.T) {
 	// /approve - fail - unauthorized
 	newUserID := 111
 	newUserName := "new-user"
-	gitfake.Users[newUserName] = git.User{ID: newUserID, Name: newUserName}
+	gitfake.Users[newUserName] = &git.User{ID: newUserID, Name: newUserName}
 	gitfake.Repos[testRepo].UserCanWrite[newUserName] = false
-	wh.IssueComment.Sender = gitfake.Users[newUserName]
+	wh.IssueComment.Sender = *gitfake.Users[newUserName]
 	testJobApprove(t, handler, wh, ic, chatops.Command{Type: "approve"}, func() {
 		repo := gitfake.Repos[testRepo]
 		assert.Equal(t, 1, len(repo.Comments[testPRID]), "Comment length")

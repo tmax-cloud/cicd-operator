@@ -80,9 +80,9 @@ func syncStatusTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
 		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	}
 
-	gitfake.Repos = map[string]gitfake.Repo{
+	gitfake.Repos = map[string]*gitfake.Repo{
 		testRepo: {
-			Webhooks:     map[int]git.WebhookEntry{},
+			Webhooks:     map[int]*git.WebhookEntry{},
 			UserCanWrite: map[string]bool{},
 
 			PullRequests: map[int]*git.PullRequest{
