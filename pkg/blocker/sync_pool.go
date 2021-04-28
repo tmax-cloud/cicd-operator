@@ -113,6 +113,13 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 		// Check conditions (labels, author, branch, conflict)
 		isCandidate, addMsg := checkConditionsSimple(ic.Spec.MergeConfig.Query, &rawPR)
 
+		// If it's a re-test from merge pool (i.e., in the merge pool and is in WaitingBatchTest),
+		// set it as a candidate and keep it in the merge pool.
+		// merger will remove it from the merge pool
+		if pool.CurrentBatch != nil && pool.CurrentBatch.Contains(rawPR.ID) {
+			isCandidate = true
+		}
+
 		// Add to/delete from merge Pool
 		if isCandidate {
 			// Check if it's in merge pool and if not, add to it
@@ -139,7 +146,7 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 			pr.BlockerDescription = desc
 		}
 
-		log.Info(fmt.Sprintf("\t[#%d](%.20s) - merge candidate: %t", pr.ID, pr.Title, isCandidate))
+		log.Info(fmt.Sprintf("\t[#%d](%.20s) - merge candidate: %t (%s)", pr.ID, pr.Title, isCandidate, pr.BlockerDescription))
 	}
 
 	// Delete redundant PRs (i.e., closed/merged ones)

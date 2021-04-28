@@ -49,11 +49,7 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 // handleTestCommand handles '/test <ARGS>' command
 func (h *Handler) handleTestCommand(command chatops.Command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	// Generate IntegrationJob for the PullRequest
-	job, err := dispatcher.GeneratePreSubmit(webhook.IssueComment.Issue.PullRequest, &webhook.Repo, &webhook.IssueComment.Sender, config)
-	if err != nil {
-		return err
-	}
-
+	job := dispatcher.GeneratePreSubmit(webhook.IssueComment.Issue.PullRequest, &webhook.Repo, &webhook.IssueComment.Sender, config)
 	if job == nil {
 		return nil
 	}
@@ -78,11 +74,7 @@ func (h *Handler) handleTestCommand(command chatops.Command, webhook *git.Webhoo
 // handleTestCommand handles '/retest' command
 func (h *Handler) handleRetestCommand(webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	// Generate IntegrationJob for the PullRequest
-	job, err := dispatcher.GeneratePreSubmit(webhook.IssueComment.Issue.PullRequest, &webhook.Repo, &webhook.IssueComment.Sender, config)
-	if err != nil {
-		return err
-	}
-
+	job := dispatcher.GeneratePreSubmit(webhook.IssueComment.Issue.PullRequest, &webhook.Repo, &webhook.IssueComment.Sender, config)
 	if job == nil {
 		return nil
 	}

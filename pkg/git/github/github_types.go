@@ -22,8 +22,10 @@ type CommitStatusRequest struct {
 
 // CommitStatusResponse is a response body of getting commit status
 type CommitStatusResponse struct {
-	Context string `json:"context"`
-	State   string `json:"state"`
+	Context     string `json:"context"`
+	State       string `json:"state"`
+	Description string `json:"description"`
+	TargetURL   string `json:"target_url"`
 }
 
 // CommentBody is a body structure for creating new comment

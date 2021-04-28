@@ -23,8 +23,10 @@ type CommitStatusRequest struct {
 
 // CommitStatusResponse is a response body of getting commit status
 type CommitStatusResponse struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
+	Name        string `json:"name"`
+	Status      string `json:"status"`
+	Description string `json:"description"`
+	TargetURL   string `json:"target_url"`
 }
 
 // CommentBody is a body structure for creating new comment
@@ -66,9 +68,9 @@ type BranchResponse struct {
 
 // MergeAcceptRequest is a request struct to merge a merge request
 type MergeAcceptRequest struct {
-	MergeCommitMessage  string `json:"merge_commit_message"`
-	SquashCommitMessage string `json:"squash_commit_message"`
-	Squash              bool   `json:"squash"`
-	Sha                 string `json:"sha"`
-	RemoveSourceBranch  bool   `json:"should_remove_source_branch"`
+	//MergeCommitMessage  string `json:"merge_commit_message"`
+	//SquashCommitMessage string `json:"squash_commit_message"`
+	Squash             bool   `json:"squash"`
+	Sha                string `json:"sha"`
+	RemoveSourceBranch bool   `json:"should_remove_source_branch"`
 }

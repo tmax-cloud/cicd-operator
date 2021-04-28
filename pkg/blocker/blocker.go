@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -36,6 +37,9 @@ type blocker struct {
 
 	// poolSynced is a channel from PoolSyncer to StatusSyncer, which indicates the completion of pool sync
 	poolSynced chan struct{}
+
+	// statusSynced is a channel from StatusSyncer to Merger, which indicates the completion of status sync
+	statusSynced chan struct{}
 }
 
 // New creates a new blocker
@@ -45,6 +49,7 @@ func New(c client.Client) *blocker {
 		log:          logf.Log.WithName("blocker"),
 		lastPoolSync: time.Now(),
 		poolSynced:   make(chan struct{}, 1),
+		statusSynced: make(chan struct{}, 1),
 		Pools:        map[poolKey]*PRPool{},
 	}
 }
@@ -53,7 +58,7 @@ func New(c client.Client) *blocker {
 func (b *blocker) Start() {
 	go b.loopSyncPRs()
 	go b.loopSyncMergePoolStatus()
-	// TODO - go b.loopMerge()
+	go b.loopMerge()
 }
 
 // poolKey is a key for PR pools.
@@ -61,7 +66,9 @@ type poolKey string
 
 // genPoolKey generates a default key for the IntegrationConfig (i.e., <APIUrl>/<Repository>)
 func genPoolKey(ic *cicdv1.IntegrationConfig) poolKey {
-	return poolKey(fmt.Sprintf("%s/%s", ic.Spec.Git.GetAPIUrl(), ic.Spec.Git.Repository))
+	host := strings.TrimPrefix(ic.Spec.Git.GetAPIUrl(), "http://")
+	host = strings.TrimPrefix(host, "https://")
+	return poolKey(fmt.Sprintf("%s/%s", host, ic.Spec.Git.Repository))
 }
 
 // PRPool is a PullRequest pool(=cache) of an IntegrationConfig
@@ -76,6 +83,34 @@ type PRPool struct {
 
 	// MergePool is a cache of PRs which meet all the conditions except for commit status/merge conflict conditions
 	MergePool MergePool
+
+	// CurrentBatch is a batch of PRs, waiting for a block-merge.
+	// If it's non-nil, maybe merger is retesting the PRs.
+	CurrentBatch *Batch
+}
+
+// Batch is a batch of PRs, waiting for a block-merge.
+type Batch struct {
+	// PRs in the batch
+	PRs []*PullRequest
+
+	// Job is a IntegrationJob's namespaced name for the batch job
+	Job types.NamespacedName
+}
+
+// Contains checks if a PR is in the batch
+func (b *Batch) Contains(id int) bool {
+	for _, pr := range b.PRs {
+		if pr.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// Len is a length of the batch
+func (b *Batch) Len() int {
+	return len(b.PRs)
 }
 
 // NewPRPool creates a new PRPool
@@ -137,4 +172,7 @@ type PullRequest struct {
 
 	// blockerCacheDirty specifies if the commit status should be updated
 	blockerCacheDirty bool
+
+	// Statuses stores whole commit statuses of the PR
+	Statuses map[string]git.CommitStatus
 }

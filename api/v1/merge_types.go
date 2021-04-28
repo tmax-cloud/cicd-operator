@@ -9,7 +9,8 @@ type MergeConfig struct {
 	Method git.MergeMethod `json:"method,omitempty"`
 
 	// CommitTemplate is a message template for a merge commit.
-	// The commit message is compiled as a go template using git.PullRequest object
+	// Currently NOT supported (only uses default commit messages) - to be implemented.
+	// The commit message is compiled as a go template using git.PullRequest object.
 	CommitTemplate string `json:"commitTemplate,omitempty"`
 
 	// Query is conditions for a open PR to be merged

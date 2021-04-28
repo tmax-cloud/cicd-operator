@@ -24,3 +24,13 @@ func TestAppendBaseShaToDescription(t *testing.T) {
 	appended = appendBaseShaToDescription(desc, sha)
 	assert.Equal(t, desc[:statusDescriptionMaxLength], appended, "Description")
 }
+
+func TestParseBaseFromDescription(t *testing.T) {
+	fullDesc := "Job is running... BaseSHA:2641c89aac959fb804ec6f2a4a22e129f4ac4900"
+	sha := ParseBaseFromDescription(fullDesc)
+	assert.Equal(t, "2641c89aac959fb804ec6f2a4a22e129f4ac4900", sha)
+
+	fullDesc = "Job is running... BaseSHA:zzzzzzzzzzzzzzzzz"
+	sha = ParseBaseFromDescription(fullDesc)
+	assert.Equal(t, "", sha)
+}

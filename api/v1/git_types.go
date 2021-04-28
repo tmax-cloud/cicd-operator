@@ -95,6 +95,9 @@ func (g GitRef) String() string {
 
 // GetTag extracts tag from ref
 func (g GitRef) GetTag() string {
+	if !strings.HasPrefix(g.String(), "refs/") {
+		return g.String()
+	}
 	if strings.HasPrefix(g.String(), "refs/tags/") {
 		return strings.TrimPrefix(g.String(), "refs/tags/")
 	}
@@ -103,6 +106,9 @@ func (g GitRef) GetTag() string {
 
 // GetBranch extracts branch from ref
 func (g GitRef) GetBranch() string {
+	if !strings.HasPrefix(g.String(), "refs/") {
+		return g.String()
+	}
 	if strings.HasPrefix(g.String(), "refs/heads/") {
 		return strings.TrimPrefix(g.String(), "refs/heads/")
 	}

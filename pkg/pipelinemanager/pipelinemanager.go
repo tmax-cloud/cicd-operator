@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
+	"regexp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
@@ -441,6 +442,15 @@ func appendBaseShaToDescription(desc, sha string) string {
 	}
 
 	return desc + space + base
+}
+
+// ParseBaseFromDescription parses a SHA from the commit status's description
+func ParseBaseFromDescription(desc string) string {
+	sub := regexp.MustCompile(statusDescriptionBaseSHAKey + "([0-9a-f]{5,40})").FindStringSubmatch(desc)
+	if len(sub) != 2 {
+		return ""
+	}
+	return sub[1]
 }
 
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch;delete

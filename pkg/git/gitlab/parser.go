@@ -14,14 +14,8 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 		return nil, err
 	}
 
-	// Get Target branch
-	baseBranch, err := c.GetBranch(data.ObjectAttribute.BaseRef)
-	if err != nil {
-		return nil, err
-	}
-
 	sender := git.User{Name: data.User.Name, Email: data.User.Email}
-	base := git.Base{Ref: data.ObjectAttribute.BaseRef, Sha: baseBranch.CommitID}
+	base := git.Base{Ref: data.ObjectAttribute.BaseRef}
 	head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
 	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
 	action := git.PullRequestAction(data.ObjectAttribute.Action)
@@ -41,6 +35,14 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 	case "approved", "unapproved":
 		return c.parsePullRequestReviewWebhook(data)
 	}
+
+	// Get Target branch
+	baseBranch, err := c.GetBranch(data.ObjectAttribute.BaseRef)
+	if err != nil {
+		return nil, err
+	}
+	base.Sha = baseBranch.CommitID
+
 	state := git.PullRequestState(data.ObjectAttribute.State)
 	switch string(state) {
 	case "opened":

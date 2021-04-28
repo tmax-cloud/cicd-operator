@@ -304,7 +304,7 @@ Merge automation can be configured using `mergeConfig`.
 ### `query`
 `query` is a selector of PRs to be merged. (i.e., conditions of PRs to be merged)
 PRs are searched using the query and merged if all the CI checks are completed.
-There are 9 kinds of queries. `labels`, `skipLabels`, `authors`, `skipAuthors`, `branches`, `skipBranches`, `checks`, `optionalChecks`, and `approveRequired`.
+There are 9 kinds of queries. `labels`, `blockLabels`, `authors`, `skipAuthors`, `branches`, `skipBranches`, `checks`, `optionalChecks`, and `approveRequired`.
 
 
 ## Triggering jobs

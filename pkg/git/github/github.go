@@ -139,8 +139,10 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 		}
 		tmp[s.Context] = struct{}{}
 		resp = append(resp, git.CommitStatus{
-			Context: s.Context,
-			State:   git.CommitStatusState(s.State),
+			Context:     s.Context,
+			State:       git.CommitStatusState(s.State),
+			Description: s.Description,
+			TargetURL:   s.TargetURL,
 		})
 	}
 
