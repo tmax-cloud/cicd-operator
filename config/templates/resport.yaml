@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: report-template
   namespace: cicd-system
+  labels:
+    cicd.tmax.io/part-of: controller
 data:
   template: |
     <!doctype html>

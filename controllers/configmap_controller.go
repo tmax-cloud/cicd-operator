@@ -28,12 +28,6 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"strconv"
-)
-
-const (
-	configNameConfig        = "cicd-config"
-	configNameEmailTemplate = "email-template"
 )
 
 // ConfigReconciler reconciles a Approval object
@@ -41,31 +35,14 @@ type ConfigReconciler struct {
 	client typedcorev1.ConfigMapInterface
 	Log    logr.Logger
 
-	GcChan   chan struct{}
-	InitChan chan struct{}
-
-	Init bool
-
 	lastResourceVersions map[string]string
+	Handlers             map[string]configs.Handler
 }
 
 // Start starts the config map reconciler
 func (r *ConfigReconciler) Start() {
 	var err error
 	r.client, err = newConfigMapClient()
-	if err != nil {
-		r.Log.Error(err, "")
-		os.Exit(1)
-	}
-
-	// Get first to check the ConfigMap's existence
-	_, err = r.client.Get(context.Background(), configNameConfig, metav1.GetOptions{})
-	if err != nil {
-		r.Log.Error(err, "")
-		os.Exit(1)
-	}
-
-	_, err = r.client.Get(context.Background(), configNameEmailTemplate, metav1.GetOptions{})
 	if err != nil {
 		r.Log.Error(err, "")
 		os.Exit(1)
@@ -78,12 +55,15 @@ func (r *ConfigReconciler) Start() {
 	}
 }
 
+// Add adds config map handler
+func (r *ConfigReconciler) Add(name string, handler configs.Handler) {
+	r.Handlers[name] = handler
+}
+
 func (r *ConfigReconciler) watch() {
 	log := r.Log.WithName("config-controller")
 
-	watcher, err := r.client.Watch(context.Background(), metav1.ListOptions{
-		FieldSelector: "metadata.name!=2787db31.tmax.io",
-	})
+	watcher, err := r.client.Watch(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		log.Error(err, "")
 		return
@@ -99,27 +79,6 @@ func (r *ConfigReconciler) watch() {
 	}
 }
 
-type cfgType int
-
-const (
-	cfgTypeString cfgType = iota
-	cfgTypeInt
-	cfgTypeBool
-)
-
-type operatorConfig struct {
-	Type cfgType
-
-	StringVal     *string
-	StringDefault string
-
-	IntVal     *int
-	IntDefault int
-
-	BoolVal     *bool
-	BoolDefault bool
-}
-
 // Reconcile reconciles ConfigMap
 func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 	if cm == nil {
@@ -132,112 +91,15 @@ func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 	}
 	r.lastResourceVersions[cm.Name] = cm.ResourceVersion
 
-	r.Log.Info("Config is changed")
-
-	switch cm.Name {
-	case configNameConfig:
-		if err := r.reconcileConfig(cm); err != nil {
-			return err
-		}
-	case configNameEmailTemplate:
-		if err := r.reconcileEmailTemplate(cm); err != nil {
-			return err
-		}
+	handler, exist := r.Handlers[cm.Name]
+	if !exist {
+		return nil
 	}
-
-	if !r.Init {
-		r.Init = true
-		r.InitChan <- struct{}{}
+	r.Log.Info(fmt.Sprintf("Configmap (%s) is changed", cm.Name))
+	if err := handler(cm); err != nil {
+		return err
 	}
-
 	return nil
-}
-
-func (r *ConfigReconciler) reconcileConfig(cm *corev1.ConfigMap) error {
-	vars := map[string]operatorConfig{
-		"maxPipelineRun":            {Type: cfgTypeInt, IntVal: &configs.MaxPipelineRun, IntDefault: 5},                                // Max PipelineRun count
-		"enableMail":                {Type: cfgTypeBool, BoolVal: &configs.EnableMail, BoolDefault: false},                             // Enable Mail
-		"externalHostName":          {Type: cfgTypeString, StringVal: &configs.ExternalHostName},                                       // External Hostname
-		"reportRedirectUriTemplate": {Type: cfgTypeString, StringVal: &configs.ReportRedirectURITemplate},                              // RedirectUriTemplate for report access
-		"smtpHost":                  {Type: cfgTypeString, StringVal: &configs.SMTPHost},                                               // SMTP Host
-		"smtpUserSecret":            {Type: cfgTypeString, StringVal: &configs.SMTPUserSecret},                                         // SMTP Cred
-		"collectPeriod":             {Type: cfgTypeInt, IntVal: &configs.CollectPeriod, IntDefault: 120},                               // GC period
-		"integrationJobTTL":         {Type: cfgTypeInt, IntVal: &configs.IntegrationJobTTL, IntDefault: 120},                           // GC threshold
-		"ingressClass":              {Type: cfgTypeString, StringVal: &configs.IngressClass, StringDefault: ""},                        // Ingress class
-		"ingressHost":               {Type: cfgTypeString, StringVal: &configs.IngressHost, StringDefault: ""},                         // Ingress host
-		"mergeSyncPeriod":           {Type: cfgTypeInt, IntVal: &configs.MergeSyncPeriod, IntDefault: 1},                               // Merge automation sync period
-		"mergeBlockLabel":           {Type: cfgTypeString, StringVal: &configs.MergeBlockLabel, StringDefault: "ma/block"},             // Merge automation block label
-		"mergeKindSquashLabel":      {Type: cfgTypeString, StringVal: &configs.MergeKindSquashLabel, StringDefault: "ma/merge-squash"}, // Merge kind squash label
-		"mergeKindMergeLabel":       {Type: cfgTypeString, StringVal: &configs.MergeKindMergeLabel, StringDefault: "ma/merge-merge"},   // Merge kind squash label
-	}
-
-	getVars(cm.Data, vars)
-
-	// Check SMTP config.s
-	if configs.EnableMail && (configs.SMTPHost == "" || configs.SMTPUserSecret == "") {
-		return fmt.Errorf("email is enaled but smtp access info. is not given")
-	}
-
-	// Reconfigure GC
-	r.GcChan <- struct{}{}
-
-	return nil
-}
-
-func (r *ConfigReconciler) reconcileEmailTemplate(cm *corev1.ConfigMap) error {
-	vars := map[string]operatorConfig{
-		"request-title":   {Type: cfgTypeString, StringVal: &configs.ApprovalRequestMailTitle, StringDefault: "[CI/CD] Approval '{{.Name}}' is requested to you"},
-		"request-content": {Type: cfgTypeString, StringVal: &configs.ApprovalRequestMailContent, StringDefault: "{{.Name}}"},
-		"result-title":    {Type: cfgTypeString, StringVal: &configs.ApprovalResultMailTitle, StringDefault: "[CI/CD] Approval is {{.Status.Result}}"},
-		"result-content":  {Type: cfgTypeString, StringVal: &configs.ApprovalResultMailContent, StringDefault: "{{.Name}}"},
-	}
-
-	getVars(cm.Data, vars)
-
-	return nil
-}
-
-func getVars(data map[string]string, vars map[string]operatorConfig) {
-	for key, c := range vars {
-		v := data[key]
-		switch c.Type {
-		case cfgTypeString:
-			if c.StringVal == nil {
-				continue
-			}
-			if len(v) > 0 {
-				*c.StringVal = v
-			} else if len(c.StringDefault) > 0 {
-				*c.StringVal = c.StringDefault
-			}
-		case cfgTypeInt:
-			if c.IntVal == nil {
-				continue
-			}
-			if len(v) > 0 {
-				i, err := strconv.Atoi(v)
-				if err != nil {
-					continue
-				}
-				*c.IntVal = i
-			} else {
-				*c.IntVal = c.IntDefault
-			}
-		case cfgTypeBool:
-			if c.BoolVal == nil {
-				continue
-			}
-			if len(v) > 0 {
-				b, err := strconv.ParseBool(v)
-				if err != nil {
-					continue
-				}
-				*c.BoolVal = b
-			} else {
-				*c.BoolVal = c.BoolDefault
-			}
-		}
-	}
 }
 
 func newConfigMapClient() (typedcorev1.ConfigMapInterface, error) {

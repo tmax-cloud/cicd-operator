@@ -10,6 +10,8 @@ kind: Service
 metadata:
   name: cicd-webhook
   namespace: cicd-system
+  labels:
+    cicd.tmax.io/part-of: controller
 spec:
   selector:
     control-plane: controller-manager
@@ -24,6 +26,8 @@ kind: Ingress
 metadata:
   name: cicd-webhook
   namespace: cicd-system
+  labels:
+    cicd.tmax.io/part-of: controller
 spec:
   rules:
     - host: waiting.for.loadbalancer
@@ -42,6 +46,8 @@ kind: ConfigMap
 metadata:
   name: cicd-config
   namespace: cicd-system
+  labels:
+    cicd.tmax.io/part-of: controller
 data:
   maxPipelineRun: "5"
   externalHostName: ""
@@ -61,6 +67,7 @@ metadata:
   namespace: cicd-system
   labels:
     control-plane: controller-manager
+    cicd.tmax.io/part-of: controller
 spec:
   selector:
     matchLabels:

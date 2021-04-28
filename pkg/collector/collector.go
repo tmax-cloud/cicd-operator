@@ -23,20 +23,17 @@ type Collector interface {
 type collector struct {
 	client client.Client
 
-	reconfigureChan chan struct{}
-
 	cron     *cron.Cron
 	cronSpec string
 	cronID   cron.EntryID
 }
 
 // New is a constructor of collector
-func New(c client.Client, ch chan struct{}) (*collector, error) {
+func New(c client.Client) (*collector, error) {
 	gc := &collector{
-		client:          c,
-		cron:            cron.New(),
-		cronSpec:        parseGcPeriod(),
-		reconfigureChan: ch,
+		client:   c,
+		cron:     cron.New(),
+		cronSpec: parseGcPeriod(),
 	}
 	id, err := gc.cron.AddFunc(gc.cronSpec, gc.collect)
 	if err != nil {
@@ -51,7 +48,7 @@ func (c *collector) Start() {
 	log.Info("Starting garbage collector")
 	c.cron.Start()
 
-	for range c.reconfigureChan {
+	for range configs.GcChan {
 		if err := c.reconfigure(); err != nil {
 			log.Error(err, "")
 		}
