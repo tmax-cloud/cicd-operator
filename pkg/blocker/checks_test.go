@@ -3,14 +3,8 @@ package blocker
 import (
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
-	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	gitfake "github.com/tmax-cloud/cicd-operator/pkg/git/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
 
@@ -83,40 +77,27 @@ func TestCheckConditions(t *testing.T) {
 }
 
 func TestCheckConditionsFull(t *testing.T) {
-	fakeCli, ic := checkTestEnv()
-	gitCli, err := utils.GetGitCli(ic, fakeCli)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ic, pr := checkTestConfig()
 
 	// Test 1
-	status, removeFromMergePool, msg, err := checkConditionsFull(ic.Spec.MergeConfig.Query, testPRID, gitCli)
-	if err != nil {
-		t.Fatal(err)
-	}
+	status, removeFromMergePool, msg := checkConditionsFull(ic.Spec.MergeConfig.Query, pr)
 
 	assert.Equal(t, false, status, "Full status")
 	assert.Equal(t, true, removeFromMergePool, "Remove from merge pool")
 	assert.Equal(t, "Label [approved] is required.", msg, "Full message")
 
 	// Test 2
-	gitfake.Repos[testRepo].PullRequests[testPRID].Labels = []git.IssueLabel{{Name: "approved"}}
-	status, removeFromMergePool, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, testPRID, gitCli)
-	if err != nil {
-		t.Fatal(err)
-	}
+	pr.Labels = []git.IssueLabel{{Name: "approved"}}
+	status, removeFromMergePool, msg = checkConditionsFull(ic.Spec.MergeConfig.Query, pr)
 
 	assert.Equal(t, false, status, "Full status")
 	assert.Equal(t, false, removeFromMergePool, "Remove from merge pool")
 	assert.Equal(t, "Merge conflicts exist. Checks [test-1] are not successful.", msg, "Full message")
 
 	// Test 3
-	gitfake.Repos[testRepo].PullRequests[testPRID].Mergeable = true
-	gitfake.Repos[testRepo].CommitStatuses[testSHA] = []git.CommitStatus{{Context: "test-1", State: "success"}}
-	status, removeFromMergePool, msg, err = checkConditionsFull(ic.Spec.MergeConfig.Query, testPRID, gitCli)
-	if err != nil {
-		t.Fatal(err)
-	}
+	pr.Mergeable = true
+	pr.Statuses["test-1"] = git.CommitStatus{State: "success"}
+	status, removeFromMergePool, msg = checkConditionsFull(ic.Spec.MergeConfig.Query, pr)
 
 	assert.Equal(t, true, status, "Full status")
 	assert.Equal(t, false, removeFromMergePool, "Remove from merge pool")
@@ -359,9 +340,9 @@ func TestCheckLabels(t *testing.T) {
 
 func TestCheckChecks(t *testing.T) {
 	// Test 1
-	statuses := map[string]git.CommitStatusState{
-		"test-lint": "pending",
-		"test-unit": "success",
+	statuses := map[string]git.CommitStatus{
+		"test-lint": {State: "pending"},
+		"test-unit": {State: "success"},
 	}
 	query := cicdv1.MergeQuery{
 		Checks: []string{},
@@ -372,9 +353,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-lint] are not successful.", msg, "Message")
 
 	// Test 2
-	statuses = map[string]git.CommitStatusState{
-		"test-lint": "pending",
-		"test-unit": "success",
+	statuses = map[string]git.CommitStatus{
+		"test-lint": {State: "pending"},
+		"test-unit": {State: "success"},
 	}
 	query = cicdv1.MergeQuery{
 		OptionalChecks: []string{
@@ -387,9 +368,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "", msg, "Message")
 
 	// Test 3
-	statuses = map[string]git.CommitStatusState{
-		"test-lint": "pending",
-		"test-unit": "success",
+	statuses = map[string]git.CommitStatus{
+		"test-lint": {State: "pending"},
+		"test-unit": {State: "success"},
 	}
 	query = cicdv1.MergeQuery{
 		Checks: []string{
@@ -402,9 +383,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "", msg, "Message")
 
 	// Test 4
-	statuses = map[string]git.CommitStatusState{
-		"test-lint": "pending",
-		"test-unit": "pending",
+	statuses = map[string]git.CommitStatus{
+		"test-lint": {State: "pending"},
+		"test-unit": {State: "pending"},
 	}
 	query = cicdv1.MergeQuery{
 		Checks: []string{
@@ -417,9 +398,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-unit] are not successful.", msg, "Message")
 
 	// Test 5
-	statuses = map[string]git.CommitStatusState{
-		"test-lint": "pending",
-		"test-unit": "pending",
+	statuses = map[string]git.CommitStatus{
+		"test-lint": {State: "pending"},
+		"test-unit": {State: "pending"},
 	}
 	query = cicdv1.MergeQuery{}
 	result, msg = checkChecks(statuses, query)
@@ -428,9 +409,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-lint,test-unit] are not successful.", msg, "Message")
 
 	// Test 6
-	statuses = map[string]git.CommitStatusState{
-		"test-lint": "pending",
-		"test-unit": "pending",
+	statuses = map[string]git.CommitStatus{
+		"test-lint": {State: "pending"},
+		"test-unit": {State: "pending"},
 	}
 	query = cicdv1.MergeQuery{
 		Checks: []string{
@@ -444,10 +425,10 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-lint,test-unit] are not successful.", msg, "Message")
 
 	// Test 7
-	statuses = map[string]git.CommitStatusState{
-		blockerContext: "pending",
-		"test-lint":    "pending",
-		"test-unit":    "success",
+	statuses = map[string]git.CommitStatus{
+		blockerContext: {State: "pending"},
+		"test-lint":    {State: "pending"},
+		"test-unit":    {State: "success"},
 	}
 	query = cicdv1.MergeQuery{
 		OptionalChecks: []string{
@@ -460,9 +441,9 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "", msg, "Message")
 
 	// Test 8
-	statuses = map[string]git.CommitStatusState{
-		blockerContext: "pending",
-		"test-lint":    "pending",
+	statuses = map[string]git.CommitStatus{
+		blockerContext: {State: "pending"},
+		"test-lint":    {State: "pending"},
 	}
 	query = cicdv1.MergeQuery{
 		Checks: []string{
@@ -475,26 +456,7 @@ func TestCheckChecks(t *testing.T) {
 	assert.Equal(t, "Checks [test-unit] are not successful.", msg, "Message")
 }
 
-func checkTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
-	gitfake.Repos = map[string]*gitfake.Repo{
-		testRepo: {
-			Webhooks:     map[int]*git.WebhookEntry{},
-			UserCanWrite: map[string]bool{},
-
-			PullRequests:   map[int]*git.PullRequest{},
-			CommitStatuses: map[string][]git.CommitStatus{},
-			Comments:       map[int][]git.IssueComment{},
-		},
-	}
-	gitfake.Repos[testRepo].PullRequests[testPRID] = &git.PullRequest{
-		Head:   git.Head{Sha: testSHA},
-		Labels: []git.IssueLabel{{Name: "kind/bug"}},
-	}
-	gitfake.Repos[testRepo].CommitStatuses[testSHA] = nil
-
-	s := runtime.NewScheme()
-	utilruntime.Must(cicdv1.AddToScheme(s))
-
+func checkTestConfig() (*cicdv1.IntegrationConfig, *PullRequest) {
 	ic := &cicdv1.IntegrationConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-ic",
@@ -516,5 +478,14 @@ func checkTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
 		},
 	}
 
-	return fake.NewFakeClientWithScheme(s, ic), ic
+	pr := &PullRequest{
+		PullRequest: git.PullRequest{
+			ID:     testPRID,
+			Head:   git.Head{Sha: testSHA},
+			Labels: []git.IssueLabel{{Name: "kind/bug"}},
+		},
+		Statuses: map[string]git.CommitStatus{},
+	}
+
+	return ic, pr
 }

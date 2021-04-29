@@ -4072,8 +4072,9 @@ spec:
                 properties:
                   commitTemplate:
                     description: CommitTemplate is a message template for a merge
-                      commit. The commit message is compiled as a go template using
-                      git.PullRequest object
+                      commit. Currently NOT supported (only uses default commit messages)
+                      - to be implemented. The commit message is compiled as a go
+                      template using git.PullRequest object.
                     type: string
                   method:
                     description: Method is a merge method

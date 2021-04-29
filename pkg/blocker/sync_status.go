@@ -47,6 +47,11 @@ func (b *blocker) syncMergePoolStatus() {
 		// Set PRs' commit status for each repository
 		b.reportCommitStatus(pool, ic, gitCli)
 	}
+
+	// Notify that a sync is done
+	if len(b.statusSynced) < cap(b.statusSynced) {
+		b.statusSynced <- struct{}{}
+	}
 }
 
 func (b *blocker) syncOneMergePoolStatus(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli git.Client) {
@@ -59,11 +64,12 @@ func (b *blocker) syncOneMergePoolStatus(pool *PRPool, ic *cicdv1.IntegrationCon
 	for oldStatus := range pool.MergePool {
 		// For each PR
 		for prID, pr := range pool.MergePool[oldStatus] {
-			newStatusB, removeFromMergePool, newDescription, err := checkConditionsFull(ic.Spec.MergeConfig.Query, pr.ID, gitCli)
-			if err != nil {
+			// Fetch PR's status, commit statuses
+			if err := b.reflectPRStatus(pr, gitCli); err != nil {
 				log.Error(err, "")
 				continue
 			}
+			newStatusB, removeFromMergePool, newDescription := checkConditionsFull(ic.Spec.MergeConfig.Query, pr)
 
 			var newStatus git.CommitStatusState
 			if newStatusB {
@@ -74,7 +80,8 @@ func (b *blocker) syncOneMergePoolStatus(pool *PRPool, ic *cicdv1.IntegrationCon
 			}
 
 			// Remove from merge pool if simple test fails
-			if removeFromMergePool {
+			// But, if the PR is being re-tested by merger, keep it in the merge pool
+			if removeFromMergePool && (pool.CurrentBatch == nil || !pool.CurrentBatch.Contains(prID)) {
 				delete(pool.MergePool[oldStatus], prID)
 			}
 
@@ -97,6 +104,26 @@ func (b *blocker) syncOneMergePoolStatus(pool *PRPool, ic *cicdv1.IntegrationCon
 			log.Info(fmt.Sprintf("\t[#%d](%.20s) - %s/%s", pr.ID, pr.Title, pr.BlockerStatus, pr.BlockerDescription))
 		}
 	}
+}
+
+func (b *blocker) reflectPRStatus(pull *PullRequest, gitCli git.Client) error {
+	// GET PullRequest
+	pr, err := gitCli.GetPullRequest(pull.ID)
+	if err != nil {
+		return err
+	}
+	pull.PullRequest = *pr
+
+	// GET PR statuses
+	checksSlice, err := gitCli.ListCommitStatuses(pr.Head.Sha)
+	if err != nil {
+		return err
+	}
+	pull.Statuses = map[string]git.CommitStatus{}
+	for _, c := range checksSlice {
+		pull.Statuses[c.Context] = c
+	}
+	return nil
 }
 
 func (b *blocker) reportCommitStatus(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli git.Client) {

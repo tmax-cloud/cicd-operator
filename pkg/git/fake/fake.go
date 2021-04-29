@@ -274,7 +274,7 @@ func (c *Client) GetBranch(branch string) (*git.Branch, error) {
 	}
 	b, exist := Branches[branch]
 	if !exist {
-		return nil, fmt.Errorf("404 no such branch")
+		return nil, fmt.Errorf("404 no such branch (%s)", branch)
 	}
 	return b, nil
 }

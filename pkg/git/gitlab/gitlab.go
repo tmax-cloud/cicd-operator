@@ -146,8 +146,10 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 			state = "failure"
 		}
 		resp = append(resp, git.CommitStatus{
-			Context: s.Name,
-			State:   state,
+			Context:     s.Name,
+			State:       state,
+			Description: s.Description,
+			TargetURL:   s.TargetURL,
 		})
 	}
 
@@ -174,7 +176,7 @@ func (c *Client) SetCommitStatus(sha string, status git.CommitStatus) error {
 		commitStatusBody.State = string(status.State)
 	}
 	commitStatusBody.TargetURL = status.TargetURL
-	commitStatusBody.Description = status.TargetURL
+	commitStatusBody.Description = status.Description
 	commitStatusBody.Context = status.Context
 
 	// Cannot transition status via :run from :running
@@ -301,6 +303,13 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 		return nil, err
 	}
 
+	// Target Branch
+	// TODO - can we delete this logic...? it consumes another API token limit...
+	targetBranch, err := c.GetBranch(mr.TargetBranch)
+	if err != nil {
+		return nil, err
+	}
+
 	return &git.PullRequest{
 		ID:    mr.ID,
 		Title: mr.Title,
@@ -310,7 +319,7 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 			Name: mr.Author.UserName,
 		},
 		URL:       mr.WebURL,
-		Base:      git.Base{Ref: mr.TargetBranch},
+		Base:      git.Base{Ref: mr.TargetBranch, Sha: targetBranch.CommitID},
 		Head:      git.Head{Ref: mr.SourceBranch, Sha: mr.SHA},
 		Labels:    convertLabel(mr.Labels),
 		Mergeable: !mr.HasConflicts,
@@ -318,14 +327,13 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 }
 
 // MergePullRequest merges a pull request
-func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, message string) error {
+func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, _ string) error {
 	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%d/merge", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), id)
 
 	body := &MergeAcceptRequest{
 		Squash:             method == git.MergeMethodSquash,
 		Sha:                sha,
 		RemoveSourceBranch: false,
-		MergeCommitMessage: message,
 	}
 
 	_, _, err := c.requestHTTP(http.MethodPut, apiURL, body)

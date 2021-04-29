@@ -41,33 +41,17 @@ func checkConditionsSimple(q cicdv1.MergeQuery, pr *git.PullRequest) (bool, stri
 }
 
 // checkConditionsFull is a checkConditionsSimple + commit status check + merge conflict check
-// Return: status / removeFromMergePool / description / error
-func checkConditionsFull(q cicdv1.MergeQuery, id int, client git.Client) (bool, bool, string, error) {
-	// GET PullRequest
-	pr, err := client.GetPullRequest(id)
-	if err != nil {
-		return false, false, "", err
-	}
-
-	// GET PR statuses
-	checksSlice, err := client.ListCommitStatuses(pr.Head.Sha)
-	if err != nil {
-		return false, false, "", err
-	}
-	checks := map[string]git.CommitStatusState{}
-	for _, c := range checksSlice {
-		checks[c.Context] = c.State
-	}
-
+// Return: status / removeFromMergePool / description
+func checkConditionsFull(q cicdv1.MergeQuery, pr *PullRequest) (bool, bool, string) {
 	var messages []string
 
 	// Check labels (, approved), branch, author
-	simpleResult, simpleMessage := checkConditionsSimple(q, pr)
+	simpleResult, simpleMessage := checkConditionsSimple(q, &pr.PullRequest)
 	if simpleMessage != "" {
 		messages = append(messages, simpleMessage)
 	}
 	if !simpleResult {
-		return false, true, strings.Join(messages, " "), nil
+		return false, true, strings.Join(messages, " ")
 	}
 
 	// Check merge conflict
@@ -77,12 +61,12 @@ func checkConditionsFull(q cicdv1.MergeQuery, id int, client git.Client) (bool, 
 	}
 
 	// Check commit statuses
-	passCommitStatus, commitStatusMsg := checkChecks(checks, q)
+	passCommitStatus, commitStatusMsg := checkChecks(pr.Statuses, q)
 	if commitStatusMsg != "" {
 		messages = append(messages, commitStatusMsg)
 	}
 
-	return simpleResult && passMergeConflict && passCommitStatus, false, strings.Join(messages, " "), nil
+	return simpleResult && passMergeConflict && passCommitStatus, false, strings.Join(messages, " ")
 }
 
 func checkBranch(b string, q cicdv1.MergeQuery) (bool, string) {
@@ -155,7 +139,7 @@ func checkLabels(labels map[string]struct{}, q cicdv1.MergeQuery) (bool, string)
 	return isProperLabels, msg
 }
 
-func checkChecks(statuses map[string]git.CommitStatusState, q cicdv1.MergeQuery) (bool, string) {
+func checkChecks(statuses map[string]git.CommitStatus, q cicdv1.MergeQuery) (bool, string) {
 	var unmetChecks []string
 	passAllRequiredChecks := true
 	if len(q.Checks) > 0 {
@@ -163,7 +147,7 @@ func checkChecks(statuses map[string]git.CommitStatusState, q cicdv1.MergeQuery)
 		for _, c := range q.Checks {
 			s, exist := statuses[c]
 			if exist {
-				if s != "success" {
+				if s.State != "success" {
 					passAllRequiredChecks = false
 					unmetChecks = append(unmetChecks, c)
 				}
@@ -175,11 +159,11 @@ func checkChecks(statuses map[string]git.CommitStatusState, q cicdv1.MergeQuery)
 		}
 	} else {
 		// Check for the other checks
-		for context, state := range statuses {
+		for context, s := range statuses {
 			if context == blockerContext {
 				continue
 			}
-			if state != "success" && !containsString(context, q.OptionalChecks) {
+			if s.State != "success" && !containsString(context, q.OptionalChecks) {
 				passAllRequiredChecks = false
 				unmetChecks = append(unmetChecks, context)
 			}
