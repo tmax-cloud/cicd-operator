@@ -97,6 +97,69 @@ spec:
             path: /var/log/cicd-operator/logs
       terminationGracePeriodSeconds: 10
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blocker
+  namespace: cicd-system
+  labels:
+    cicd.tmax.io/part-of: blocker
+spec:
+  selector:
+    cicd.tmax.io/part-of: blocker
+  ports:
+    - port: 8808
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blocker-config
+  namespace: cicd-system
+  labels:
+    cicd.tmax.io/part-of: blocker
+data:
+  mergeSyncPeriod: "1" # in minute
+  mergeBlockLabel: "ci/hold"
+  mergeKindSquashLabel: "ci/merge-squash"
+  mergeKindMergeLabel: "ci/merge-merge"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blocker
+  namespace: cicd-system
+  labels:
+    control-plane: controller-manager
+    cicd.tmax.io/part-of: blocker
+spec:
+  selector:
+    matchLabels:
+      cicd.tmax.io/part-of: blocker
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        cicd.tmax.io/part-of: blocker
+    spec:
+      containers:
+        - command:
+            - /blocker
+          image: tmaxcloudck/cicd-blocker:latest
+          imagePullPolicy: Always
+          name: manager
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          volumeMounts:
+            - mountPath: /logs
+              name: operator-log
+      volumes:
+        - name: operator-log
+          hostPath:
+            path: /var/log/cicd-operator/logs
+      terminationGracePeriodSeconds: 10
+---
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
