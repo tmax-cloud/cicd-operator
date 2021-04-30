@@ -1,64 +1,79 @@
 package configs
 
-// Configs to be configured by command line arguments
-
-var (
-	// MaxPipelineRun is the number of PipelineRuns that can run simultaneously
-	MaxPipelineRun int
-
-	// ExternalHostName to be used for webhook server (default is ingress host name)
-	ExternalHostName string
-
-	// ReportRedirectURITemplate is a uri template for report page redirection
-	ReportRedirectURITemplate string
-
-	// CollectPeriod is a garbage collection period (in hour)
-	CollectPeriod int
-
-	// IntegrationJobTTL is a garbage collection threshold (in hour).
-	// If IntegrationJob's .status.completionTime + TTL < now, it's collected
-	IntegrationJobTTL int
-
-	// EnableMail is whether to enable mail feature or not
-	EnableMail bool
-
-	// SMTPHost is a host (IP:PORT) of the SMTP server
-	SMTPHost string
-
-	// SMTPUserSecret is a credential secret for the SMTP server (should be basic type)
-	SMTPUserSecret string
-
-	// ApprovalRequestMailTitle is a title for the approval request mail
-	ApprovalRequestMailTitle string
-	// ApprovalRequestMailContent is a content of the approval request mail
-	ApprovalRequestMailContent string
-
-	// ApprovalResultMailTitle is a title for the approval result mail
-	ApprovalResultMailTitle string
-	// ApprovalResultMailContent is a content of the approval result mail
-	ApprovalResultMailContent string
-
-	// IngressClass is a class for ingress instance
-	IngressClass string
-
-	// IngressHost is a host for ingress instance
-	IngressHost string
+import (
+	corev1 "k8s.io/api/core/v1"
+	"strconv"
 )
 
-// Merge Automation Configs
+// Initiate-related channel
 var (
-	// MergeSyncPeriod is a PR sync period in minute
-	MergeSyncPeriod int
-
-	// MergeBlockLabel is a label name which blocks a PR to be merged
-	MergeBlockLabel string
-
-	// MergeKindSquashLabel is a label to make a PR to be merged by 'squash'
-	MergeKindSquashLabel string
-
-	// MergeKindRebaseLabel is a label to make a PR to be merged by 'rebase'
-	MergeKindRebaseLabel string
-
-	// MergeKindMergeLabel is a label to make a PR to be merged by 'merge'
-	MergeKindMergeLabel string
+	Initiated = false
+	InitCh    = make(chan struct{}, 1)
 )
+
+type cfgType int
+
+const (
+	cfgTypeString cfgType = iota
+	cfgTypeInt
+	cfgTypeBool
+)
+
+type operatorConfig struct {
+	Type cfgType
+
+	StringVal     *string
+	StringDefault string
+
+	IntVal     *int
+	IntDefault int
+
+	BoolVal     *bool
+	BoolDefault bool
+}
+
+// Handler is a config map handler function
+type Handler func(cm *corev1.ConfigMap) error
+
+func getVars(data map[string]string, vars map[string]operatorConfig) {
+	for key, c := range vars {
+		v := data[key]
+		switch c.Type {
+		case cfgTypeString:
+			if c.StringVal == nil {
+				continue
+			}
+			if len(v) > 0 {
+				*c.StringVal = v
+			} else if len(c.StringDefault) > 0 {
+				*c.StringVal = c.StringDefault
+			}
+		case cfgTypeInt:
+			if c.IntVal == nil {
+				continue
+			}
+			if len(v) > 0 {
+				i, err := strconv.Atoi(v)
+				if err != nil {
+					continue
+				}
+				*c.IntVal = i
+			} else {
+				*c.IntVal = c.IntDefault
+			}
+		case cfgTypeBool:
+			if c.BoolVal == nil {
+				continue
+			}
+			if len(v) > 0 {
+				b, err := strconv.ParseBool(v)
+				if err != nil {
+					continue
+				}
+				*c.BoolVal = b
+			} else {
+				*c.BoolVal = c.BoolDefault
+			}
+		}
+	}
+}

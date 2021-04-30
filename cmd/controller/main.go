@@ -22,6 +22,7 @@ import (
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/controllers/customs"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/logrotate"
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver"
 	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
@@ -103,9 +104,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	gcChan := make(chan struct{})
 	// Start garbage collector
-	gc, err := collector.New(mgr.GetClient(), gcChan)
+	gc, err := collector.New(mgr.GetClient())
 	if err != nil {
 		setupLog.Error(err, "error initializing garbage collector")
 		os.Exit(1)
@@ -113,10 +113,12 @@ func main() {
 	go gc.Start()
 
 	// Config Controller
-	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), GcChan: gcChan, InitChan: make(chan struct{})}
+	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), Handlers: map[string]configs.Handler{}}
 	go cfgCtrl.Start()
+	cfgCtrl.Add(configs.ConfigMapNameCICDConfig, configs.ApplyControllerConfigChange)
+	cfgCtrl.Add(configs.ConfigMapNameEmailTemplate, configs.ApplyEmailTemplateConfigChange)
 	// Wait for initial config reconcile
-	<-cfgCtrl.InitChan
+	<-configs.InitCh
 
 	// Controllers
 	if err = (&controllers.IntegrationConfigReconciler{

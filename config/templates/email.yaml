@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: email-template
   namespace: cicd-system
+  labels:
+    cicd.tmax.io/part-of: controller
 data:
   request-title: "[HyperCloud] 파이프라인 승인 요청 안내"
   request-content: |
