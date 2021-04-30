@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	gitfake "github.com/tmax-cloud/cicd-operator/pkg/git/fake"
@@ -144,6 +145,63 @@ func TestBlocker_handleBatch(t *testing.T) {
 		}
 		assert.Equal(t, true, pool.CurrentBatch == nil, "CurrentBatch cleared")
 	})
+}
+
+type getMergeMethodTestCase struct {
+	Labels         []git.IssueLabel
+	ICMethod       git.MergeMethod
+	ExpectedMethod git.MergeMethod
+}
+
+func TestGetMergeMethod(t *testing.T) {
+	tc := map[string]getMergeMethodTestCase{
+		"followICMerge": {
+			Labels:         []git.IssueLabel{},
+			ICMethod:       git.MergeMethodMerge,
+			ExpectedMethod: git.MergeMethodMerge,
+		},
+		"followICSquash": {
+			Labels:         []git.IssueLabel{},
+			ICMethod:       git.MergeMethodSquash,
+			ExpectedMethod: git.MergeMethodSquash,
+		},
+		"globalMerge": {
+			Labels:         []git.IssueLabel{{Name: "global/merge-merge"}},
+			ICMethod:       git.MergeMethodMerge,
+			ExpectedMethod: git.MergeMethodMerge,
+		},
+		"globalMerge2": {
+			Labels:         []git.IssueLabel{{Name: "global/merge-merge"}},
+			ICMethod:       git.MergeMethodSquash,
+			ExpectedMethod: git.MergeMethodMerge,
+		},
+		"globalSquash": {
+			Labels:         []git.IssueLabel{{Name: "global/merge-squash"}},
+			ICMethod:       git.MergeMethodSquash,
+			ExpectedMethod: git.MergeMethodSquash,
+		},
+		"globalSquash2": {
+			Labels:         []git.IssueLabel{{Name: "global/merge-squash"}},
+			ICMethod:       git.MergeMethodMerge,
+			ExpectedMethod: git.MergeMethodSquash,
+		},
+	}
+
+	configs.MergeKindMergeLabel = "global/merge-merge"
+	configs.MergeKindSquashLabel = "global/merge-squash"
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			pr := &PullRequest{}
+			pr.Labels = c.Labels
+			ic := &cicdv1.IntegrationConfig{}
+			ic.Spec.MergeConfig = &cicdv1.MergeConfig{Method: c.ICMethod}
+
+			method := getMergeMethod(pr, ic)
+
+			assert.Equal(t, string(c.ExpectedMethod), string(method))
+		})
+	}
 }
 
 func mergeTestConfig() (*cicdv1.IntegrationConfig, client.Client) {

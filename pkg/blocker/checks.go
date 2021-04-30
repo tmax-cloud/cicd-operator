@@ -3,6 +3,7 @@ package blocker
 import (
 	"fmt"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"sort"
 	"strings"
@@ -20,6 +21,12 @@ func checkConditionsSimple(q cicdv1.MergeQuery, pr *git.PullRequest) (bool, stri
 	if q.ApproveRequired { // Check 'approved' label if approval is required
 		q.Labels = append(q.Labels, "approved")
 	}
+
+	// add global block label
+	if configs.MergeBlockLabel != "" {
+		q.BlockLabels = append(q.BlockLabels, configs.MergeBlockLabel)
+	}
+
 	passLabelChecks, labelCheckMsg := checkLabels(labels, q)
 	if labelCheckMsg != "" {
 		messages = append(messages, labelCheckMsg)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -78,9 +79,7 @@ func (b *blocker) retestAndMergeOnePool(pool *PRPool) {
 
 	// Merge it if the tests are done based on the latest commit
 	if isBaseLatest {
-		log.Info(fmt.Sprintf("Merging PR #%d into %s", pr.ID, branch))
-		// TODO - merge commit template
-		if err := gitCli.MergePullRequest(pr.ID, pr.Head.Sha, ic.Spec.MergeConfig.Method, ""); err != nil {
+		if err := b.mergePullRequest(pr, ic, gitCli); err != nil {
 			log.Error(err, "")
 			return
 		}
@@ -122,9 +121,7 @@ func (b *blocker) handleBatch(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli
 		// If batch test is successful, merge them all, sequentially
 		// TODO - what if the target branch is updated during the test...? (manually by a user)
 		for _, pr := range pool.CurrentBatch.PRs {
-			b.log.WithName("merger").WithValues("integrationconfig", ic.Namespace+"/"+ic.Name).Info(fmt.Sprintf("Merging PR #%d into %s", pr.ID, cicdv1.GitRef(pr.Base.Ref).GetBranch()))
-			// TODO - merge commit template
-			if err := gitCli.MergePullRequest(pr.ID, pr.Head.Sha, ic.Spec.MergeConfig.Method, ""); err != nil {
+			if err := b.mergePullRequest(pr, ic, gitCli); err != nil {
 				return err
 			}
 		}
@@ -145,6 +142,33 @@ func (b *blocker) handleBatch(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli
 		// Do nothing if it's still running
 	}
 	return nil
+}
+
+func (b *blocker) mergePullRequest(pr *PullRequest, ic *cicdv1.IntegrationConfig, gitCli git.Client) error {
+	log := b.log.WithName("merger").WithValues("repo", genPoolKey(ic))
+	log.Info(fmt.Sprintf("Merging PR #%d into %s", pr.ID, cicdv1.GitRef(pr.Base.Ref).GetBranch()))
+
+	// TODO - compile message
+	if err := gitCli.MergePullRequest(pr.ID, pr.Head.Sha, getMergeMethod(pr, ic), ""); err != nil {
+		return err
+	}
+	return nil
+}
+
+func getMergeMethod(pr *PullRequest, ic *cicdv1.IntegrationConfig) git.MergeMethod {
+	method := ic.Spec.MergeConfig.Method
+
+	// Check squash/merge label
+	for _, l := range pr.Labels {
+		if configs.MergeKindSquashLabel != "" && l.Name == configs.MergeKindSquashLabel {
+			return git.MergeMethodSquash
+		}
+		if configs.MergeKindMergeLabel != "" && l.Name == configs.MergeKindMergeLabel {
+			return git.MergeMethodMerge
+		}
+	}
+
+	return method
 }
 
 func checkBaseSHA(baseBranch string, ic *cicdv1.IntegrationConfig, pr *PullRequest, gitCli git.Client) (bool, error) {
