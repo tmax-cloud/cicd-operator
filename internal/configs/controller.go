@@ -19,16 +19,17 @@ var GcChan = make(chan struct{}, 1)
 // ApplyControllerConfigChange is a configmap handler for cicd-config configmap
 func ApplyControllerConfigChange(cm *corev1.ConfigMap) error {
 	getVars(cm.Data, map[string]operatorConfig{
-		"maxPipelineRun":            {Type: cfgTypeInt, IntVal: &MaxPipelineRun, IntDefault: 5},         // Max PipelineRun count
-		"enableMail":                {Type: cfgTypeBool, BoolVal: &EnableMail, BoolDefault: false},      // Enable Mail
-		"externalHostName":          {Type: cfgTypeString, StringVal: &ExternalHostName},                // External Hostname
-		"reportRedirectUriTemplate": {Type: cfgTypeString, StringVal: &ReportRedirectURITemplate},       // RedirectUriTemplate for report access
-		"smtpHost":                  {Type: cfgTypeString, StringVal: &SMTPHost},                        // SMTP Host
-		"smtpUserSecret":            {Type: cfgTypeString, StringVal: &SMTPUserSecret},                  // SMTP Cred
-		"collectPeriod":             {Type: cfgTypeInt, IntVal: &CollectPeriod, IntDefault: 120},        // GC period
-		"integrationJobTTL":         {Type: cfgTypeInt, IntVal: &IntegrationJobTTL, IntDefault: 120},    // GC threshold
-		"ingressClass":              {Type: cfgTypeString, StringVal: &IngressClass, StringDefault: ""}, // Ingress class
-		"ingressHost":               {Type: cfgTypeString, StringVal: &IngressHost, StringDefault: ""},  // Ingress host
+		"maxPipelineRun":            {Type: cfgTypeInt, IntVal: &MaxPipelineRun, IntDefault: 5},                                // Max PipelineRun count
+		"enableMail":                {Type: cfgTypeBool, BoolVal: &EnableMail, BoolDefault: false},                             // Enable Mail
+		"externalHostName":          {Type: cfgTypeString, StringVal: &ExternalHostName},                                       // External Hostname
+		"reportRedirectUriTemplate": {Type: cfgTypeString, StringVal: &ReportRedirectURITemplate},                              // RedirectUriTemplate for report access
+		"smtpHost":                  {Type: cfgTypeString, StringVal: &SMTPHost},                                               // SMTP Host
+		"smtpUserSecret":            {Type: cfgTypeString, StringVal: &SMTPUserSecret},                                         // SMTP Cred
+		"collectPeriod":             {Type: cfgTypeInt, IntVal: &CollectPeriod, IntDefault: 120},                               // GC period
+		"integrationJobTTL":         {Type: cfgTypeInt, IntVal: &IntegrationJobTTL, IntDefault: 120},                           // GC threshold
+		"ingressClass":              {Type: cfgTypeString, StringVal: &IngressClass, StringDefault: ""},                        // Ingress class
+		"ingressHost":               {Type: cfgTypeString, StringVal: &IngressHost, StringDefault: ""},                         // Ingress host
+		"gitImage":                  {Type: cfgTypeString, StringVal: &GitImage, StringDefault: "docker.io/alpine/git:1.0.30"}, // Git image
 	})
 
 	// Check SMTP config.s
@@ -105,4 +106,7 @@ var (
 
 	// IngressHost is a host for ingress instance
 	IngressHost string
+
+	// GitImage is an image url for the git-checkout step
+	GitImage string
 )

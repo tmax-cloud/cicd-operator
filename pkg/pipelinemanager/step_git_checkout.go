@@ -2,6 +2,7 @@ package pipelinemanager
 
 import (
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -15,7 +16,7 @@ func gitCheckout() tektonv1beta1.Step {
 	step := tektonv1beta1.Step{}
 
 	step.Name = "git-clone"
-	step.Image = "alpine/git"
+	step.Image = configs.GitImage
 	step.WorkingDir = DefaultWorkingDir
 	step.Script = `#!/bin/sh
 set -x

@@ -5,6 +5,7 @@ This guide shows how to configure the operator. Contents are as follows.
   - [`maxPipelineRun`](#maxpipelinerun)
   - [`ingressClass`](#ingressclass)
   - [`externalHostName`](#externalhostname)
+  - [`gitImage`](#gitimage)
 - [Email Configurations](#email-configurations)
   - [`enableMail`](#enablemail)
   - [`smtpHost`](#smtphost)
@@ -41,6 +42,10 @@ Ingress's class name to be used for the webhook/report server access.
 
 ### `externalHostName`
 External host name for the ingress. It should be the address a user/git server can access. Default address is `cicd-webhook.INGRESS_IP.nip.io`
+
+### `gitImage`
+Git image to be used for `git-checkout` steps
+> Default: docker.io/alpine/git:1.0.30
 
 ## Email Configurations
 ### `enableMail`
