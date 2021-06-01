@@ -59,6 +59,7 @@ data:
   integrationJobTTL: "120"
   ingressClass: ""
   ingressHost: ""
+  gitImage: "docker.io/alpine/git:1.0.30"
 ---
 apiVersion: apps/v1
 kind: Deployment
