@@ -57,16 +57,24 @@ spec:
       image: quay.io/buildah/stable
       script: |
         TAG=${CI_HEAD_REF#refs/tags/}
-        IMG=$IMAGE_URL:$TAG
 
-        buildah bud --format docker --storage-driver=vfs -f ./Dockerfile -t $IMG .
-        buildah push --storage-driver=vfs $IMG docker://$IMG
+        IMG_OPERATOR="$IMAGE_URL_OPERATOR:$TAG"
+        IMG_BLOCKER="$IMAGE_URL_BLOCKER:$TAG"
 
-        buildah tag --storage-driver=vfs $IMG $IMAGE_URL:latest
-        buildah push --storage-driver=vfs $IMAGE_URL:latest docker://$IMAGE_URL:latest
+        buildah bud --format docker --storage-driver=vfs -f ./build/controller/Dockerfile -t $IMG_OPERATOR .
+        buildah tag --storage-driver=vfs $IMG_OPERATOR $IMAGE_URL_OPERATOR:latest
+        buildah push --storage-driver=vfs $IMG_OPERATOR docker://$IMG_OPERATOR
+        buildah push --storage-driver=vfs $IMAGE_URL_OPERATOR:latest docker://$IMAGE_URL_OPERATOR:latest
+
+        buildah bud --format docker --storage-driver=vfs -f ./build/blocker/Dockerfile -t $IMG_BLOCKER .
+        buildah tag --storage-driver=vfs $IMG_BLOCKER $IMAGE_URL_BLOCKER:latest
+        buildah push --storage-driver=vfs $IMG_BLOCKER docker://$IMG_BLOCKER
+        buildah push --storage-driver=vfs $IMAGE_URL_BLOCKER:latest docker://$IMAGE_URL_BLOCKER:latest
       env:
-      - name: IMAGE_URL
+      - name: IMAGE_URL_OPERATOR
         value: tmaxcloudck/cicd-operator
+      - name: IMAGE_URL_BLOCKER
+        value: tmaxcloudck/cicd-blocker
       securityContext:
         privileged: true
       when:

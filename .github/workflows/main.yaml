@@ -49,9 +49,17 @@ jobs:
         run: |
           docker login -u=tmaxcloudck -p=${{ secrets.DOCKER_HUB_PASSWORD }}
 
-          REPO=tmaxcloudck/cicd-operator
-          IMG=${REPO}:${GITHUB_REF#refs/tags/}
-          docker build . -t ${IMG}
-          docker tag ${IMG} ${REPO}:latest
-          docker push ${IMG}
-          docker push ${REPO}:latest
+          REPO_OPERATOR=tmaxcloudck/cicd-operator
+          REPO_BLOCKER=tmaxcloudck/cicd-blocker
+
+          IMG_OPERATOR=${REPO_OPERATOR}:${GITHUB_REF#refs/tags/}
+          IMG_BLOCKER=${REPO_BLOCKER}:${GITHUB_REF#refs/tags/}
+
+          docker build . -t ${IMG_OPERATOR} -f build/controller/Dockerfile
+          docker build . -t ${IMG_BLOCKER} -f build/blocker/Dockerfile
+          docker tag ${IMG_OPERATOR} ${REPO_OPERATOR}:latest
+          docker tag ${IMG_BLOCKER} ${REPO_BLOCKER}:latest
+          docker push ${IMG_OPERATOR}
+          docker push ${IMG_BLOCKER}
+          docker push ${REPO_OPERATOR}:latest
+          docker push ${REPO_BLOCKER}:latest
