@@ -289,6 +289,8 @@ spec:
 ```
 
 ## Configuring `mergeConfig`
+*Currently, an ALPHA feature*
+
 Merge automation can be configured using `mergeConfig`.
 ### `method`
 `method` field specifies the method to merge the PR.

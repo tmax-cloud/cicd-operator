@@ -3,7 +3,8 @@ VERSION ?= v0.2.3
 REGISTRY ?= tmaxcloudck
 
 # Image URL to use all building/pushing image targets
-IMG ?= $(REGISTRY)/cicd-operator:$(VERSION)
+IMG_CONTROLLER ?= $(REGISTRY)/cicd-operator:$(VERSION)
+IMG_BLOCKER ?= $(REGISTRY)/cicd-blocker:$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -52,12 +53,24 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-docker-build:
-	docker build . -f build/controller/Dockerfile -t ${IMG}
+.PHONY: docker-build
+docker-build: docker-build-controller docker-build-blocker
+
+docker-build-controller:
+	docker build . -f build/controller/Dockerfile -t ${IMG_CONTROLLER}
+
+docker-build-blocker:
+	docker build . -f build/blocker/Dockerfile -t ${IMG_BLOCKER}
 
 # Push the docker image
-docker-push:
-	docker push ${IMG}
+.PHONY: docker-push
+docker-push: docker-push-controller docker-push-blocker
+
+docker-push-controller:
+	docker push ${IMG_CONTROLLER}
+
+docker-push-blocker:
+	docker push ${IMG_BLOCKER}
 
 # find or download controller-gen
 # download controller-gen if necessary
