@@ -36,3 +36,4 @@ for target in "${TARGETS[@]}"; do
 done
 
 sed -i "s/tmaxcloudck\/cicd-operator:latest/tmaxcloudck\/cicd-operator:$VERSION/g" "$RELEASE_MANIFEST"
+sed -i "s/tmaxcloudck\/cicd-blocker:latest/tmaxcloudck\/cicd-blocker:$VERSION/g" "$RELEASE_MANIFEST"
