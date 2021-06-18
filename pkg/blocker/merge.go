@@ -157,6 +157,9 @@ func (b *blocker) mergePullRequest(pr *PullRequest, ic *cicdv1.IntegrationConfig
 
 func getMergeMethod(pr *PullRequest, ic *cicdv1.IntegrationConfig) git.MergeMethod {
 	method := ic.Spec.MergeConfig.Method
+	if method == "" {
+		method = git.MergeMethodMerge
+	}
 
 	// Check squash/merge label
 	for _, l := range pr.Labels {
