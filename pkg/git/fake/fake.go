@@ -188,7 +188,6 @@ func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) erro
 				ID: issueNo,
 			},
 		},
-		Sender: git.User{},
 	})
 	return nil
 }

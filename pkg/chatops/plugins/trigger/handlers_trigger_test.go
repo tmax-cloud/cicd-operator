@@ -156,16 +156,26 @@ func buildTestWebhookForTrigger() *git.Webhook {
 			Name: "tmax-cloud/cicd-operator",
 			URL:  "https://github.com/tmax-cloud/cicd-operator",
 		},
+		Sender: git.User{
+			ID:    testUserID,
+			Name:  testUserName,
+			Email: testUserEmail,
+		},
 		IssueComment: &git.IssueComment{
 			Comment: git.Comment{
 				CreatedAt: &metav1.Time{Time: time.Now()},
+			},
+			Author: git.User{
+				ID:    testUserID,
+				Name:  testUserName,
+				Email: testUserEmail,
 			},
 			Issue: git.Issue{
 				PullRequest: &git.PullRequest{
 					ID:    0,
 					Title: "test-pull-request",
 					State: git.PullRequestStateOpen,
-					Sender: git.User{
+					Author: git.User{
 						ID:    testUserID,
 						Name:  testUserName,
 						Email: testUserEmail,
@@ -179,11 +189,6 @@ func buildTestWebhookForTrigger() *git.Webhook {
 						Sha: "sfoj39jfsidjf93jfsiljf20",
 					},
 				},
-			},
-			Sender: git.User{
-				ID:    testUserID,
-				Name:  testUserName,
-				Email: testUserEmail,
 			},
 		},
 	}

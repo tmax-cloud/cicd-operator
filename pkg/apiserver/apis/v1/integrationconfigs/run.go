@@ -86,13 +86,16 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 		}
 		wh.PullRequest = pr
 	case git.EventTypePush:
-		push, err := buildPushWebhook(req.Body, userEscaped)
+		push, err := buildPushWebhook(req.Body)
 		if err != nil {
 			log.Info(err.Error())
 			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot build push webhook", reqID))
 			return
 		}
 		wh.Push = push
+	}
+	wh.Sender = git.User{
+		Name: fmt.Sprintf("trigger-%s-end", userEscaped),
 	}
 
 	// Trigger Run!
@@ -124,7 +127,7 @@ func buildPullRequestWebhook(body io.ReadCloser, user string) (*git.PullRequest,
 	return &git.PullRequest{
 		State:  git.PullRequestStateOpen,
 		Action: git.PullRequestActionOpen,
-		Sender: git.User{
+		Author: git.User{
 			Name: fmt.Sprintf("trigger-%s-end", user),
 		},
 		Base: git.Base{
@@ -138,7 +141,7 @@ func buildPullRequestWebhook(body io.ReadCloser, user string) (*git.PullRequest,
 	}, nil
 }
 
-func buildPushWebhook(body io.ReadCloser, user string) (*git.Push, error) {
+func buildPushWebhook(body io.ReadCloser) (*git.Push, error) {
 	userReq := &cicdv1.IntegrationConfigAPIReqRunPostBody{}
 	decoder := json.NewDecoder(body)
 	if err := decoder.Decode(userReq); err != nil {
@@ -151,9 +154,6 @@ func buildPushWebhook(body io.ReadCloser, user string) (*git.Push, error) {
 	}
 
 	return &git.Push{
-		Sender: git.User{
-			Name: fmt.Sprintf("trigger-%s-end", user),
-		},
 		Ref: branch,
 		Sha: git.FakeSha,
 	}, nil

@@ -100,7 +100,7 @@ func (b *blocker) retestAndMergeOnePool(pool *PRPool) {
 		}
 
 		// Retest it (create IJ) TODO - batched IJ - not implemented yet
-		ij := dispatcher.GeneratePreSubmit(&pr.PullRequest, &git.Repository{Name: ic.Spec.Git.Repository, URL: pr.URL}, &pr.Sender, ic)
+		ij := dispatcher.GeneratePreSubmit(&pr.PullRequest, &git.Repository{Name: ic.Spec.Git.Repository, URL: pr.URL}, &pr.Author, ic)
 		pool.CurrentBatch.Job = types.NamespacedName{Name: ij.Name, Namespace: ij.Namespace}
 		if err := b.client.Create(context.Background(), ij); err != nil {
 			log.Error(err, "")
