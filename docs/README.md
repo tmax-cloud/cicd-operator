@@ -1,5 +1,9 @@
 # CI/CD Operator Documents
 
+## Overall Architecture
+![architecture](./figures/architecture.png)
+
+## Contents
 - [Installation Guide](./installation.md)
 - [Configuring Operator](./configs.md)
 - [Configuring Blocker](./config_blocker.md)
