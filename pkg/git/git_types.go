@@ -75,6 +75,9 @@ type PullRequest struct {
 	Head      Head
 	Labels    []IssueLabel
 	Mergeable bool
+
+	// LabelChanged
+	LabelChanged []IssueLabel
 }
 
 // IssueComment is a common structure for issue comment

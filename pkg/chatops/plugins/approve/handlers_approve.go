@@ -25,13 +25,21 @@ type Handler struct {
 
 // Handle handles a raw webhook
 func (h *Handler) Handle(wh *git.Webhook, ic *cicdv1.IntegrationConfig) error {
-	// Exit if it's not an approve/cancel action
-	if wh.IssueComment == nil || wh.IssueComment.Issue.PullRequest.State != git.PullRequestStateOpen || wh.IssueComment.ReviewState == "" {
+	// Skip if token is empty
+	if ic.Spec.Git.Token == nil {
 		return nil
 	}
 
-	// Skip if token is empty
-	if ic.Spec.Git.Token == nil {
+	// Case 1) Approve / Cancel of a pull request (via github/gitlab feature)
+	isApproval := wh.EventType == git.EventTypeIssueComment && wh.IssueComment != nil &&
+		wh.IssueComment.Issue.PullRequest.State == git.PullRequestStateOpen && wh.IssueComment.ReviewState != ""
+
+	// Case 2) Label 'approved' is added/deleted
+	isLabeled := wh.EventType == git.EventTypePullRequest && wh.PullRequest != nil &&
+		(wh.PullRequest.Action == git.PullRequestActionLabeled || wh.PullRequest.Action == git.PullRequestActionUnlabeled)
+
+	// Exit if it's not an approve/cancel action or label action
+	if !isApproval && !isLabeled {
 		return nil
 	}
 
@@ -40,6 +48,12 @@ func (h *Handler) Handle(wh *git.Webhook, ic *cicdv1.IntegrationConfig) error {
 		return err
 	}
 
+	// For labeled/unlabeled event
+	if isLabeled {
+		return h.handleLabelEvent(wh, ic, gitCli)
+	}
+
+	// For approve/cancel event
 	switch wh.IssueComment.ReviewState {
 	case git.PullRequestReviewStateApproved:
 		return h.handleApproveCommand(wh.IssueComment, gitCli)
@@ -69,7 +83,7 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 	}
 
 	// Authorize or exit
-	if err := h.authorize(config, &webhook.Sender, issueComment, gitCli); err != nil {
+	if err := h.authorize(config, webhook.Sender, issueComment.Issue.PullRequest.Author, gitCli); err != nil {
 		unAuthErr, ok := err.(*git.UnauthorizedError)
 		if !ok {
 			return err
@@ -96,6 +110,58 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 		return err
 	}
 
+	return nil
+}
+
+// handleLabelEvent handles labeled/unlabeled event for 'approved' label
+func (h *Handler) handleLabelEvent(wh *git.Webhook, ic *cicdv1.IntegrationConfig, gitCli git.Client) error {
+	pr := wh.PullRequest
+	// Check if 'approved' label is set/unset
+	isApprovedChanged := false
+	for _, l := range pr.LabelChanged {
+		if l.Name == approvedLabel {
+			isApprovedChanged = true
+			break
+		}
+	}
+	if !isApprovedChanged {
+		return nil
+	}
+
+	// Is it set or unset?
+	// Can't trust pr's action field (gitlab can set/unset labels at the same time)
+	isApprovedLabeled := false
+	for _, l := range pr.Labels {
+		if l.Name == approvedLabel {
+			isApprovedLabeled = true
+			break
+		}
+	}
+
+	// Authorize or exit
+	if err := h.authorize(ic, wh.Sender, pr.Author, gitCli); err != nil {
+		unAuthErr, ok := err.(*git.UnauthorizedError)
+		if !ok {
+			return err
+		}
+
+		// Set/Unset the label again
+		if isApprovedLabeled {
+			// Delete approved label
+			if err := gitCli.DeleteLabel(git.IssueTypePullRequest, pr.ID, approvedLabel); err != nil && !strings.Contains(err.Error(), "Label does not exist") {
+				return err
+			}
+		} else {
+			// Register approved label
+			if err := gitCli.SetLabel(git.IssueTypePullRequest, pr.ID, approvedLabel); err != nil {
+				return err
+			}
+		}
+		if err := gitCli.RegisterComment(git.IssueTypePullRequest, pr.ID, generateUserUnauthorizedComment(unAuthErr.User)); err != nil {
+			return err
+		}
+		return nil
+	}
 	return nil
 }
 
@@ -128,14 +194,14 @@ func (h *Handler) handleApproveCancelCommand(issueComment *git.IssueComment, git
 }
 
 // authorize decides if the sender is authorized to approve the PR
-func (h *Handler) authorize(cfg *cicdv1.IntegrationConfig, sender *git.User, issueComment *git.IssueComment, gitCli git.Client) error {
+func (h *Handler) authorize(cfg *cicdv1.IntegrationConfig, sender git.User, author git.User, gitCli git.Client) error {
 	// Check if it's PR's author
-	if sender.ID == issueComment.Issue.PullRequest.Author.ID {
+	if sender.ID == author.ID {
 		return &git.UnauthorizedError{User: sender.Name, Repo: cfg.Spec.Git.Repository}
 	}
 
 	// Check if it's repo's maintainer
-	ok, err := gitCli.CanUserWriteToRepo(*sender)
+	ok, err := gitCli.CanUserWriteToRepo(sender)
 	if err != nil {
 		return err
 	} else if ok {

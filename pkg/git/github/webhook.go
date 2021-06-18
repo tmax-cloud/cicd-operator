@@ -11,6 +11,9 @@ type PullRequestWebhook struct {
 	PullRequest PullRequest `json:"pull_request"`
 
 	Repo Repo `json:"repository"`
+
+	// Changed label
+	Label LabelBody `json:"label"`
 }
 
 // PushWebhook is a github-specific push event webhook body

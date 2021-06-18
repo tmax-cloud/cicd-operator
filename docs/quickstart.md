@@ -16,6 +16,7 @@ The contents are as follows.
 
 ## Create bot account and token
 1. Create account/token
+> DO NOT make pull requests using the bot account. Race can happen on labelling.
 - For GitHub  
   - Create a new bot account
   - Create an access token for the bot account  
