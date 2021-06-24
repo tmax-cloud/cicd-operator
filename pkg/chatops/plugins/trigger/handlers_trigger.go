@@ -31,7 +31,7 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 	}
 
 	// Authorize or exit
-	if err := h.authorize(config, issueComment); err != nil {
+	if err := h.authorize(config, &webhook.Sender, issueComment); err != nil {
 		if err := h.registerUnauthorizedComment(config, issueComment.Issue.PullRequest.ID, err); err != nil {
 			return err
 		}
@@ -49,7 +49,7 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 // handleTestCommand handles '/test <ARGS>' command
 func (h *Handler) handleTestCommand(command chatops.Command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	// Generate IntegrationJob for the PullRequest
-	job := dispatcher.GeneratePreSubmit(webhook.IssueComment.Issue.PullRequest, &webhook.Repo, &webhook.IssueComment.Sender, config)
+	job := dispatcher.GeneratePreSubmit(webhook.IssueComment.Issue.PullRequest, &webhook.Repo, &webhook.Sender, config)
 	if job == nil {
 		return nil
 	}
@@ -74,7 +74,7 @@ func (h *Handler) handleTestCommand(command chatops.Command, webhook *git.Webhoo
 // handleTestCommand handles '/retest' command
 func (h *Handler) handleRetestCommand(webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	// Generate IntegrationJob for the PullRequest
-	job := dispatcher.GeneratePreSubmit(webhook.IssueComment.Issue.PullRequest, &webhook.Repo, &webhook.IssueComment.Sender, config)
+	job := dispatcher.GeneratePreSubmit(webhook.IssueComment.Issue.PullRequest, &webhook.Repo, &webhook.Sender, config)
 	if job == nil {
 		return nil
 	}
@@ -88,9 +88,9 @@ func (h *Handler) handleRetestCommand(webhook *git.Webhook, config *cicdv1.Integ
 }
 
 // authorize decides if the sender is authorized to trigger the tests
-func (h *Handler) authorize(cfg *cicdv1.IntegrationConfig, issueComment *git.IssueComment) error {
+func (h *Handler) authorize(cfg *cicdv1.IntegrationConfig, sender *git.User, issueComment *git.IssueComment) error {
 	// Check if it's PR's author
-	if issueComment.Sender.ID == issueComment.Issue.PullRequest.Sender.ID {
+	if sender.ID == issueComment.Issue.PullRequest.Author.ID {
 		return nil
 	}
 
@@ -99,14 +99,14 @@ func (h *Handler) authorize(cfg *cicdv1.IntegrationConfig, issueComment *git.Iss
 	if err != nil {
 		return err
 	}
-	ok, err := g.CanUserWriteToRepo(issueComment.Sender)
+	ok, err := g.CanUserWriteToRepo(*sender)
 	if err != nil {
 		return err
 	} else if ok {
 		return nil
 	}
 
-	return &git.UnauthorizedError{User: issueComment.Sender.Name, Repo: cfg.Spec.Git.Repository}
+	return &git.UnauthorizedError{User: sender.Name, Repo: cfg.Spec.Git.Repository}
 }
 
 // filterDependentJobs filters out unnecessary (not dependent) jobs

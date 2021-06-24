@@ -27,7 +27,7 @@ func TestCheckConditions(t *testing.T) {
 	tc := map[string]checkConditionTestCase{
 		"success": {
 			PR: &git.PullRequest{
-				Sender:    git.User{Name: "cqbqdd11519"},
+				Author:    git.User{Name: "cqbqdd11519"},
 				Base:      git.Base{Ref: "refs/heads/newnew"},
 				Labels:    []git.IssueLabel{{Name: "lgtm"}},
 				Mergeable: true,
@@ -38,7 +38,7 @@ func TestCheckConditions(t *testing.T) {
 		},
 		"failBranch": {
 			PR: &git.PullRequest{
-				Sender:    git.User{Name: "cqbqdd11519"},
+				Author:    git.User{Name: "cqbqdd11519"},
 				Base:      git.Base{Ref: "refs/heads/newnew"},
 				Labels:    []git.IssueLabel{{Name: "lgtm"}},
 				Mergeable: true,
@@ -51,7 +51,7 @@ func TestCheckConditions(t *testing.T) {
 		},
 		"successBranch": {
 			PR: &git.PullRequest{
-				Sender:    git.User{Name: "cqbqdd11519"},
+				Author:    git.User{Name: "cqbqdd11519"},
 				Base:      git.Base{Ref: "refs/heads/newnew"},
 				Labels:    []git.IssueLabel{{Name: "lgtm"}},
 				Mergeable: true,
@@ -64,7 +64,7 @@ func TestCheckConditions(t *testing.T) {
 		},
 		"failLabel": {
 			PR: &git.PullRequest{
-				Sender:    git.User{Name: "cqbqdd11519"},
+				Author:    git.User{Name: "cqbqdd11519"},
 				Base:      git.Base{Ref: "refs/heads/newnew"},
 				Labels:    []git.IssueLabel{{Name: "lgtm"}},
 				Mergeable: true,
@@ -79,7 +79,7 @@ func TestCheckConditions(t *testing.T) {
 		},
 		"failGlobalBlock": {
 			PR: &git.PullRequest{
-				Sender:    git.User{Name: "cqbqdd11519"},
+				Author:    git.User{Name: "cqbqdd11519"},
 				Base:      git.Base{Ref: "refs/heads/newnew"},
 				Labels:    []git.IssueLabel{{Name: "lgtm"}, {Name: "global/block-label"}},
 				Mergeable: true,

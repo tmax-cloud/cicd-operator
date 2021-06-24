@@ -50,6 +50,7 @@ const (
 type Webhook struct {
 	EventType EventType
 	Repo      Repository
+	Sender    User
 
 	Push         *Push
 	PullRequest  *PullRequest
@@ -58,9 +59,8 @@ type Webhook struct {
 
 // Push is a common structure for push events
 type Push struct {
-	Sender User
-	Ref    string
-	Sha    string
+	Ref string
+	Sha string
 }
 
 // PullRequest is a common structure for pull request events
@@ -69,7 +69,7 @@ type PullRequest struct {
 	Title     string
 	State     PullRequestState
 	Action    PullRequestAction
-	Sender    User
+	Author    User
 	URL       string
 	Base      Base
 	Head      Head
@@ -81,7 +81,7 @@ type PullRequest struct {
 type IssueComment struct {
 	Comment     Comment
 	Issue       Issue
-	Sender      User
+	Author      User
 	ReviewState PullRequestReviewState
 }
 

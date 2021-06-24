@@ -67,7 +67,8 @@ func TestChatOps_handleApprove(t *testing.T) {
 	newUserName := "new-user"
 	gitfake.Users[newUserName] = &git.User{ID: newUserID, Name: newUserName}
 	gitfake.Repos[testRepo].UserCanWrite[newUserName] = false
-	wh.IssueComment.Sender = *gitfake.Users[newUserName]
+	wh.Sender = *gitfake.Users[newUserName]
+	wh.IssueComment.Author = wh.Sender
 	testJobApprove(t, handler, wh, ic, chatops.Command{Type: "approve"}, func() {
 		repo := gitfake.Repos[testRepo]
 		assert.Equal(t, 1, len(repo.Comments[testPRID]), "Comment length")
@@ -136,16 +137,26 @@ func buildTestWebhookForApprove() *git.Webhook {
 		Repo: git.Repository{
 			Name: testRepo,
 		},
+		Sender: git.User{
+			ID:    testUserID,
+			Name:  testUserName,
+			Email: testUserEmail,
+		},
 		IssueComment: &git.IssueComment{
 			Comment: git.Comment{
 				CreatedAt: &metav1.Time{Time: time.Now()},
+			},
+			Author: git.User{
+				ID:    testUserID,
+				Name:  testUserName,
+				Email: testUserEmail,
 			},
 			Issue: git.Issue{
 				PullRequest: &git.PullRequest{
 					ID:    testPRID,
 					Title: "test-pull-request",
 					State: git.PullRequestStateOpen,
-					Sender: git.User{
+					Author: git.User{
 						ID:    testUserID,
 						Name:  testUserName,
 						Email: testUserEmail,
@@ -159,11 +170,6 @@ func buildTestWebhookForApprove() *git.Webhook {
 						Sha: "sfoj39jfsidjf93jfsiljf20",
 					},
 				},
-			},
-			Sender: git.User{
-				ID:    testUserID,
-				Name:  testUserName,
-				Email: testUserEmail,
 			},
 		},
 	}

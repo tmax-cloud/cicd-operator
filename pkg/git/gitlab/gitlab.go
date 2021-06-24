@@ -276,7 +276,7 @@ func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 			ID:    mr.ID,
 			Title: mr.Title,
 			State: convertState(mr.State),
-			Sender: git.User{
+			Author: git.User{
 				ID:   mr.Author.ID,
 				Name: mr.Author.UserName,
 			},
@@ -314,7 +314,7 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 		ID:    mr.ID,
 		Title: mr.Title,
 		State: convertState(mr.State),
-		Sender: git.User{
+		Author: git.User{
 			ID:   mr.Author.ID,
 			Name: mr.Author.UserName,
 		},

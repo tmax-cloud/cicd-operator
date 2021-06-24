@@ -49,7 +49,7 @@ func TestBlocker_syncPRs(t *testing.T) {
 		ID:     newPRID,
 		Title:  "[fix] Fix bugs",
 		State:  "open",
-		Sender: git.User{Name: "test"},
+		Author: git.User{Name: "test"},
 		Base:   git.Base{Ref: "master"},
 		Labels: []git.IssueLabel{
 			{Name: "kind/bug"},
@@ -101,7 +101,7 @@ func syncPoolTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
 		ID:     testPRID,
 		Title:  "[feat] New feature",
 		State:  "open",
-		Sender: git.User{Name: "test"},
+		Author: git.User{Name: "test"},
 		Base:   git.Base{Ref: "master"},
 		Labels: []git.IssueLabel{
 			{Name: "kind/feat"},

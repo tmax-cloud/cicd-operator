@@ -69,7 +69,7 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 	}
 
 	// Authorize or exit
-	if err := h.authorize(config, issueComment, gitCli); err != nil {
+	if err := h.authorize(config, &webhook.Sender, issueComment, gitCli); err != nil {
 		unAuthErr, ok := err.(*git.UnauthorizedError)
 		if !ok {
 			return err
@@ -107,7 +107,7 @@ func (h *Handler) handleApproveCommand(issueComment *git.IssueComment, gitCli gi
 	}
 
 	// Register comment
-	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateApprovedComment(issueComment.Sender.Name)); err != nil {
+	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateApprovedComment(issueComment.Author.Name)); err != nil {
 		return err
 	}
 	return nil
@@ -121,28 +121,28 @@ func (h *Handler) handleApproveCancelCommand(issueComment *git.IssueComment, git
 	}
 
 	// Register comment
-	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateApproveCanceledComment(issueComment.Sender.Name)); err != nil {
+	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateApproveCanceledComment(issueComment.Author.Name)); err != nil {
 		return err
 	}
 	return nil
 }
 
 // authorize decides if the sender is authorized to approve the PR
-func (h *Handler) authorize(cfg *cicdv1.IntegrationConfig, issueComment *git.IssueComment, gitCli git.Client) error {
+func (h *Handler) authorize(cfg *cicdv1.IntegrationConfig, sender *git.User, issueComment *git.IssueComment, gitCli git.Client) error {
 	// Check if it's PR's author
-	if issueComment.Sender.ID == issueComment.Issue.PullRequest.Sender.ID {
-		return &git.UnauthorizedError{User: issueComment.Sender.Name, Repo: cfg.Spec.Git.Repository}
+	if sender.ID == issueComment.Issue.PullRequest.Author.ID {
+		return &git.UnauthorizedError{User: sender.Name, Repo: cfg.Spec.Git.Repository}
 	}
 
 	// Check if it's repo's maintainer
-	ok, err := gitCli.CanUserWriteToRepo(issueComment.Sender)
+	ok, err := gitCli.CanUserWriteToRepo(*sender)
 	if err != nil {
 		return err
 	} else if ok {
 		return nil
 	}
 
-	return &git.UnauthorizedError{User: issueComment.Sender.Name, Repo: cfg.Spec.Git.Repository}
+	return &git.UnauthorizedError{User: sender.Name, Repo: cfg.Spec.Git.Repository}
 }
 
 func generateUserUnauthorizedComment(user string) string {

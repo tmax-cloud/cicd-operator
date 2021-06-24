@@ -14,7 +14,19 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 		return nil, err
 	}
 
+	// Sender - Author might be different... in case of update
 	sender := git.User{Name: data.User.Name, Email: data.User.Email}
+	var author git.User
+	if data.User.ID == data.ObjectAttribute.AuthorID {
+		author = sender
+	} else {
+		user, err := c.GetUserInfo(strconv.Itoa(data.ObjectAttribute.AuthorID))
+		if err != nil {
+			return nil, err
+		}
+		author = *user
+	}
+
 	base := git.Base{Ref: data.ObjectAttribute.BaseRef}
 	head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
 	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
@@ -56,8 +68,8 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 		labels = append(labels, git.IssueLabel{Name: l.Title})
 	}
 
-	pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Sender: sender, URL: data.Project.WebURL, Base: base, Head: head, State: state, Action: action, Labels: labels}
-	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest}, nil
+	pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Author: author, URL: data.Project.WebURL, Base: base, Head: head, State: state, Action: action, Labels: labels}
+	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, Sender: sender, PullRequest: &pullRequest}, nil
 }
 
 func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
@@ -70,15 +82,16 @@ func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
 	if strings.HasPrefix(data.Sha, "0000") && strings.HasSuffix(data.Sha, "0000") {
 		return nil, nil
 	}
-	push := git.Push{Sender: git.User{Name: data.UserName, ID: data.UserID}, Ref: data.Ref, Sha: data.Sha}
+	sender := git.User{Name: data.UserName, ID: data.UserID}
+	push := git.Push{Ref: data.Ref, Sha: data.Sha}
 
 	// Get sender email
 	userInfo, err := c.GetUserInfo(strconv.Itoa(data.UserID))
 	if err == nil {
-		push.Sender.Email = userInfo.Email
+		sender.Email = userInfo.Email
 	}
 
-	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Push: &push}, nil
+	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Sender: sender, Push: &push}, nil
 }
 
 func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
@@ -101,6 +114,22 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 		return nil, nil
 	}
 
+	sender := git.User{
+		ID:    data.User.ID,
+		Name:  data.User.Name,
+		Email: data.User.Email,
+	}
+	var author git.User
+	if sender.ID == data.ObjectAttributes.AuthorID {
+		author = sender
+	} else {
+		user, err := c.GetUserInfo(strconv.Itoa(data.ObjectAttributes.AuthorID))
+		if err != nil {
+			return nil, err
+		}
+		author = *user
+	}
+
 	// Get Merge Request user info
 	var pr *git.PullRequest
 	if data.MergeRequest.TargetBranch != "" {
@@ -118,7 +147,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 			ID:     data.MergeRequest.ID,
 			Title:  data.MergeRequest.Title,
 			State:  mrState,
-			Sender: *mrAuthor,
+			Author: *mrAuthor,
 			URL:    data.MergeRequest.URL,
 			Base: git.Base{
 				Ref: data.MergeRequest.TargetBranch,
@@ -134,20 +163,18 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 	return &git.Webhook{EventType: git.EventTypeIssueComment, Repo: git.Repository{
 		Name: data.Project.Name,
 		URL:  data.Project.WebURL,
-	}, IssueComment: &git.IssueComment{
-		Comment: git.Comment{
-			Body:      data.ObjectAttributes.Note,
-			CreatedAt: &metav1.Time{Time: data.ObjectAttributes.CreatedAt.Time},
-		},
-		Issue: git.Issue{
-			PullRequest: pr,
-		},
-		Sender: git.User{
-			ID:    data.User.ID,
-			Name:  data.User.Name,
-			Email: data.User.Email,
-		},
-	}}, nil
+	},
+		Sender: sender,
+		IssueComment: &git.IssueComment{
+			Comment: git.Comment{
+				Body:      data.ObjectAttributes.Note,
+				CreatedAt: &metav1.Time{Time: data.ObjectAttributes.CreatedAt.Time},
+			},
+			Issue: git.Issue{
+				PullRequest: pr,
+			},
+			Author: author,
+		}}, nil
 }
 
 func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.Webhook, error) {
@@ -158,6 +185,13 @@ func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.W
 	case "closed":
 		state = git.PullRequestStateClosed
 	}
+
+	sender := git.User{
+		ID:    data.User.ID,
+		Name:  data.User.Name,
+		Email: data.User.Email,
+	}
+	commentAuthor := sender
 
 	// Get User info
 	mrAuthor, err := c.GetUserInfo(strconv.Itoa(data.ObjectAttribute.AuthorID))
@@ -184,23 +218,20 @@ func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.W
 			Name: data.Project.Name,
 			URL:  data.Project.WebURL,
 		},
+		Sender: sender,
 		IssueComment: &git.IssueComment{
+			Author:      commentAuthor,
 			ReviewState: reviewState,
 			Issue: git.Issue{
 				PullRequest: &git.PullRequest{
 					ID:     data.ObjectAttribute.ID,
 					Title:  data.ObjectAttribute.Title,
-					Sender: *mrAuthor,
+					Author: *mrAuthor,
 					URL:    data.Project.WebURL,
 					Base:   git.Base{Ref: data.ObjectAttribute.BaseRef, Sha: baseBranch.CommitID},
 					Head:   git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha},
 					State:  state,
 				},
-			},
-			Sender: git.User{
-				ID:    data.User.ID,
-				Name:  data.User.Name,
-				Email: data.User.Email,
 			},
 		},
 	}, nil

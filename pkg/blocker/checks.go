@@ -33,7 +33,7 @@ func checkConditionsSimple(q cicdv1.MergeQuery, pr *git.PullRequest) (bool, stri
 	}
 
 	// Check author
-	passAuthorCheck, authorCheckMsg := checkAuthor(pr.Sender.Name, q)
+	passAuthorCheck, authorCheckMsg := checkAuthor(pr.Author.Name, q)
 	if authorCheckMsg != "" {
 		messages = append(messages, authorCheckMsg)
 	}

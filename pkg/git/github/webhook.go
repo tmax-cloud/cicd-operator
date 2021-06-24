@@ -41,6 +41,7 @@ type PullRequestReviewWebhook struct {
 		Body        string       `json:"body"`
 		SubmittedAt *metav1.Time `json:"submitted_at"`
 		State       string       `json:"state"`
+		User        User         `json:"user"`
 	} `json:"review"`
 	PullRequest PullRequest `json:"pull_request"`
 	Repo        Repo        `json:"repository"`
@@ -97,6 +98,7 @@ type User struct {
 // Comment is a comment payload
 type Comment struct {
 	Body      string       `json:"body"`
+	User      User         `json:"user"`
 	CreatedAt *metav1.Time `json:"created_at"`
 	UpdatedAt *metav1.Time `json:"updated_at"`
 }

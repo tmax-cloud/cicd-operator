@@ -342,7 +342,7 @@ func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 		ID:    pr.Number,
 		Title: pr.Title,
 		State: git.PullRequestState(pr.State),
-		Sender: git.User{
+		Author: git.User{
 			ID:   pr.User.ID,
 			Name: pr.User.Name,
 		},

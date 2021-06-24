@@ -30,10 +30,10 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 
 	if webhook.EventType == git.EventTypePullRequest && pr != nil {
 		if pr.Action == git.PullRequestActionOpen || pr.Action == git.PullRequestActionSynchronize || pr.Action == git.PullRequestActionReOpen {
-			job = GeneratePreSubmit(pr, &webhook.Repo, &pr.Sender, config)
+			job = GeneratePreSubmit(pr, &webhook.Repo, &webhook.Sender, config)
 		}
 	} else if webhook.EventType == git.EventTypePush && push != nil {
-		job = GeneratePostSubmit(push, &webhook.Repo, &push.Sender, config)
+		job = GeneratePostSubmit(push, &webhook.Repo, &webhook.Sender, config)
 	}
 
 	if job == nil {
@@ -82,7 +82,7 @@ func GeneratePreSubmit(pr *git.PullRequest, repo *git.Repository, sender *git.Us
 					Sha:  pr.Head.Sha,
 					Link: pr.URL,
 					Author: cicdv1.IntegrationJobRefsPullAuthor{
-						Name: pr.Sender.Name,
+						Name: pr.Author.Name,
 					},
 				},
 			},
