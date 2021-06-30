@@ -105,6 +105,7 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 			pr = &PullRequest{
 				BlockerStatus:      git.CommitStatusStatePending,
 				BlockerDescription: defaultBlockerMessage,
+				LatestSHA:          rawPR.Head.Sha,
 			}
 			pool.PullRequests[rawPR.ID] = pr
 		}
@@ -144,6 +145,12 @@ func (b *blocker) syncOnePool(ic *cicdv1.IntegrationConfig) {
 				pr.blockerCacheDirty = true
 			}
 			pr.BlockerDescription = desc
+
+			// Latest SHA
+			if pr.LatestSHA != rawPR.Head.Sha {
+				pr.blockerCacheDirty = true
+			}
+			pr.LatestSHA = rawPR.Head.Sha
 		}
 
 		log.Info(fmt.Sprintf("\t[#%d](%.20s) - merge candidate: %t (%s)", pr.ID, pr.Title, isCandidate, pr.BlockerDescription))
