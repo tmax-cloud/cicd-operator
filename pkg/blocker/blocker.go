@@ -165,10 +165,11 @@ func (m MergePool) Delete(id int) {
 type PullRequest struct {
 	git.PullRequest
 
-	// BlockerStatus and BlockerDescription is for caching the commit status values
+	// BlockerStatus, BlockerDescription, and LatestSHA is for caching the commit status values
 	// Only available statuses are pending and success - no failure/error
 	BlockerStatus      git.CommitStatusState
 	BlockerDescription string
+	LatestSHA          string
 
 	// blockerCacheDirty specifies if the commit status should be updated
 	blockerCacheDirty bool
