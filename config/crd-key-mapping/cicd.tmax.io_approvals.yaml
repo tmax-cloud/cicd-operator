@@ -1,0 +1,141 @@
+---
+apiVersion: "apiextensions.k8s.io/v1"
+kind: "CustomResourceDefinition"
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: "v0.4.1"
+  creationTimestamp: null
+  name: "approvals.cicd.tmax.io"
+spec:
+  group: "cicd.tmax.io"
+  names:
+    kind: "Approval"
+    listKind: "ApprovalList"
+    plural: "approvals"
+    singular: "approval"
+  scope: "Namespaced"
+  versions:
+  - additionalPrinterColumns:
+    - description: "Current status of Approval"
+      jsonPath: ".status.result"
+      name: "Status"
+      type: "string"
+    - description: "Created time"
+      jsonPath: ".metadata.creationTimestamp"
+      name: "Created"
+      type: "date"
+    - description: "Decided time"
+      jsonPath: ".status.decisionTime"
+      name: "Decided"
+      type: "date"
+    name: "v1"
+    schema:
+      openAPIV3Schema:
+        description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema"
+        properties:
+          apiVersion:
+            description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.apiVersion"
+            type: "string"
+          kind:
+            description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.kind"
+            type: "string"
+          metadata:
+            type: "object"
+          spec:
+            description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec"
+            properties:
+              integrationJob:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.integrationJob"
+                type: "string"
+              jobName:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobName"
+                type: "string"
+              link:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.link"
+                type: "string"
+              message:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.message"
+                type: "string"
+              pipelineRun:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.pipelineRun"
+                type: "string"
+              podName:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podName"
+                type: "string"
+              sender:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.sender"
+                properties:
+                  email:
+                    type: "string"
+                  name:
+                    type: "string"
+                required:
+                - "name"
+                type: "object"
+              skipSendMail:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.skipSendMail"
+                type: "boolean"
+              users:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.users"
+                items:
+                  type: "string"
+                type: "array"
+            required:
+            - "users"
+            type: "object"
+          status:
+            description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status"
+            properties:
+              approver:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.approver"
+                type: "string"
+              conditions:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions"
+                items:
+                  description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items"
+                  properties:
+                    lastTransitionTime:
+                      format: "date-time"
+                      type: "string"
+                    message:
+                      type: "string"
+                    reason:
+                      description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items.properties.reason"
+                      type: "string"
+                    status:
+                      type: "string"
+                    type:
+                      description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items.properties.type"
+                      type: "string"
+                  required:
+                  - "status"
+                  - "type"
+                  type: "object"
+                type: "array"
+              decisionTime:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.decisionTime"
+                format: "date-time"
+                type: "string"
+              reason:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.reason"
+                type: "string"
+              result:
+                description: "%cicd.tmax.io_approvals.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.result"
+                type: "string"
+            required:
+            - "conditions"
+            - "result"
+            type: "object"
+        required:
+        - "spec"
+        type: "object"
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
