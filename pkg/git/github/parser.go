@@ -9,24 +9,29 @@ import (
 
 func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error) {
 	var data PullRequestWebhook
-
 	if err := json.Unmarshal(jsonString, &data); err != nil {
 		return nil, err
 	}
 
+	pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, URL: data.Repo.URL, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action)}
+
 	// Get sender & author
 	sender, author := c.getSenderAuthor(data.Sender, data.PullRequest.User)
+	pullRequest.Author = *author
 
-	var labels []git.IssueLabel
 	for _, l := range data.PullRequest.Labels {
-		labels = append(labels, git.IssueLabel{Name: l.Name})
+		pullRequest.Labels = append(pullRequest.Labels, git.IssueLabel{Name: l.Name})
 	}
 
-	base := git.Base{Ref: data.PullRequest.Base.Ref, Sha: data.PullRequest.Base.Sha}
-	head := git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
+	// Labeled/Unlabeled event
+	if data.Action == string(git.PullRequestActionLabeled) || data.Action == string(git.PullRequestActionUnlabeled) {
+		pullRequest.LabelChanged = append(pullRequest.LabelChanged, git.IssueLabel{Name: data.Label.Name})
+	}
+
+	pullRequest.Base = git.Base{Ref: data.PullRequest.Base.Ref, Sha: data.PullRequest.Base.Sha}
+	pullRequest.Head = git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
 	repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.URL}
-	pullRequest := git.PullRequest{ID: data.Number, Title: data.PullRequest.Title, Author: *author, URL: data.Repo.URL, Base: base, Head: head, State: git.PullRequestState(data.PullRequest.State), Action: git.PullRequestAction(data.Action), Labels: labels}
-	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, Sender: *sender, PullRequest: &pullRequest}, nil
+	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest, Sender: *sender}, nil
 }
 
 func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {

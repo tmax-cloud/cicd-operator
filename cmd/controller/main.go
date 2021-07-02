@@ -196,7 +196,7 @@ func main() {
 	// Add plugins for webhook
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
 	server.AddPlugin([]git.EventType{git.EventTypeIssueComment, git.EventTypePullRequestReview, git.EventTypePullRequestReviewComment}, co)
-	server.AddPlugin([]git.EventType{git.EventTypePullRequestReview}, approveHandler)
+	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePullRequestReview}, approveHandler)
 	go srv.Start()
 
 	// Start API aggregation server

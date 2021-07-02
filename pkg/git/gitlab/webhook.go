@@ -18,11 +18,12 @@ type MergeRequestWebhook struct {
 		OldRev string `json:"oldrev"`
 	} `json:"object_attributes"`
 	Project Project `json:"project"`
-	Labels  []struct {
-		Title string `json:"title"`
-	} `json:"labels"`
+	Labels  []Label `json:"labels"`
 	Changes struct {
-		Labels *struct{} `json:"labels"`
+		Labels *struct {
+			Previous []Label `json:"previous"`
+			Current  []Label `json:"current"`
+		} `json:"labels,omitempty"`
 	} `json:"changes"`
 }
 
@@ -71,6 +72,11 @@ type User struct {
 	ID    int    `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
+}
+
+// Label is a label struct of an issue/merge request
+type Label struct {
+	Title string `json:"title"`
 }
 
 // RegistrationWebhookBody is a body for requesting webhook registration for the remote git server
