@@ -12,7 +12,7 @@ This guides to install CI/CD operator. The contents are as follows.
 ## Installing CI/CD Operator
 1. Run the following command to install CI/CD operator  
    ```bash
-   VERSION=v0.3.0
+   VERSION=v0.3.1
    kubectl apply -f https://raw.githubusercontent.com/tmax-cloud/cicd-operator/$VERSION/config/release.yaml
    ```
 2. Enable `CustomTask` feature, disable `Affinity Assistant`
