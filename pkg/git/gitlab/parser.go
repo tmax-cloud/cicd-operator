@@ -14,35 +14,34 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 		return nil, err
 	}
 
-	// Sender - Author might be different... in case of update
-	sender := git.User{Name: data.User.Name, Email: data.User.Email}
-	var author git.User
-	if data.User.ID == data.ObjectAttribute.AuthorID {
-		author = sender
-	} else {
-		user, err := c.GetUserInfo(strconv.Itoa(data.ObjectAttribute.AuthorID))
-		if err != nil {
-			return nil, err
-		}
-		author = *user
+	sender, author, err := c.getSenderAuthor(data.User, data.ObjectAttribute.AuthorID)
+	if err != nil {
+		return nil, err
 	}
 
-	base := git.Base{Ref: data.ObjectAttribute.BaseRef}
-	head := git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
+	pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, URL: data.Project.WebURL}
+	pullRequest.Author = *author
+	pullRequest.Base = git.Base{Ref: data.ObjectAttribute.BaseRef}
+	pullRequest.Head = git.Head{Ref: data.ObjectAttribute.HeadRef, Sha: data.ObjectAttribute.LastCommit.Sha}
 	repo := git.Repository{Name: data.Project.Name, URL: data.Project.WebURL}
-	action := git.PullRequestAction(data.ObjectAttribute.Action)
-	switch string(action) {
+	pullRequest.Action = git.PullRequestAction(data.ObjectAttribute.Action)
+	switch string(pullRequest.Action) {
 	case "close":
-		action = git.PullRequestActionClose
+		pullRequest.Action = git.PullRequestActionClose
 	case "open":
-		action = git.PullRequestActionOpen
+		pullRequest.Action = git.PullRequestActionOpen
 	case "reopen":
-		action = git.PullRequestActionReOpen
+		pullRequest.Action = git.PullRequestActionReOpen
 	case "update":
 		if data.ObjectAttribute.OldRev != "" {
-			action = git.PullRequestActionSynchronize
+			pullRequest.Action = git.PullRequestActionSynchronize
 		} else if data.Changes.Labels != nil {
-			action = git.PullRequestActionLabeled // Maybe unlabeled... but doesn't matter
+			var isUnlabeled bool
+			pullRequest.LabelChanged, isUnlabeled = diffLabels(data.Changes.Labels.Previous, data.Changes.Labels.Current)
+			pullRequest.Action = git.PullRequestActionLabeled
+			if isUnlabeled {
+				pullRequest.Action = git.PullRequestActionUnlabeled
+			}
 		}
 	case "approved", "unapproved":
 		return c.parsePullRequestReviewWebhook(data)
@@ -53,23 +52,21 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 	if err != nil {
 		return nil, err
 	}
-	base.Sha = baseBranch.CommitID
+	pullRequest.Base.Sha = baseBranch.CommitID
 
-	state := git.PullRequestState(data.ObjectAttribute.State)
-	switch string(state) {
+	pullRequest.State = git.PullRequestState(data.ObjectAttribute.State)
+	switch string(pullRequest.State) {
 	case "opened":
-		state = git.PullRequestStateOpen
+		pullRequest.State = git.PullRequestStateOpen
 	case "closed":
-		state = git.PullRequestStateClosed
+		pullRequest.State = git.PullRequestStateClosed
 	}
 
-	var labels []git.IssueLabel
 	for _, l := range data.Labels {
-		labels = append(labels, git.IssueLabel{Name: l.Title})
+		pullRequest.Labels = append(pullRequest.Labels, git.IssueLabel{Name: l.Title})
 	}
 
-	pullRequest := git.PullRequest{ID: data.ObjectAttribute.ID, Title: data.ObjectAttribute.Title, Author: author, URL: data.Project.WebURL, Base: base, Head: head, State: state, Action: action, Labels: labels}
-	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, Sender: sender, PullRequest: &pullRequest}, nil
+	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest, Sender: *sender}, nil
 }
 
 func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
@@ -114,20 +111,9 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 		return nil, nil
 	}
 
-	sender := git.User{
-		ID:    data.User.ID,
-		Name:  data.User.Name,
-		Email: data.User.Email,
-	}
-	var author git.User
-	if sender.ID == data.ObjectAttributes.AuthorID {
-		author = sender
-	} else {
-		user, err := c.GetUserInfo(strconv.Itoa(data.ObjectAttributes.AuthorID))
-		if err != nil {
-			return nil, err
-		}
-		author = *user
+	sender, author, err := c.getSenderAuthor(data.User, data.ObjectAttributes.AuthorID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Get Merge Request user info
@@ -164,7 +150,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 		Name: data.Project.Name,
 		URL:  data.Project.WebURL,
 	},
-		Sender: sender,
+		Sender: *sender,
 		IssueComment: &git.IssueComment{
 			Comment: git.Comment{
 				Body:      data.ObjectAttributes.Note,
@@ -173,7 +159,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 			Issue: git.Issue{
 				PullRequest: pr,
 			},
-			Author: author,
+			Author: *author,
 		}}, nil
 }
 
@@ -235,4 +221,49 @@ func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.W
 			},
 		},
 	}, nil
+}
+
+func (c *Client) getSenderAuthor(senderPre User, authorID int) (*git.User, *git.User, error) {
+	sender := git.User{ID: senderPre.ID, Name: senderPre.Name, Email: senderPre.Email}
+	var author git.User
+	if sender.ID == authorID {
+		author = sender
+	} else {
+		user, err := c.GetUserInfo(strconv.Itoa(authorID))
+		if err != nil {
+			return nil, nil, err
+		}
+		author = *user
+	}
+
+	return &sender, &author, nil
+}
+
+func diffLabels(prev, cur []Label) ([]git.IssueLabel, bool) {
+	var diff []git.IssueLabel
+	isUnlabeled := false
+
+	prevMap := map[string]Label{}
+	curMap := map[string]Label{}
+
+	for _, l := range prev {
+		prevMap[l.Title] = l
+	}
+	for _, l := range cur {
+		curMap[l.Title] = l
+	}
+
+	for _, l := range prev {
+		if _, exist := curMap[l.Title]; !exist {
+			diff = append(diff, git.IssueLabel{Name: l.Title})
+		}
+	}
+	for _, l := range cur {
+		if _, exist := prevMap[l.Title]; !exist {
+			diff = append(diff, git.IssueLabel{Name: l.Title})
+			isUnlabeled = true
+		}
+	}
+
+	return diff, isUnlabeled
 }
