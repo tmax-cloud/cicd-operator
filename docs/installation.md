@@ -8,6 +8,7 @@ This guides to install CI/CD operator. The contents are as follows.
 
 ## Prerequisites
 - [Install Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) (at least v0.19.0)
+- [Install Ingress Controller](https://kubernetes.io/ko/docs/concepts/services-networking/ingress-controllers/)
 
 ## Installing CI/CD Operator
 1. Run the following command to install CI/CD operator  
@@ -27,10 +28,17 @@ This guides to install CI/CD operator. The contents are as follows.
    INGRESS_CLASS=<Ingress class you want to use> # e.g., nginx, nginx-shd
    
    # Update config map
-   kubectl -n cicd-system patch configmap cicd-config --type merge -p "{\"data\": {\"ingressClass\": \"$INGRESS_CLASS\"}}" "$kubectl_opt"
+   kubectl -n cicd-system patch configmap cicd-config --type merge -p "{\"data\": {\"ingressClass\": \"$INGRESS_CLASS\"}}"
    
    # Restart operator
    kubectl -n cicd-system delete pod $(kubectl -n cicd-system get pod | grep cicd-operator | awk '{print $1}')
+   ```
+
+4. Wait until `cicd-operator` / `blocker` pods are ready
+   > It may take some time until `Ingress` to be ready.  
+   > Make sure that you installed an ingress controller and configured ingress-class properly.
+   ```bash
+   kubectl -n cicd-system get pod -w
    ```
 
 ## Enabling email feature
