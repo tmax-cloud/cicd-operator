@@ -4,8 +4,10 @@ This guide shows how to configure the operator. Contents are as follows.
 - [System Configurations](#system-configurations)
   - [`maxPipelineRun`](#maxpipelinerun)
   - [`ingressClass`](#ingressclass)
+  - [`ingressHost`](#ingresshost)
   - [`externalHostName`](#externalhostname)
   - [`gitImage`](#gitimage)
+  - [`reportRedirectUriTemplate`](#reportredirecturitemplate)
 - [Email Configurations](#email-configurations)
   - [`enableMail`](#enablemail)
   - [`smtpHost`](#smtphost)
@@ -40,12 +42,19 @@ Maximum number of PipelineRuns which can run in same time.
 ### `ingressClass`
 Ingress's class name to be used for the webhook/report server access.
 
+### `ingressHost`
+Ingress's host name for the webhook/report server access.
+> Default: cicd-webhook.{Ingress Controller IP}.nip.io
+
 ### `externalHostName`
 External host name for the ingress. It should be the address a user/git server can access. Default address is `cicd-webhook.INGRESS_IP.nip.io`
 
 ### `gitImage`
 Git image to be used for `git-checkout` steps
 > Default: docker.io/alpine/git:1.0.30
+
+### `reportRedirectUriTemplate`
+Url template of commit status's detail page, which is compiled using `IntegrationJob` struct. If it's empty, it uses default report page.
 
 ## Email Configurations
 ### `enableMail`
