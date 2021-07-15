@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/bmizerany/assert"
 	"github.com/gorilla/mux"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -16,11 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"net/http"
-	"net/http/httptest"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"testing"
 )
 
 type assertFunc func(*cicdv1.IntegrationJob)
@@ -33,15 +34,15 @@ func Test_handler_runPreHandler(t *testing.T) {
 
 	// TEST 1
 	testReq(t, h, cicdv1.IntegrationConfigAPIReqRunPreBody{HeadBranch: "newnew"}, "runpre", func(job *cicdv1.IntegrationJob) {
-		assert.Equal(t, true, job.Spec.Refs.Pull != nil, "refs.pr is not nil")
-		assert.Equal(t, "newnew", job.Spec.Refs.Pull.Ref.String(), "pr.ref")
+		assert.Equal(t, true, job.Spec.Refs.Pulls != nil, "refs.pr is not nil")
+		assert.Equal(t, "newnew", job.Spec.Refs.Pulls[0].Ref.String(), "pr.ref")
 	})
 
 	// TEST 2
 	testReq(t, h, cicdv1.IntegrationConfigAPIReqRunPreBody{HeadBranch: "newnew", BaseBranch: "new"}, "runpre", func(job *cicdv1.IntegrationJob) {
 		assert.Equal(t, "new", job.Spec.Refs.Base.Ref.String(), "base.ref")
-		assert.Equal(t, true, job.Spec.Refs.Pull != nil, "refs.pr is not nil")
-		assert.Equal(t, "newnew", job.Spec.Refs.Pull.Ref.String(), "pr.ref")
+		assert.Equal(t, true, job.Spec.Refs.Pulls != nil, "refs.pr is not nil")
+		assert.Equal(t, "newnew", job.Spec.Refs.Pulls[0].Ref.String(), "pr.ref")
 	})
 }
 
@@ -54,13 +55,13 @@ func Test_handler_runPostHandler(t *testing.T) {
 	// TEST 1
 	testReq(t, h, cicdv1.IntegrationConfigAPIReqRunPostBody{}, "runpost", func(job *cicdv1.IntegrationJob) {
 		assert.Equal(t, "master", job.Spec.Refs.Base.Ref.String(), "base ref")
-		assert.Equal(t, true, job.Spec.Refs.Pull == nil, "ref.pr is nil")
+		assert.Equal(t, true, job.Spec.Refs.Pulls == nil, "ref.pr is nil")
 	})
 
 	// TEST 2
 	testReq(t, h, cicdv1.IntegrationConfigAPIReqRunPostBody{Branch: "new"}, "runpost", func(job *cicdv1.IntegrationJob) {
 		assert.Equal(t, "new", job.Spec.Refs.Base.Ref.String(), "base ref")
-		assert.Equal(t, true, job.Spec.Refs.Pull == nil, "ref.pr is nil")
+		assert.Equal(t, true, job.Spec.Refs.Pulls == nil, "ref.pr is nil")
 	})
 }
 

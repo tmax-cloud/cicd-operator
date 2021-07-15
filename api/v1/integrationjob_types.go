@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -78,8 +79,8 @@ type IntegrationJobRefs struct {
 	// If Pull is nil (i.e., is push event), Base works as Head
 	Base IntegrationJobRefsBase `json:"base"`
 
-	// Pull represents pull request head commit
-	Pull *IntegrationJobRefsPull `json:"pull,omitempty"`
+	// Pulls are array for pull request head commit
+	Pulls []IntegrationJobRefsPull `json:"pulls,omitempty"`
 }
 
 // IntegrationJobSender is a git user who triggered the IntegrationJob

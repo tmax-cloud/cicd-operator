@@ -3,6 +3,8 @@ package blocker
 import (
 	"context"
 	"fmt"
+	"sort"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -10,7 +12,6 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/pipelinemanager"
 	"k8s.io/apimachinery/pkg/types"
-	"sort"
 )
 
 const (
@@ -99,8 +100,12 @@ func (b *blocker) retestAndMergeOnePool(pool *PRPool) {
 			}
 		}
 
+		// TODO - Temporary code for GeneratePreSubmit.
+		// it is due to be modified soon.
+		prs := []git.PullRequest{pr.PullRequest}
+
 		// Retest it (create IJ) TODO - batched IJ - not implemented yet
-		ij := dispatcher.GeneratePreSubmit(&pr.PullRequest, &git.Repository{Name: ic.Spec.Git.Repository, URL: pr.URL}, &pr.Author, ic)
+		ij := dispatcher.GeneratePreSubmit(prs, &git.Repository{Name: ic.Spec.Git.Repository, URL: pr.URL}, &pr.Author, ic)
 		pool.CurrentBatch.Job = types.NamespacedName{Name: ij.Name, Namespace: ij.Namespace}
 		if err := b.client.Create(context.Background(), ij); err != nil {
 			log.Error(err, "")

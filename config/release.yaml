@@ -10581,34 +10581,37 @@ spec:
                   link:
                     description: Link is a full url of the repository
                     type: string
-                  pull:
-                    description: Pull represents pull request head commit
-                    properties:
-                      author:
-                        description: IntegrationJobRefsPullAuthor is an author of
-                          the pull request
-                        properties:
-                          name:
-                            type: string
-                        required:
-                        - name
-                        type: object
-                      id:
-                        type: integer
-                      link:
-                        type: string
-                      ref:
-                        description: GitRef is a git reference type
-                        type: string
-                      sha:
-                        type: string
-                    required:
-                    - author
-                    - id
-                    - link
-                    - ref
-                    - sha
-                    type: object
+                  pulls:
+                    description: Pulls are array for pull request head commit
+                    items:
+                      description: IntegrationJobRefsPull refers to the pull request
+                      properties:
+                        author:
+                          description: IntegrationJobRefsPullAuthor is an author of
+                            the pull request
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        id:
+                          type: integer
+                        link:
+                          type: string
+                        ref:
+                          description: GitRef is a git reference type
+                          type: string
+                        sha:
+                          type: string
+                      required:
+                      - author
+                      - id
+                      - link
+                      - ref
+                      - sha
+                      type: object
+                    type: array
                   repository:
                     description: Repository name of git repository (in <org>/<repo>
                       form, e.g., tmax-cloud/cicd-operator)
