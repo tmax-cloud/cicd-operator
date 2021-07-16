@@ -31,6 +31,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/collector"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"github.com/tmax-cloud/cicd-operator/pkg/plugins/size"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
 	"io"
 	rbac "k8s.io/api/rbac/v1"
@@ -132,6 +133,7 @@ func main() {
 	go cfgCtrl.Start()
 	cfgCtrl.Add(configs.ConfigMapNameCICDConfig, configs.ApplyControllerConfigChange)
 	cfgCtrl.Add(configs.ConfigMapNameEmailTemplate, configs.ApplyEmailTemplateConfigChange)
+	cfgCtrl.Add(configs.ConfigMapNamePluginConfig, configs.ApplyPluginConfigChange)
 	// Wait for initial config reconcile
 	<-configs.InitCh
 
@@ -212,6 +214,7 @@ func main() {
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
 	server.AddPlugin([]git.EventType{git.EventTypeIssueComment, git.EventTypePullRequestReview, git.EventTypePullRequestReviewComment}, co)
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePullRequestReview}, approveHandler)
+	server.AddPlugin([]git.EventType{git.EventTypePullRequest}, &size.Size{Client: mgr.GetClient()})
 	go srv.Start()
 
 	// Start API aggregation server
