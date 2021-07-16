@@ -74,3 +74,12 @@ type MergeAcceptRequest struct {
 	Sha                string `json:"sha"`
 	RemoveSourceBranch bool   `json:"should_remove_source_branch"`
 }
+
+// MergeRequestChanges is a changed list of the merge request
+type MergeRequestChanges struct {
+	Changes []struct {
+		OldPath string `json:"old_path"`
+		NewPath string `json:"new_path"`
+		Diff    string `json:"diff"`
+	} `json:"changes"`
+}

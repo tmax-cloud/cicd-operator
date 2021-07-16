@@ -53,3 +53,15 @@ type MergeRequest struct {
 	MergeMethod   string `json:"merge_method"`
 	Sha           string `json:"sha"`
 }
+
+// DiffFiles is a list of DiffFile
+type DiffFiles []DiffFile
+
+// DiffFile is a
+type DiffFile struct {
+	Filename     string `json:"filename"`
+	PrevFilename string `json:"previous_filename"`
+	Additions    int    `json:"additions"`
+	Deletions    int    `json:"deletions"`
+	Changes      int    `json:"changes"`
+}
