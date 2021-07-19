@@ -3,11 +3,9 @@
 ### Before Release
 1. Update `Makefile`
     - Update `VERSION ?= <to-be version>`
-2. Update Installation Guide
-    - Update `docs/installation.md`'s `VERSION=<to-be version>`
-3. Re-generate manifests
+2. Re-generate manifests
     - `make manifest`
-4. Bump the version via Pull Request  
+3. Bump the version via Pull Request  
    (Refer to [the link](https://github.com/tmax-cloud/cicd-operator/pull/152))
 
 ### Release
