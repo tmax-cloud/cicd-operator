@@ -3,6 +3,10 @@ package pipelinemanager
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strconv"
+	"time"
+
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -14,11 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
-	"regexp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"strconv"
-	"time"
 )
 
 // PipelineManager implements utility functions for generating, watching PipelineRuns
@@ -207,9 +208,9 @@ func generateLabel(j *cicdv1.IntegrationJob) map[string]string {
 		//cicdv1.RunLabelSender: j.Spec.Refs.Sender,
 	}
 
-	if j.Spec.Refs.Pull != nil {
-		label[cicdv1.RunLabelPullRequest] = strconv.Itoa(j.Spec.Refs.Pull.ID)
-		label[cicdv1.RunLabelPullRequestSha] = j.Spec.Refs.Pull.Sha
+	if j.Spec.Refs.Pulls != nil {
+		label[cicdv1.RunLabelPullRequest] = strconv.Itoa(j.Spec.Refs.Pulls[0].ID)
+		label[cicdv1.RunLabelPullRequestSha] = j.Spec.Refs.Pulls[0].Sha
 	}
 
 	return label
@@ -381,6 +382,11 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 		return err
 	}
 
+	// Skip if Multipie PRs exist
+	if len(job.Spec.Refs.Pulls) > 1 {
+		return nil
+	}
+
 	// If state is changed, update git commit status
 	for i, j := range job.Status.Jobs {
 		if stateChanged[i] {
@@ -392,16 +398,16 @@ func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, j
 			case cicdv1.CommitStatusStateFailure:
 				msg = JobMessageFailure
 			}
-			if job.Spec.Refs.Pull != nil {
+			if job.Spec.Refs.Pulls != nil {
 				msg = appendBaseShaToDescription(msg, job.Spec.Refs.Base.Sha)
 			}
 
 			// Get SHA of the commit
 			var sha string
-			if job.Spec.Refs.Pull == nil {
+			if job.Spec.Refs.Pulls == nil {
 				sha = job.Spec.Refs.Base.Sha
 			} else {
-				sha = job.Spec.Refs.Pull.Sha
+				sha = job.Spec.Refs.Pulls[0].Sha
 			}
 			log.Info(fmt.Sprintf("Setting commit status %s:%s to %s's %s", j.Name, j.State, cfg.Spec.Git.Repository, sha))
 			if err := gitCli.SetCommitStatus(sha, git.CommitStatus{Context: j.Name, State: git.CommitStatusState(j.State), Description: msg, TargetURL: job.GetReportServerAddress(j.Name)}); err != nil {

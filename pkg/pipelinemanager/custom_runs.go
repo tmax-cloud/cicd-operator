@@ -1,9 +1,10 @@
 package pipelinemanager
 
 import (
+	"strconv"
+
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
-	"strconv"
 )
 
 // Approval custom tasks
@@ -20,8 +21,8 @@ func generateApprovalRunTask(job *cicdv1.IntegrationJob, j *cicdv1.Job, task *te
 	sender := job.Spec.Refs.Sender
 
 	var link string
-	if job.Spec.Refs.Pull != nil {
-		link = job.Spec.Refs.Pull.Link
+	if job.Spec.Refs.Pulls != nil {
+		link = job.Spec.Refs.Pulls[0].Link
 	} else {
 		link = job.Spec.Refs.Base.Link
 	}

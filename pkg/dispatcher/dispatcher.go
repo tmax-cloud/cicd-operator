@@ -30,7 +30,8 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 
 	if webhook.EventType == git.EventTypePullRequest && pr != nil {
 		if pr.Action == git.PullRequestActionOpen || pr.Action == git.PullRequestActionSynchronize || pr.Action == git.PullRequestActionReOpen {
-			job = GeneratePreSubmit(pr, &webhook.Repo, &webhook.Sender, config)
+			prs := []git.PullRequest{*pr}
+			job = GeneratePreSubmit(prs, &webhook.Repo, &webhook.Sender, config)
 		}
 	} else if webhook.EventType == git.EventTypePush && push != nil {
 		job = GeneratePostSubmit(push, &webhook.Repo, &webhook.Sender, config)
@@ -48,14 +49,22 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 }
 
 // GeneratePreSubmit generates IntegrationJob for pull request event
-func GeneratePreSubmit(pr *git.PullRequest, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) *cicdv1.IntegrationJob {
-	jobs := FilterJobs(config.Spec.Jobs.PreSubmit, git.EventTypePullRequest, pr.Base.Ref)
+func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) *cicdv1.IntegrationJob {
+	jobs := FilterJobs(config.Spec.Jobs.PreSubmit, git.EventTypePullRequest, prs[0].Base.Ref)
 	if len(jobs) < 1 {
 		return nil
 	}
+
+	var ijName string
+	if len(prs) > 1 {
+		ijName = "batch"
+	} else {
+		ijName = prs[0].Head.Sha // only one PR Exists
+	}
+
 	jobID := utils.RandomString(20)
 	return &cicdv1.IntegrationJob{
-		ObjectMeta: generateMeta(config.Name, config.Namespace, pr.Head.Sha, jobID),
+		ObjectMeta: generateMeta(config.Name, config.Namespace, ijName, jobID),
 		Spec: cicdv1.IntegrationJobSpec{
 			ConfigRef: cicdv1.IntegrationJobConfigRef{
 				Name: config.Name,
@@ -72,19 +81,11 @@ func GeneratePreSubmit(pr *git.PullRequest, repo *git.Repository, sender *git.Us
 					Email: sender.Email,
 				},
 				Base: cicdv1.IntegrationJobRefsBase{
-					Ref:  cicdv1.GitRef(pr.Base.Ref),
-					Sha:  pr.Base.Sha,
+					Ref:  cicdv1.GitRef(prs[0].Base.Ref),
+					Sha:  prs[0].Base.Sha,
 					Link: repo.URL,
 				},
-				Pull: &cicdv1.IntegrationJobRefsPull{
-					ID:   pr.ID,
-					Ref:  cicdv1.GitRef(pr.Head.Ref),
-					Sha:  pr.Head.Sha,
-					Link: pr.URL,
-					Author: cicdv1.IntegrationJobRefsPullAuthor{
-						Name: pr.Author.Name,
-					},
-				},
+				Pulls: generatePulls(prs),
 			},
 			PodTemplate: config.Spec.PodTemplate,
 		},
@@ -133,6 +134,27 @@ func generateMeta(cfgName, cfgNamespace, sha, jobID string) metav1.ObjectMeta {
 		Labels: map[string]string{
 			cicdv1.JobLabelConfig: cfgName,
 			cicdv1.JobLabelID:     jobID,
+		},
+	}
+}
+
+func generatePulls(prs []git.PullRequest) []cicdv1.IntegrationJobRefsPull {
+	pulls := []cicdv1.IntegrationJobRefsPull{}
+	for _, pr := range prs {
+		pull := generatePull(pr)
+		pulls = append(pulls, pull)
+	}
+	return pulls
+}
+
+func generatePull(pr git.PullRequest) cicdv1.IntegrationJobRefsPull {
+	return cicdv1.IntegrationJobRefsPull{
+		ID:   pr.ID,
+		Ref:  cicdv1.GitRef(pr.Head.Ref),
+		Sha:  pr.Head.Sha,
+		Link: pr.URL,
+		Author: cicdv1.IntegrationJobRefsPullAuthor{
+			Name: pr.Author.Name,
 		},
 	}
 }

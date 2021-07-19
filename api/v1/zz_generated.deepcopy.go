@@ -501,10 +501,10 @@ func (in *IntegrationJobRefs) DeepCopyInto(out *IntegrationJobRefs) {
 		**out = **in
 	}
 	out.Base = in.Base
-	if in.Pull != nil {
-		in, out := &in.Pull, &out.Pull
-		*out = new(IntegrationJobRefsPull)
-		**out = **in
+	if in.Pulls != nil {
+		in, out := &in.Pulls, &out.Pulls
+		*out = make([]IntegrationJobRefsPull, len(*in))
+		copy(*out, *in)
 	}
 }
 

@@ -24,22 +24,30 @@ set -e
 
 git config --global user.email "bot@cicd.tmax.io"
 git config --global user.name "tmax-cicd-bot"
+git init
 
 CHECKOUT_URL="$CI_SERVER_URL/$CI_REPOSITORY"
-if [ "$CI_BASE_REF" = "" ]; then
-    CHECKOUT_REF="$CI_HEAD_REF"
-    CHECKOUT_SHA="$CI_HEAD_SHA"
-else
-    CHECKOUT_REF="$CI_BASE_REF"
-    CHECKOUT_SHA="$CI_BASE_SHA"
+CI_HEAD_REF_ARRAY="$CI_HEAD_REF"
+
+if [ "$CI_BASE_REF" = "" ]; then 
+  # Push Event
+  CHECKOUT_REF="$CI_HEAD_REF"
+else 
+  # Pull Request Event
+  CHECKOUT_REF="$CI_BASE_REF"
 fi
-git init
+
 git fetch "$CHECKOUT_URL" "$CHECKOUT_REF"
 git checkout FETCH_HEAD
+
 if [ "$CI_BASE_REF" != "" ]; then
-    git fetch "$CHECKOUT_URL" "$CI_HEAD_REF"
+  # Pull request event
+  for ci_head_ref in $CI_HEAD_REF_ARRAY; do 
+    git fetch "$CHECKOUT_URL" "$ci_head_ref"
     git merge --no-ff FETCH_HEAD
+  done
 fi
+
 git submodule update --init --recursive
 `
 	resources := corev1.ResourceList{
