@@ -22,9 +22,10 @@ type Repo struct {
 	Webhooks     map[int]*git.WebhookEntry
 	UserCanWrite map[string]bool
 
-	PullRequests   map[int]*git.PullRequest
-	CommitStatuses map[string][]git.CommitStatus
-	Comments       map[int][]git.IssueComment
+	PullRequests     map[int]*git.PullRequest
+	PullRequestDiffs map[int]*git.Diff
+	CommitStatuses   map[string][]git.CommitStatus
+	Comments         map[int][]git.IssueComment
 }
 
 // Client is a gitlab client struct
@@ -235,6 +236,28 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 // MergePullRequest merges a pull request
 func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, message string) error {
 	return nil
+}
+
+// GetPullRequestDiff gets diff of the pull request
+func (c *Client) GetPullRequestDiff(id int) (*git.Diff, error) {
+	if Repos == nil {
+		return nil, fmt.Errorf("repos not initialized")
+	}
+	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
+	if !repoExist {
+		return nil, fmt.Errorf("404 no such repository")
+	}
+
+	if repo.PullRequestDiffs == nil {
+		return nil, fmt.Errorf("pull request diffs not initialized")
+	}
+
+	diff, exist := repo.PullRequestDiffs[id]
+	if !exist {
+		return nil, fmt.Errorf("404 no such pr")
+	}
+
+	return diff, nil
 }
 
 // SetLabel sets label to the issue id

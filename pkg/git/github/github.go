@@ -291,6 +291,37 @@ func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, me
 	return nil
 }
 
+// GetPullRequestDiff gets diff of the pull request
+func (c *Client) GetPullRequestDiff(id int) (*git.Diff, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/pulls/%d/files", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
+	rawDiffs, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	diffs := DiffFiles{}
+	if err := json.Unmarshal(rawDiffs, &diffs); err != nil {
+		return nil, err
+	}
+
+	var changes []git.Change
+	for _, d := range diffs {
+		prevName := d.PrevFilename
+		if prevName == "" {
+			prevName = d.Filename
+		}
+		changes = append(changes, git.Change{
+			Filename:    d.Filename,
+			OldFilename: prevName,
+			Additions:   d.Additions,
+			Deletions:   d.Deletions,
+			Changes:     d.Changes,
+		})
+	}
+
+	return &git.Diff{Changes: changes}, nil
+}
+
 // SetLabel sets label to the issue id
 func (c *Client) SetLabel(_ git.IssueType, id int, label string) error {
 	apiURL := fmt.Sprintf("%s/repos/%s/issues/%d/labels", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)

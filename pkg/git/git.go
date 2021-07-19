@@ -34,6 +34,7 @@ type Client interface {
 	ListPullRequests(onlyOpen bool) ([]PullRequest, error)
 	GetPullRequest(id int) (*PullRequest, error)
 	MergePullRequest(id int, sha string, method MergeMethod, message string) error
+	GetPullRequestDiff(id int) (*Diff, error)
 
 	// Issue Labels
 

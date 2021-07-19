@@ -80,6 +80,20 @@ type PullRequest struct {
 	LabelChanged []IssueLabel
 }
 
+// Diff is a diff between commits or of a pull-request
+type Diff struct {
+	Changes []Change
+}
+
+// Change is a diff of a changed file
+type Change struct {
+	Filename    string
+	OldFilename string
+	Additions   int
+	Deletions   int
+	Changes     int // Changes should be equal to the addition of Additions and Deletions
+}
+
 // IssueComment is a common structure for issue comment
 type IssueComment struct {
 	Comment     Comment
