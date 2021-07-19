@@ -7,6 +7,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 )
 
@@ -23,6 +24,8 @@ type Handler struct {
 	Client client.Client
 }
 
+var log = logf.Log.WithName("approve-plugin")
+
 // Handle handles a raw webhook
 func (h *Handler) Handle(wh *git.Webhook, ic *cicdv1.IntegrationConfig) error {
 	// Skip if token is empty
@@ -31,7 +34,7 @@ func (h *Handler) Handle(wh *git.Webhook, ic *cicdv1.IntegrationConfig) error {
 	}
 
 	// Case 1) Approve / Cancel of a pull request (via github/gitlab feature)
-	isApproval := wh.EventType == git.EventTypeIssueComment && wh.IssueComment != nil &&
+	isApproval := wh.EventType == git.EventTypePullRequestReview && wh.IssueComment != nil &&
 		wh.IssueComment.Issue.PullRequest.State == git.PullRequestStateOpen && wh.IssueComment.ReviewState != ""
 
 	// Case 2) Label 'approved' is added/deleted
@@ -128,6 +131,8 @@ func (h *Handler) handleLabelEvent(wh *git.Webhook, ic *cicdv1.IntegrationConfig
 		return nil
 	}
 
+	log.Info(fmt.Sprintf("%s set/unset approved label on %s/%d", wh.Sender.Name, wh.Repo.URL, wh.PullRequest.ID))
+
 	// Is it set or unset?
 	// Can't trust pr's action field (gitlab can set/unset labels at the same time)
 	isApprovedLabeled := false
@@ -167,6 +172,7 @@ func (h *Handler) handleLabelEvent(wh *git.Webhook, ic *cicdv1.IntegrationConfig
 
 // handleApproveCommand handles '/approve' command
 func (h *Handler) handleApproveCommand(issueComment *git.IssueComment, gitCli git.Client) error {
+	log.Info(fmt.Sprintf("%s approved %s", issueComment.Author.Name, issueComment.Issue.PullRequest.URL))
 	// Register approved label
 	if err := gitCli.SetLabel(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, approvedLabel); err != nil {
 		return err
@@ -181,6 +187,7 @@ func (h *Handler) handleApproveCommand(issueComment *git.IssueComment, gitCli gi
 
 // handleApproveCancelCommand handles '/approve cancel] command
 func (h *Handler) handleApproveCancelCommand(issueComment *git.IssueComment, gitCli git.Client) error {
+	log.Info(fmt.Sprintf("%s canceled approval on %s", issueComment.Author.Name, issueComment.Issue.PullRequest.URL))
 	// Delete approved label
 	if err := gitCli.DeleteLabel(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, approvedLabel); err != nil && !strings.Contains(err.Error(), "Label does not exist") {
 		return err
