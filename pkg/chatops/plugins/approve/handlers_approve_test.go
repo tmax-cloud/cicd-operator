@@ -1,7 +1,7 @@
 package approve
 
 import (
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -9,7 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"os"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"testing"
 	"time"
 )
@@ -24,21 +27,194 @@ const (
 	testUserID    = 32
 	testUserName  = "test-user"
 	testUserEmail = "test@test.com"
+
+	testUser2ID    = 111
+	testUser2Name  = "new-user"
+	testUser2Email = "new@test.com"
 )
 
-func TestChatOps_handleApprove(t *testing.T) {
+type approvalTestCase struct {
+	preFunc    func(wh *git.Webhook)
+	verifyFunc func(t *testing.T)
+}
+
+func TestHandler_Handle(t *testing.T) {
+	if _, exist := os.LookupEnv("CI"); !exist {
+		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	}
 	s := runtime.NewScheme()
 	utilruntime.Must(cicdv1.AddToScheme(s))
 
 	ic := buildTestConfigForApprove()
-	wh := buildTestWebhookForApprove()
-
 	fakeCli := fake.NewFakeClientWithScheme(s, ic)
-
 	handler := &Handler{Client: fakeCli}
 
+	tc := map[string]approvalTestCase{
+		"noop": {
+			preFunc: func(wh *git.Webhook) {
+				wh.EventType = git.EventTypePullRequest
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 0, "Comment length")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
+			},
+		},
+		"successApprove": {
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 1, "Comment length")
+				require.Equal(t, generateApprovedComment(testUser2Name), repo.Comments[testPRID][0].Comment.Body, "Successfully approved comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 1, "Label length")
+				require.Equal(t, "approved", repo.PullRequests[testPRID].Labels[0].Name, "Approved label exists")
+			},
+		},
+		"successApproveCancel": {
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				gitfake.Repos[testRepo].PullRequests[testPRID].Labels = append(gitfake.Repos[testRepo].PullRequests[testPRID].Labels, git.IssueLabel{Name: "approved"})
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+				wh.IssueComment.ReviewState = git.PullRequestReviewStateUnapproved
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 1, "Comment length")
+				require.Equal(t, generateApproveCanceledComment(testUser2Name), repo.Comments[testPRID][0].Comment.Body, "Successfully approved comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
+			},
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			// Init fake git
+			initFakeGit()
+
+			// Initialize webhook
+			wh := buildTestWebhookApprove()
+			c.preFunc(wh)
+
+			err := handler.Handle(wh, ic)
+			require.NoError(t, err)
+			c.verifyFunc(t)
+		})
+	}
+}
+
+type chatOpsApprovalTestCase struct {
+	command    chatops.Command
+	preFunc    func(wh *git.Webhook)
+	verifyFunc func(t *testing.T)
+}
+
+func TestChatOps_handleApprove(t *testing.T) {
+	if _, exist := os.LookupEnv("CI"); !exist {
+		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	}
+	s := runtime.NewScheme()
+	utilruntime.Must(cicdv1.AddToScheme(s))
+
+	ic := buildTestConfigForApprove()
+	fakeCli := fake.NewFakeClientWithScheme(s, ic)
+	handler := &Handler{Client: fakeCli}
+
+	tc := map[string]chatOpsApprovalTestCase{
+		"failSameUser": {
+			command: chatops.Command{Type: "approve"},
+			preFunc: func(_ *git.Webhook) {},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 1, "Comment length")
+				require.Equal(t, generateUserUnauthorizedComment(testUserName), repo.Comments[testPRID][0].Comment.Body, "Cannot approve comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
+			},
+		},
+		"failUnauthorized": {
+			command: chatops.Command{Type: "approve"},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = false
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 1, "Comment length")
+				require.Equal(t, generateUserUnauthorizedComment(testUser2Name), repo.Comments[testPRID][0].Comment.Body, "Cannot approve comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
+			},
+		},
+		"failMalformedCommand": {
+			command: chatops.Command{Type: "approve", Args: []string{"asd"}},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 1, "Comment length")
+				require.Equal(t, generateHelpComment(), repo.Comments[testPRID][0].Comment.Body, "Cannot approve comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
+			},
+		},
+		"successApprove": {
+			command: chatops.Command{Type: "approve"},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 1, "Comment length")
+				require.Equal(t, generateApprovedComment(testUser2Name), repo.Comments[testPRID][0].Comment.Body, "Successfully approved comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 1, "Label length")
+				require.Equal(t, "approved", repo.PullRequests[testPRID].Labels[0].Name, "Approved label exists")
+			},
+		},
+		"successApproveCancel": {
+			command: chatops.Command{Type: "approve", Args: []string{"cancel"}},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				gitfake.Repos[testRepo].PullRequests[testPRID].Labels = append(gitfake.Repos[testRepo].PullRequests[testPRID].Labels, git.IssueLabel{Name: "approved"})
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 1, "Comment length")
+				require.Equal(t, generateApproveCanceledComment(testUser2Name), repo.Comments[testPRID][0].Comment.Body, "Successfully approved comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
+			},
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			// Init fake git
+			initFakeGit()
+
+			// Initialize webhook
+			wh := buildTestWebhookCommentApprove()
+			c.preFunc(wh)
+
+			err := handler.HandleChatOps(c.command, wh, ic)
+			require.NoError(t, err)
+			c.verifyFunc(t)
+		})
+	}
+}
+
+func initFakeGit() {
 	gitfake.Users = map[string]*git.User{
-		testUserName: {ID: testUserID, Name: testUserName, Email: testUserEmail},
+		testUserName:  {ID: testUserID, Name: testUserName, Email: testUserEmail},
+		testUser2Name: {ID: testUser2ID, Name: testUser2Name, Email: testUser2Email},
 	}
 	gitfake.Repos = map[string]*gitfake.Repo{
 		testRepo: {
@@ -52,67 +228,6 @@ func TestChatOps_handleApprove(t *testing.T) {
 			Comments:       map[int][]git.IssueComment{},
 		},
 	}
-
-	// /approve - fail - same user
-	testJobApprove(t, handler, wh, ic, chatops.Command{Type: "approve"}, func() {
-		repo := gitfake.Repos[testRepo]
-		assert.Equal(t, 1, len(repo.Comments[testPRID]), "Comment length")
-		assert.Equal(t, generateUserUnauthorizedComment(testUserName), repo.Comments[testPRID][0].Comment.Body, "Cannot approve comment")
-		assert.Equal(t, 0, len(repo.PullRequests[testPRID].Labels), "Label length")
-	})
-	gitfake.Repos[testRepo].Comments[testPRID] = nil
-
-	// /approve - fail - unauthorized
-	newUserID := 111
-	newUserName := "new-user"
-	gitfake.Users[newUserName] = &git.User{ID: newUserID, Name: newUserName}
-	gitfake.Repos[testRepo].UserCanWrite[newUserName] = false
-	wh.Sender = *gitfake.Users[newUserName]
-	wh.IssueComment.Author = wh.Sender
-	testJobApprove(t, handler, wh, ic, chatops.Command{Type: "approve"}, func() {
-		repo := gitfake.Repos[testRepo]
-		assert.Equal(t, 1, len(repo.Comments[testPRID]), "Comment length")
-		assert.Equal(t, generateUserUnauthorizedComment(newUserName), repo.Comments[testPRID][0].Comment.Body, "Cannot approve comment")
-		assert.Equal(t, 0, len(repo.PullRequests[testPRID].Labels), "Label length")
-	})
-	gitfake.Repos[testRepo].Comments[testPRID] = nil
-
-	// /approve asads - fail
-	gitfake.Repos[testRepo].UserCanWrite[newUserName] = true
-	testJobApprove(t, handler, wh, ic, chatops.Command{Type: "approve", Args: []string{"asd"}}, func() {
-		repo := gitfake.Repos[testRepo]
-		assert.Equal(t, 1, len(repo.Comments[testPRID]), "Comment length")
-		assert.Equal(t, generateHelpComment(), repo.Comments[testPRID][0].Comment.Body, "Cannot approve comment")
-		assert.Equal(t, 0, len(repo.PullRequests[testPRID].Labels), "Label length")
-	})
-	gitfake.Repos[testRepo].Comments[testPRID] = nil
-
-	// /approve - success
-	testJobApprove(t, handler, wh, ic, chatops.Command{Type: "approve"}, func() {
-		repo := gitfake.Repos[testRepo]
-		assert.Equal(t, 1, len(repo.Comments[testPRID]), "Comment length")
-		assert.Equal(t, generateApprovedComment(newUserName), repo.Comments[testPRID][0].Comment.Body, "Successfully approved comment")
-		assert.Equal(t, 1, len(repo.PullRequests[testPRID].Labels), "Label length")
-		assert.Equal(t, "approved", repo.PullRequests[testPRID].Labels[0].Name, "Approved label exists")
-	})
-	gitfake.Repos[testRepo].Comments[testPRID] = nil
-
-	// /approve cancel - success
-	testJobApprove(t, handler, wh, ic, chatops.Command{Type: "approve", Args: []string{"cancel"}}, func() {
-		repo := gitfake.Repos[testRepo]
-		assert.Equal(t, 1, len(repo.Comments[testPRID]), "Comment length")
-		assert.Equal(t, generateApproveCanceledComment(newUserName), repo.Comments[testPRID][0].Comment.Body, "Successfully approved comment")
-		assert.Equal(t, 0, len(repo.PullRequests[testPRID].Labels), "Label length")
-	})
-}
-
-type testApproveVerifier func()
-
-func testJobApprove(t *testing.T, handler *Handler, wh *git.Webhook, ic *cicdv1.IntegrationConfig, command chatops.Command, verifyFunc testApproveVerifier) {
-	if err := handler.HandleChatOps(command, wh, ic); err != nil {
-		t.Fatal(err)
-	}
-	verifyFunc()
 }
 
 func buildTestConfigForApprove() *cicdv1.IntegrationConfig {
@@ -131,7 +246,7 @@ func buildTestConfigForApprove() *cicdv1.IntegrationConfig {
 	}
 }
 
-func buildTestWebhookForApprove() *git.Webhook {
+func buildTestWebhookCommentApprove() *git.Webhook {
 	return &git.Webhook{
 		EventType: git.EventTypeIssueComment,
 		Repo: git.Repository{
@@ -143,6 +258,51 @@ func buildTestWebhookForApprove() *git.Webhook {
 			Email: testUserEmail,
 		},
 		IssueComment: &git.IssueComment{
+			Comment: git.Comment{
+				CreatedAt: &metav1.Time{Time: time.Now()},
+			},
+			Author: git.User{
+				ID:    testUserID,
+				Name:  testUserName,
+				Email: testUserEmail,
+			},
+			Issue: git.Issue{
+				PullRequest: &git.PullRequest{
+					ID:    testPRID,
+					Title: "test-pull-request",
+					State: git.PullRequestStateOpen,
+					Author: git.User{
+						ID:    testUserID,
+						Name:  testUserName,
+						Email: testUserEmail,
+					},
+					URL: "https://github.com/tmax-cloud/cicd-operator/pulls/1",
+					Base: git.Base{
+						Ref: "master",
+					},
+					Head: git.Head{
+						Ref: "new-feat",
+						Sha: "sfoj39jfsidjf93jfsiljf20",
+					},
+				},
+			},
+		},
+	}
+}
+
+func buildTestWebhookApprove() *git.Webhook {
+	return &git.Webhook{
+		EventType: git.EventTypePullRequestReview,
+		Repo: git.Repository{
+			Name: testRepo,
+		},
+		Sender: git.User{
+			ID:    testUserID,
+			Name:  testUserName,
+			Email: testUserEmail,
+		},
+		IssueComment: &git.IssueComment{
+			ReviewState: git.PullRequestReviewStateApproved,
 			Comment: git.Comment{
 				CreatedAt: &metav1.Time{Time: time.Now()},
 			},
