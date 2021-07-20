@@ -68,11 +68,11 @@ type BranchResponse struct {
 
 // MergeAcceptRequest is a request struct to merge a merge request
 type MergeAcceptRequest struct {
-	//MergeCommitMessage  string `json:"merge_commit_message"`
-	//SquashCommitMessage string `json:"squash_commit_message"`
-	Squash             bool   `json:"squash"`
-	Sha                string `json:"sha"`
-	RemoveSourceBranch bool   `json:"should_remove_source_branch"`
+	MergeCommitMessage  string `json:"merge_commit_message,omitempty"`
+	SquashCommitMessage string `json:"squash_commit_message,omitempty"`
+	Squash              bool   `json:"squash"`
+	Sha                 string `json:"sha"`
+	RemoveSourceBranch  bool   `json:"should_remove_source_branch"`
 }
 
 // MergeRequestChanges is a changed list of the merge request

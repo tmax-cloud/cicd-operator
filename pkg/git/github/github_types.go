@@ -48,8 +48,8 @@ type BranchResponse struct {
 
 // MergeRequest is a request struct to merge a pull request
 type MergeRequest struct {
-	CommitTitle   string `json:"commit_title"`
-	CommitMessage string `json:"commit_message"`
+	CommitTitle   string `json:"commit_title,omitempty"`
+	CommitMessage string `json:"commit_message,omitempty"`
 	MergeMethod   string `json:"merge_method"`
 	Sha           string `json:"sha"`
 }
