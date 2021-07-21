@@ -14,9 +14,9 @@ func TestApplyBlockerConfigChange(t *testing.T) {
 			assert.Equal(t, true, err == nil)
 
 			assert.Equal(t, 1, MergeSyncPeriod)
-			assert.Equal(t, "ma/block", MergeBlockLabel)
-			assert.Equal(t, "ma/merge-squash", MergeKindSquashLabel)
-			assert.Equal(t, "ma/merge-merge", MergeKindMergeLabel)
+			assert.Equal(t, "ci/hold", MergeBlockLabel)
+			assert.Equal(t, "ci/merge-squash", MergeKindSquashLabel)
+			assert.Equal(t, "ci/merge-merge", MergeKindMergeLabel)
 		}},
 		"normal": {ConfigMap: &corev1.ConfigMap{
 			Data: map[string]string{

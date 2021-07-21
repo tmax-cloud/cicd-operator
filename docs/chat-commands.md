@@ -10,5 +10,7 @@
 |`/retest`| Trigger all the jobs for the pull request. Same as `/test`. |
 |`/approve`| Approves a PR. Only those who have write access to the repo can call this command. |
 |`/approve cancel`| Cancels an approval on a PR. Only those who have write access to the repo can call this command. |
+|`/hold`| Hold a pull request. Held pull request is not merged automatically.|
+|`/hold cancel`| Unhold a pull request. The pull request can be merged automatically when meets conditions.|
 
 ## Issues

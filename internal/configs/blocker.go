@@ -13,9 +13,9 @@ const (
 func ApplyBlockerConfigChange(cm *corev1.ConfigMap) error {
 	getVars(cm.Data, map[string]operatorConfig{
 		"mergeSyncPeriod":      {Type: cfgTypeInt, IntVal: &MergeSyncPeriod, IntDefault: 1},                               // Merge automation sync period
-		"mergeBlockLabel":      {Type: cfgTypeString, StringVal: &MergeBlockLabel, StringDefault: "ma/block"},             // Merge automation block label
-		"mergeKindSquashLabel": {Type: cfgTypeString, StringVal: &MergeKindSquashLabel, StringDefault: "ma/merge-squash"}, // Merge kind squash label
-		"mergeKindMergeLabel":  {Type: cfgTypeString, StringVal: &MergeKindMergeLabel, StringDefault: "ma/merge-merge"},   // Merge kind squash label
+		"mergeBlockLabel":      {Type: cfgTypeString, StringVal: &MergeBlockLabel, StringDefault: "ci/hold"},              // Merge automation block label
+		"mergeKindSquashLabel": {Type: cfgTypeString, StringVal: &MergeKindSquashLabel, StringDefault: "ci/merge-squash"}, // Merge kind squash label
+		"mergeKindMergeLabel":  {Type: cfgTypeString, StringVal: &MergeKindMergeLabel, StringDefault: "ci/merge-merge"},   // Merge kind squash label
 	})
 
 	// Init

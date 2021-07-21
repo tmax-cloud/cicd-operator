@@ -27,6 +27,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver"
 	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
 	"github.com/tmax-cloud/cicd-operator/pkg/chatops/plugins/approve"
+	"github.com/tmax-cloud/cicd-operator/pkg/chatops/plugins/hold"
 	"github.com/tmax-cloud/cicd-operator/pkg/chatops/plugins/trigger"
 	"github.com/tmax-cloud/cicd-operator/pkg/collector"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
@@ -134,6 +135,7 @@ func main() {
 	cfgCtrl.Add(configs.ConfigMapNameCICDConfig, configs.ApplyControllerConfigChange)
 	cfgCtrl.Add(configs.ConfigMapNameEmailTemplate, configs.ApplyEmailTemplateConfigChange)
 	cfgCtrl.Add(configs.ConfigMapNamePluginConfig, configs.ApplyPluginConfigChange)
+	cfgCtrl.Add(configs.ConfigMapNameBlockerConfig, configs.ApplyBlockerConfigChange)
 	// Wait for initial config reconcile
 	<-configs.InitCh
 
@@ -199,14 +201,16 @@ func main() {
 	// Init chat-ops
 	co := chatops.New(mgr.GetClient())
 
-	// Init plugins
+	// Init chat-ops plugins
 	approveHandler := &approve.Handler{Client: mgr.GetClient()}
 	triggerHandler := &trigger.Handler{Client: mgr.GetClient()}
+	holdHandler := &hold.Handler{Client: mgr.GetClient()}
 
 	co.RegisterCommandHandler(approve.CommandTypeApprove, approveHandler.HandleChatOps)
 	co.RegisterCommandHandler(approve.CommandTypeGitLabApprove, approveHandler.HandleChatOps)
 	co.RegisterCommandHandler(trigger.CommandTypeTest, triggerHandler.HandleChatOps)
 	co.RegisterCommandHandler(trigger.CommandTypeRetest, triggerHandler.HandleChatOps)
+	co.RegisterCommandHandler(hold.CommandTypeHold, holdHandler.HandleChatOps)
 
 	// Create and start webhook server
 	srv := server.New(mgr.GetClient(), mgr.GetConfig())
