@@ -2,9 +2,10 @@ package github
 
 import (
 	"encoding/json"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"strconv"
 	"strings"
+
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
 )
 
 func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error) {

@@ -2,6 +2,9 @@ package blocker
 
 import (
 	"context"
+	"os"
+	"testing"
+
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -13,12 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
 )
 
 const (
@@ -118,13 +119,16 @@ func TestBlocker_handleBatch(t *testing.T) {
 		_ = cli.Status().Update(context.Background(), ij1)
 
 		pool.CurrentBatch = &Batch{
-			PRs: []*PullRequest{{PullRequest: git.PullRequest{ID: 12}}},
+			PRs: []*PullRequest{{PullRequest: git.PullRequest{ID: 12}},
+				{PullRequest: git.PullRequest{ID: 23}},
+				{PullRequest: git.PullRequest{ID: 37}}},
 			Job: types.NamespacedName{Name: "test-ij-1", Namespace: testICNamespace},
 		}
 		if err := b.handleBatch(pool, ic, gitCli); err != nil {
 			t.Fatal(err)
 		}
-		assert.Equal(t, true, pool.CurrentBatch == nil, "CurrentBatch cleared")
+
+		assert.Equal(t, 2, len(pool.CurrentBatch.PRs), "CurrentBatch gets rid of the last PR")
 	})
 
 	// TEST 2 - Batch IJ Succeeds

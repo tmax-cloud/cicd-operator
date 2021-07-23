@@ -12,10 +12,13 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/pipelinemanager"
 	"k8s.io/apimachinery/pkg/types"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+var log = logf.Log.WithName("blocker")
+
 const (
-	maxBatchSize = 1 // TODO - currently, IntegrationJob does not support batch test
+	maxBatchSize = 10
 )
 
 func (b *blocker) loopMerge() {
@@ -100,15 +103,10 @@ func (b *blocker) retestAndMergeOnePool(pool *PRPool) {
 			}
 		}
 
-		// TODO - Temporary code for GeneratePreSubmit.
-		// it is due to be modified soon.
-		prs := []git.PullRequest{pr.PullRequest}
-
-		// Retest it (create IJ) TODO - batched IJ - not implemented yet
-		ij := dispatcher.GeneratePreSubmit(prs, &git.Repository{Name: ic.Spec.Git.Repository, URL: pr.URL}, &pr.Author, ic)
-		pool.CurrentBatch.Job = types.NamespacedName{Name: ij.Name, Namespace: ij.Namespace}
-		if err := b.client.Create(context.Background(), ij); err != nil {
-			log.Error(err, "")
+		// Retest it (create IJ)
+		gitPRs := getGitPRsFromPRs(pool.CurrentBatch.PRs)
+		if err := b.createIntegrationJobForBatch(gitPRs, ic, &pool.CurrentBatch.Job); err != nil {
+			log.Error(err, "Fail to create integrationJob for batch.")
 			return
 		}
 	}
@@ -138,13 +136,34 @@ func (b *blocker) handleBatch(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli
 			pool.CurrentBatch = nil
 		} else {
 			pool.CurrentBatch.PRs = pool.CurrentBatch.PRs[:len(pool.CurrentBatch.PRs)-1]
-			pool.CurrentBatch.Job.Name = ""
-			pool.CurrentBatch.Job.Namespace = ""
-			// TODO - re-test (create batched IJ - not implemented yet)
-			// pool.CurrentBatch.Job = types.NamespacedName{Name: ij.Name, Namespace: ij.Namespace}
+			gitPRs := getGitPRsFromPRs(pool.CurrentBatch.PRs)
+			if err := b.createIntegrationJobForBatch(gitPRs, ic, &pool.CurrentBatch.Job); err != nil {
+				log.Error(err, "Fail to create integrationJob for batch.")
+				return err
+			}
 		}
 	default:
 		// Do nothing if it's still running
+	}
+	return nil
+}
+
+func getGitPRsFromPRs(prs []*PullRequest) []git.PullRequest {
+	gitPRs := []git.PullRequest{}
+	for _, p := range prs {
+		gitPRs = append(gitPRs, p.PullRequest)
+	}
+	return gitPRs
+}
+
+func (b *blocker) createIntegrationJobForBatch(prs []git.PullRequest, ic *cicdv1.IntegrationConfig, batchJob *types.NamespacedName) error {
+	// The PRs in batch are assumed to have the same 'repo'.
+	dummy := git.User{Name: "tmax-cicd-bot", Email: "bot@cicd.tmax.io"}
+	ij := dispatcher.GeneratePreSubmit(prs, &git.Repository{Name: ic.Spec.Git.Repository, URL: prs[0].URL}, &dummy, ic)
+	*batchJob = types.NamespacedName{Name: ij.Name, Namespace: ij.Namespace}
+	if err := b.client.Create(context.Background(), ij); err != nil {
+		log.Error(err, "")
+		return err
 	}
 	return nil
 }
