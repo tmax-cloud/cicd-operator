@@ -1,0 +1,38 @@
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: merge-automation-config
+spec:
+  git:
+    type: github
+    apiUrl: 
+    repository: tmax-cloud/cicd-sample-repo
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: git-token
+          key: token
+  jobs:  
+    preSubmit:
+      - image: golang:1.14
+        name: test-code
+        script: go test ./...
+        when:
+          branch:
+            - main
+      - image: golangci/golangci-lint:v1.32
+        name: test-lint
+        script: |
+          golangci-lint run ./... -v
+        when:
+          branch:
+            - main
+  mergeConfig:              # specifies how to automate the PR merge
+    method: squash          # is a merge method. (squash/merge)
+    query:                  # conditions for a opened PR to be merged
+      approveRequired: true # specifies whether to check github/gitlab's approval
+      blockLabels:          # specify the required labels of PR to be blocked for merge
+      - hold
+      checks:               # are checks needed to be passed for the PR to be merged. Checks and OptionalChecks are mutually exclusive
+      - test-code
+      - test-lint

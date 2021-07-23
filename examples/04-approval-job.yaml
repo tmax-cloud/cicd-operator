@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap # Create approvers list ConfigMap
+metadata:
+  name: approver-test
+data:
+  approvers: | # <User name>=<Email address> form (email is optional)
+    admin@tmax.co.kr=jeonghyeon_yang@tmax.co.kr 
+    test@tmax.co.kr
+---
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: approval-job-config
+spec:
+  git:
+    type: github
+    apiUrl:
+    repository: tmax-cloud/cicd-sample-repo
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: git-token
+          key: token
+  jobs:
+    preSubmit:
+      - name : approval # Add following 'approval' job before the job which needs an approval in IntegrationConfig
+        approval:
+          approversConfigMap:
+            name: approver-test
+          approvers: # You can use both approvers & approversConfigMap
+            - system:serviceaccount:default:approver-account # Service account is also supported
+          requestMessage: Please approve this! # Message to be sent via email when the Approval is created
+      - name: test
+        image: golang:1.14
+        script: go test ./...
+        after:
+          - approval

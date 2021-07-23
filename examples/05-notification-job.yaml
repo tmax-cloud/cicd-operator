@@ -1,0 +1,30 @@
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: notification-job-config
+spec:
+  git:
+    type: github
+    apiUrl:
+    repository: tmax-cloud/cicd-sample-repo
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: git-token
+          key: token
+  jobs:
+    preSubmit:
+        - name : email
+          email:
+            receivers:
+              - test@tmax.co.kr
+            title: HTML Email title
+            isHtml: true
+            content: |
+                <hr>
+                <b>hello, world</b>
+                <i>bye</i>
+        - name : slack
+          slack:
+            url: https://hooks.slack.com/services/....
+            message: IntegrationJob($INTEGRATION_JOB_NAME)'s job($JOB_NAME) is running!

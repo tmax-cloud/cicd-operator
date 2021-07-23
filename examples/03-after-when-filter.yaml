@@ -1,0 +1,28 @@
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: after-when-filter-config
+spec:
+  git:
+    type: github
+    apiUrl:
+    repository: tmax-cloud/cicd-sample-repo
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: git-token
+          key: token
+  jobs:
+    preSubmit:
+      - name: test-code
+        image: golang:1.14
+        script: go test ./...
+      - name: test-lint
+        image: golangci/golangci-lint:v1.32
+        script: |
+          golangci-lint run ./... -v
+        after: # If you want this job to be executed after specific jobs, you can specify here.
+          - test-code
+        when: # If you want this job to be executed only for specific branches or tags, you can specify here.
+          branch: # Available fields: branch, skipBranch, tag, skipTag
+            - main # All values for the fields should be in valid regular expression (e.g. test-.*, v*)

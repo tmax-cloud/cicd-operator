@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  resources:
+    requests:
+      storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+---
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: using-workspaces-between-jobs-config
+spec:
+  git:
+    type: github
+    apiUrl:
+    repository: tmax-cloud/cicd-sample-repo
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: git-token
+          key: token
+  workspaces:
+    - name : my-workspace
+      persistentVolumeClaim:
+        claimName: my-pvc
+  jobs:
+    preSubmit:
+      - name: write-hello-world
+        image: ubuntu
+        script: echo Hello > $(workspaces.my-workspace.path)/foo.txt
+      - name: print-hello-world
+        image: ubuntu
+        script: cat $(workspaces.my-workspace.path)/foo.txt
