@@ -165,9 +165,10 @@ func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error
 	notExist := false
 	role := &rbac.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleAndBindingName(approval.Name),
-			Namespace: approval.Namespace,
-			Labels:    labelsForRoleAndBinding(approval),
+			Name:        roleAndBindingName(approval.Name),
+			Namespace:   approval.Namespace,
+			Labels:      labelsForRoleAndBinding(approval),
+			Annotations: annotationsForRoleAndBinding(approval),
 		},
 	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: role.Name, Namespace: role.Namespace}, role); err != nil {
@@ -210,9 +211,10 @@ func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error
 func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval) error {
 	binding := &rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleAndBindingName(approval.Name),
-			Namespace: approval.Namespace,
-			Labels:    labelsForRoleAndBinding(approval),
+			Name:        roleAndBindingName(approval.Name),
+			Namespace:   approval.Namespace,
+			Labels:      labelsForRoleAndBinding(approval),
+			Annotations: annotationsForRoleAndBinding(approval),
 		},
 	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}, binding); err != nil {
@@ -287,6 +289,11 @@ func labelsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
 		cicdv1.JobLabelPrefix + "integrationJob": approval.Spec.IntegrationJob,
 	}
 
+	return result
+}
+
+func annotationsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
+	result := map[string]string{}
 	if approval.Spec.Sender != nil {
 		result[cicdv1.JobLabelPrefix+"sender"] = approval.Spec.Sender.Name
 	}
