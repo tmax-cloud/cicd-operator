@@ -1,9 +1,10 @@
 # Configuring Blocker
 
 This guide shows how to configure the blocker. Contents are as follows.
-- [`maxPipelineRun`](#maxpipelinerun)
-- [`ingressClass`](#ingressclass)
-- [`externalHostName`](#externalhostname)
+- [`mergeSyncPeriod`](#mergesyncperiod)
+- [`mergeBlockLabel`](#mergeblocklabel)
+- [`mergeKindSquashLabel`](#mergekindsquashlabel)
+- [`mergeKindMergeLabel`](#mergekindmergelabel)
 
 You can check and update the configuration values from the ConfigMap `blocker-config` in namespace `cicd-system`.
 ```yaml
