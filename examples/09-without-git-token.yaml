@@ -1,0 +1,18 @@
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: without-git-token-config
+spec:
+  git:
+    type: github
+    apiUrl: 
+    repository: tmax-cloud/cicd-sample-repo
+  jobs:
+    preSubmit:
+    postSubmit:
+
+# 
+# It will be ready but skipped to register webhook.
+# The reason is there is no git token. 
+# In this case, it runs only via external-api/cli.
+#

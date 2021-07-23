@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: git-token # Note that it will be used to configure "IntegrationConfig". Change name whatever you want.
+stringData:
+  token: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX # Modify here. Copy generated token and store it as a secret.
+
+# First of all, please read "Quick Start Guide" docs.
+# Change the value of token appropriately and apply to your cluster.

@@ -1,0 +1,34 @@
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: notification-succeed-or-fail-config
+spec:
+  git:
+    type: github
+    apiUrl:
+    repository: tmax-cloud/cicd-sample-repo
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: git-token # it should be applied to your cluster. 
+          key: token
+  jobs:
+    preSubmit: # Jobs to be executed on PullRequest
+      - name: test
+        image: golang:1.14
+        script: go test ./...
+        notification:
+          onSuccess:
+            email:
+              receivers:
+                - test@tmax.co.kr
+              title: IntegrationJob $INTEGRATION_JOB_NAME Succeeded.
+              isHtml: true
+              content : |
+                <hr>
+                <b>IntegrationJob: $INTEGRATION_JOB_NAME</b>
+                <i>Job: $JOB_NAME </i>
+          onFailure:
+            slack:
+              url: https://hooks.slack.com/services/...
+              message: IntegraionJob($INTEGRATION_JOB_NAME)'s job($JOB_NAME) failed
