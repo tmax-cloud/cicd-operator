@@ -107,9 +107,28 @@ func (a *ApprovalRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error
 		run.Status.CompletionTime = &metav1.Time{Time: time.Now()}
 	} else {
 		cond.Status = corev1.ConditionUnknown
+		a.reflectApprovalEmailStatus(approval, cond)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (a *ApprovalRunHandler) reflectApprovalEmailStatus(approval *cicdv1.Approval, cond *apis.Condition) {
+	// Reflect approval email status to Run
+	// Result of sending email is not critical to the Approval itself, so it's only stated in the message
+	var mailStatuses []string
+
+	sentReqMail := approval.Status.Conditions.GetCondition(cicdv1.ApprovalConditionSentRequestMail)
+	if sentReqMail != nil && sentReqMail.IsFalse() {
+		mailStatuses = append(mailStatuses, fmt.Sprintf("RequestMail : %s-%s", sentReqMail.Reason, sentReqMail.Message))
+	}
+
+	sentResMail := approval.Status.Conditions.GetCondition(cicdv1.ApprovalConditionSentResultMail)
+	if sentResMail != nil && sentResMail.IsFalse() {
+		mailStatuses = append(mailStatuses, fmt.Sprintf("ResultMail : %s-%s", sentResMail.Reason, sentResMail.Message))
+	}
+
+	cond.Message = strings.Join(mailStatuses, ", ")
 }
 
 func (a *ApprovalRunHandler) setApprovalRunStatus(cond *apis.Condition, status corev1.ConditionStatus, reason, message string) {
