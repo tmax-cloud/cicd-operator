@@ -61,7 +61,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				cond := run.Status.GetCondition(apis.ConditionSucceeded)
 				require.NotNil(t, cond)
 				require.True(t, cond.IsUnknown())
-				require.Equal(t, "Waiting", cond.Reason)
+				require.Equal(t, "Awaiting", cond.Reason)
 				require.Equal(t, "waiting for approval", cond.Message)
 
 				// Verify created Approval
@@ -89,7 +89,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				cond := run.Status.GetCondition(apis.ConditionSucceeded)
 				require.NotNil(t, cond)
 				require.True(t, cond.IsUnknown())
-				require.Equal(t, "Waiting", cond.Reason)
+				require.Equal(t, "Awaiting", cond.Reason)
 				require.Equal(t, "waiting for approval", cond.Message)
 
 				// Verify created Approval
@@ -123,7 +123,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				cond := run.Status.GetCondition(apis.ConditionSucceeded)
 				require.NotNil(t, cond)
 				require.True(t, cond.IsUnknown())
-				require.Equal(t, "Waiting", cond.Reason)
+				require.Equal(t, "Awaiting", cond.Reason)
 				require.Equal(t, "waiting for approval", cond.Message)
 
 				// Verify created Approval
@@ -202,7 +202,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 		},
 		"approvalReqMailError": {
 			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
-				approvalStatus := cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultWaiting}
+				approvalStatus := cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultAwaiting}
 				approvalStatus.Conditions.SetCondition(status.Condition{
 					Type:    cicdv1.ApprovalConditionSentRequestMail,
 					Status:  corev1.ConditionFalse,
@@ -215,13 +215,13 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				cond := run.Status.GetCondition(apis.ConditionSucceeded)
 				require.NotNil(t, cond)
 				require.True(t, cond.IsUnknown())
-				require.Equal(t, "Waiting", cond.Reason)
+				require.Equal(t, "Awaiting", cond.Reason)
 				require.Equal(t, "RequestMail : ErrorSendingMail-some smtp-related error message!", cond.Message)
 			},
 		},
 		"approvalResMailError": {
 			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
-				approvalStatus := cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultWaiting}
+				approvalStatus := cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultAwaiting}
 				approvalStatus.Conditions.SetCondition(status.Condition{
 					Type:    cicdv1.ApprovalConditionSentResultMail,
 					Status:  corev1.ConditionFalse,
@@ -234,7 +234,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				cond := run.Status.GetCondition(apis.ConditionSucceeded)
 				require.NotNil(t, cond)
 				require.True(t, cond.IsUnknown())
-				require.Equal(t, "Waiting", cond.Reason)
+				require.Equal(t, "Awaiting", cond.Reason)
 				require.Equal(t, "ResultMail : ErrorSendingMail-some smtp-related error message!", cond.Message)
 			},
 		},

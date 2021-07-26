@@ -105,7 +105,7 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// Default conditions
 	if instance.Status.Result == "" {
-		instance.Status.Result = cicdv1.ApprovalResultWaiting
+		instance.Status.Result = cicdv1.ApprovalResultAwaiting
 		return ctrl.Result{}, nil
 	}
 
