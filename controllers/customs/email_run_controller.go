@@ -36,7 +36,7 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 		cond = &apis.Condition{
 			Type:    apis.ConditionSucceeded,
 			Status:  corev1.ConditionUnknown,
-			Reason:  "Waiting",
+			Reason:  "Awaiting",
 			Message: "Sending email",
 		}
 	}

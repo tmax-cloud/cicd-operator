@@ -33,7 +33,7 @@ type ApprovalResult string
 
 // Results
 const (
-	ApprovalResultWaiting  ApprovalResult = "Waiting"
+	ApprovalResultAwaiting ApprovalResult = "Awaiting"
 	ApprovalResultApproved ApprovalResult = "Approved"
 	ApprovalResultRejected ApprovalResult = "Rejected"
 	ApprovalResultError    ApprovalResult = "Error"
