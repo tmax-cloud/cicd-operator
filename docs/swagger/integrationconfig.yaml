@@ -1,0 +1,200 @@
+openapi: 3.0.0
+info:
+  description: IntegrationConfig-related APIs
+  version: "0.0.1"
+  title: IntegrationConfig
+  contact:
+    email: sunghyun_kim3@tmax.co.kr
+tags:
+  - name: TestRun
+  - name: Webhook
+paths:
+  /apis/cicdapi.tmax.io/v1/namespaces/{namespace}/integrationconfigs/{name}/runpre:
+    post:
+      tags:
+        - TestRun
+      summary: Run 'preSubmit' jobs
+      description: Run 'preSubmit' jobs
+      parameters:
+        - in: "path"
+          name: namespace
+          description: namespace of the IntegrationConfig
+          required: true
+          schema:
+            type: "string"
+        - in: "path"
+          name: name
+          description: name of the IntegrationConfig
+          required: true
+          schema:
+            type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestRunPre'
+            example:
+              base_branch: "master"
+              head_branch: "feat/add-feature"
+      responses:
+        '200':
+          description: Triggered the 'preSubmit' jobs
+          content:
+            application/json:
+              schema:
+                example: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+  /apis/cicdapi.tmax.io/v1/namespaces/{namespace}/integrationconfigs/{name}/runpost:
+    post:
+      tags:
+        - TestRun
+      summary: Run 'postSubmit' jobs
+      description: Run 'postSubmit' jobs
+      parameters:
+        - in: "path"
+          name: namespace
+          description: namespace of the IntegrationConfig
+          required: true
+          schema:
+            type: "string"
+        - in: "path"
+          name: name
+          description: name of the IntegrationConfig
+          required: true
+          schema:
+            type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestRunPost'
+            example:
+              branch: "master"
+      responses:
+        '200':
+          description: Triggered the 'postSubmit' jobs
+          content:
+            application/json:
+              schema:
+                example: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+  /apis/cicdapi.tmax.io/v1/namespaces/{namespace}/integrationconfigs/{name}/webhookurl:
+    get:
+      tags:
+        - Webhook
+      summary: Get webhook url for the IntegrationConfig
+      description: Get webhook url for the IntegrationConfig
+      parameters:
+        - in: "path"
+          name: namespace
+          description: namespace of the IntegrationConfig
+          required: true
+          schema:
+            type: "string"
+        - in: "path"
+          name: name
+          description: name of the IntegrationConfig
+          required: true
+          schema:
+            type: "string"
+      responses:
+        '200':
+          description: Got webhook server's url and secret for the IntegrationConfig
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseWebhookURL'
+              example:
+                url: "http://cicd-webhook.0.0.0.0.nip.io/webhook/default/ic-test"
+                secret: "9ctpql37pem3rgnpcgji"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                example:
+                  url: "error message"
+                  secret: ""
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                example:
+                  message: "error message"
+components:
+  schemas:
+    RequestRunPre:
+      type: object
+      description: RunPre request type
+      properties:
+        base_branch:
+          type: string
+          description: Base branch to be used for the run
+        head_branch:
+          type: string
+          description: Head branch to be used for the run
+    RequestRunPost:
+      type: object
+      description: RunPost request type
+      properties:
+        branch:
+          type: string
+          description: Head branch to be used for the run
+    ResponseWebhookURL:
+      type: object
+      description: WebhookURL response type
+      properties:
+        url:
+          type: string
+          description: URL of the webhook server for the IntegrationConfig.
+        secret:
+          type: string
+          description: Secret of the webhook, which should be used for signing the webhook payload. Refer to the GitHub/GitLab's webhook api documents.
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
