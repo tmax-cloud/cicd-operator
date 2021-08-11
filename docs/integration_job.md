@@ -20,8 +20,8 @@ spec:
       ref: <e.g., master>
       sha: <SHA of base commit>
       link: <Link of base repo.>
-    pull:
-      id: <Pull request ID>
+    pulls:
+    - id: <Pull request ID>
       sha: <SHA of the pull request commit>
       link: <Link of the pull request>
       author: 
@@ -74,8 +74,8 @@ spec:
       ref: master
       sha: wef89weaf8wefje8cn2jd8c83nd9322502183c79
       link: https://github.com/tmax-cloud/cicd-operator
-    pull:
-      id: 32
+    pulls:
+    - id: 32
       sha: 48f6ce4dd655a64f723de28695e3322502183c79
       link: https://github.com/tmax-cloud/cicd-operator/pull/32
       author: 
