@@ -57,6 +57,7 @@ data:
   smtpUserSecret: ""
   collectPeriod: "120"
   integrationJobTTL: "120"
+  exposeMode: "Ingress"
   ingressClass: ""
   ingressHost: ""
   gitImage: "docker.io/alpine/git:1.0.30"
@@ -261,6 +262,18 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - apiregistration.k8s.io
   resourceNames:
   - v1.cicdapi.tmax.io
@@ -364,14 +377,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - ingresses/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

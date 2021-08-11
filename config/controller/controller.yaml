@@ -57,6 +57,7 @@ data:
   smtpUserSecret: ""
   collectPeriod: "120"
   integrationJobTTL: "120"
+  exposeMode: "Ingress"
   ingressClass: ""
   ingressHost: ""
   gitImage: "docker.io/alpine/git:1.0.30"

@@ -190,14 +190,14 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
-	// Check for ingress first
-	setupLog.Info("Waiting for ingress to be ready")
-	ingCon := controllers.NewIngressController()
-	go ingCon.Start()
-	if err := ingCon.Wait(); err != nil {
-		setupLog.Error(err, "error waiting for ingress")
+	// Start webhook expose controller
+	setupLog.Info("Starting webhook expose controller")
+	exposeCon, err := controllers.NewExposeController(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create expose controller")
 		os.Exit(1)
 	}
+	go exposeCon.Start(nil)
 
 	// Init chat-ops
 	co := chatops.New(mgr.GetClient())

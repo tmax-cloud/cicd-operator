@@ -19,6 +19,7 @@ package v1
 import (
 	"context"
 	"fmt"
+
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -155,7 +156,7 @@ func GetSecretName(configName string) string {
 
 // GetWebhookServerAddress returns Server address which webhook events will be received
 func (i *IntegrationConfig) GetWebhookServerAddress() string {
-	return fmt.Sprintf("http://%s/webhook/%s/%s", configs.ExternalHostName, i.Namespace, i.Name)
+	return fmt.Sprintf("http://%s/webhook/%s/%s", configs.CurrentExternalHostName, i.Namespace, i.Name)
 }
 
 // IntegrationConfig's API kinds

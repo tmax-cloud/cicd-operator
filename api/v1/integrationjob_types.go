@@ -168,5 +168,5 @@ func (s *IntegrationJobStatus) SetDefaults() error {
 
 // GetReportServerAddress returns Server address for reports (IntegrationJob details)
 func (i *IntegrationJob) GetReportServerAddress(jobName string) string {
-	return fmt.Sprintf("http://%s/report/%s/%s/%s", configs.ExternalHostName, i.Namespace, i.Name, jobName)
+	return fmt.Sprintf("http://%s/report/%s/%s/%s", configs.CurrentExternalHostName, i.Namespace, i.Name, jobName)
 }
