@@ -17,8 +17,9 @@
 package configs
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"strconv"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Initiate-related channel
@@ -53,22 +54,22 @@ type Handler func(cm *corev1.ConfigMap) error
 
 func getVars(data map[string]string, vars map[string]operatorConfig) {
 	for key, c := range vars {
-		v := data[key]
+		v, exist := data[key]
 		switch c.Type {
 		case cfgTypeString:
 			if c.StringVal == nil {
 				continue
 			}
-			if len(v) > 0 {
+			if exist {
 				*c.StringVal = v
-			} else if len(c.StringDefault) > 0 {
+			} else {
 				*c.StringVal = c.StringDefault
 			}
 		case cfgTypeInt:
 			if c.IntVal == nil {
 				continue
 			}
-			if len(v) > 0 {
+			if exist {
 				i, err := strconv.Atoi(v)
 				if err != nil {
 					continue
@@ -81,7 +82,7 @@ func getVars(data map[string]string, vars map[string]operatorConfig) {
 			if c.BoolVal == nil {
 				continue
 			}
-			if len(v) > 0 {
+			if exist {
 				b, err := strconv.ParseBool(v)
 				if err != nil {
 					continue

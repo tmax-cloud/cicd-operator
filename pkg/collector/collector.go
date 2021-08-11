@@ -19,13 +19,14 @@ package collector
 import (
 	"context"
 	"fmt"
+	"time"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"gopkg.in/robfig/cron.v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
 )
 
 var log = logf.Log.WithName("garbage-collector")
@@ -42,6 +43,8 @@ type collector struct {
 	cron     *cron.Cron
 	cronSpec string
 	cronID   cron.EntryID
+
+	runGc chan struct{}
 }
 
 // New is a constructor of collector
@@ -50,7 +53,9 @@ func New(c client.Client) (*collector, error) {
 		client:   c,
 		cron:     cron.New(),
 		cronSpec: parseGcPeriod(),
+		runGc:    make(chan struct{}, 1),
 	}
+	configs.RegisterControllerConfigUpdateChan(gc.runGc)
 	id, err := gc.cron.AddFunc(gc.cronSpec, gc.collect)
 	if err != nil {
 		return nil, err
@@ -64,7 +69,7 @@ func (c *collector) Start() {
 	log.Info("Starting garbage collector")
 	c.cron.Start()
 
-	for range configs.GcChan {
+	for range c.runGc {
 		if err := c.reconfigure(); err != nil {
 			log.Error(err, "")
 		}

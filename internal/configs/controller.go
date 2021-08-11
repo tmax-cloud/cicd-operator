@@ -18,6 +18,7 @@ package configs
 
 import (
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -29,8 +30,12 @@ const (
 	ConfigMapNameEmailTemplate = "email-template"
 )
 
-// GcChan is a channel to call gc logic
-var GcChan = make(chan struct{}, 1)
+var controllerConfigUpdateChan []chan struct{}
+
+// RegisterControllerConfigUpdateChan registers a channel which accepts controller config's update event
+func RegisterControllerConfigUpdateChan(ch chan struct{}) {
+	controllerConfigUpdateChan = append(controllerConfigUpdateChan, ch)
+}
 
 // ApplyControllerConfigChange is a configmap handler for cicd-config configmap
 func ApplyControllerConfigChange(cm *corev1.ConfigMap) error {
@@ -61,9 +66,11 @@ func ApplyControllerConfigChange(cm *corev1.ConfigMap) error {
 		}
 	}
 
-	// Reconfigure GC
-	if len(GcChan) < cap(GcChan) {
-		GcChan <- struct{}{}
+	// Notify channels (non-blocking way)
+	for _, ch := range controllerConfigUpdateChan {
+		if len(ch) < cap(ch) {
+			ch <- struct{}{}
+		}
 	}
 
 	return nil
