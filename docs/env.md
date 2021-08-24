@@ -15,3 +15,5 @@ Following variables are set to the job containers.
 |`CI_BASE_SHA`      | Only set for forked repository / pull request |
 |`CI_BASE_REF`      | Only set for forked repository / pull request |
 |`CI_SERVER_URL`    | Server URL. e.g., https://github.com |
+|`CI_SENDER_NAME`   | Event sender's name |
+|`CI_SENDER_EMAIL`  | Event sender's email |
