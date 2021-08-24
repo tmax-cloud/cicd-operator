@@ -43,6 +43,7 @@ func ApplyControllerConfigChange(cm *corev1.ConfigMap) error {
 		"maxPipelineRun":            {Type: cfgTypeInt, IntVal: &MaxPipelineRun, IntDefault: 5},                                // Max PipelineRun count
 		"enableMail":                {Type: cfgTypeBool, BoolVal: &EnableMail, BoolDefault: false},                             // Enable Mail
 		"externalHostName":          {Type: cfgTypeString, StringVal: &ExternalHostName},                                       // External Hostname
+		"exposeMode":                {Type: cfgTypeString, StringVal: &ExposeMode},                                             // Expose mode
 		"reportRedirectUriTemplate": {Type: cfgTypeString, StringVal: &ReportRedirectURITemplate},                              // RedirectUriTemplate for report access
 		"smtpHost":                  {Type: cfgTypeString, StringVal: &SMTPHost},                                               // SMTP Host
 		"smtpUserSecret":            {Type: cfgTypeString, StringVal: &SMTPUserSecret},                                         // SMTP Cred
@@ -95,6 +96,10 @@ var (
 	// ExternalHostName to be used for webhook server (default is ingress host name)
 	ExternalHostName string
 
+	// CurrentExternalHostName is NOT a configurable variable! it just stores current hostname which will be used for
+	// exposing webhook/result server
+	CurrentExternalHostName string
+
 	// ReportRedirectURITemplate is a uri template for report page redirection
 	ReportRedirectURITemplate string
 
@@ -123,6 +128,9 @@ var (
 	ApprovalResultMailTitle string
 	// ApprovalResultMailContent is a content of the approval result mail
 	ApprovalResultMailContent string
+
+	// ExposeMode is a mode to be used for exposing the webhook server (Ingress/LoadBalancer/ClusterIP)
+	ExposeMode string
 
 	// IngressClass is a class for ingress instance
 	IngressClass string

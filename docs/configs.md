@@ -3,6 +3,7 @@
 This guide shows how to configure the operator. Contents are as follows.
 - [System Configurations](#system-configurations)
   - [`maxPipelineRun`](#maxpipelinerun)
+  - [`exposeMode`](#exposemode)
   - [`ingressClass`](#ingressclass)
   - [`ingressHost`](#ingresshost)
   - [`externalHostName`](#externalhostname)
@@ -38,6 +39,10 @@ data:
 ### `maxPipelineRun`
 Maximum number of PipelineRuns which can run in same time.
 > Default: 5
+
+### `exposeMode`
+ExposeMode is a mode to be used for exposing the webhook server (Ingress/LoadBalancer/ClusterIP)
+> Default: Ingress
 
 ### `ingressClass`
 Ingress's class name to be used for the webhook/report server access.
