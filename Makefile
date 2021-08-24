@@ -18,7 +18,7 @@ endif
 all: controller cicdctl
 
 # Run tests
-test: test-crd test-gen test-verify test-unit test-lint
+test: test-crd test-gen test-verify test-unit test-lint test-coverage
 
 # Build controller binary
 controller: generate fmt vet
@@ -108,6 +108,12 @@ test-lint:
 # Unit test
 test-unit:
 	go test -v ./...
+
+# Check coverage
+test-coverage:
+	go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+	go tool cover -func profile.cov
+	rm -f profile.cov
 
 save-sha-gen:
 	$(eval GENSHA=$(shell sha512sum api/v1/zz_generated.deepcopy.go))
