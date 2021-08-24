@@ -17,75 +17,168 @@
 package pipelinemanager
 
 import (
+	"fmt"
+	"net/url"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
-	"github.com/tmax-cloud/cicd-operator/internal/utils"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGenerateDefaultEnvs(t *testing.T) {
-	jobID1 := utils.RandomString(20)
-	ij := &cicdv1.IntegrationJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-ij",
-			Namespace: "default",
-		},
-		Spec: cicdv1.IntegrationJobSpec{
-			ConfigRef: cicdv1.IntegrationJobConfigRef{
-				Name: "test-ic",
-				Type: cicdv1.JobTypePreSubmit,
-			},
-			ID: jobID1,
-			Refs: cicdv1.IntegrationJobRefs{
-				Repository: "yxzzzxh/test",
-				Link:       "https://hub.docker.io/test-repo",
-				Base: cicdv1.IntegrationJobRefsBase{
-					Ref: "master",
-					Sha: "dkfpoekglfjpgarl2p4idmgisq",
-				},
-				Pulls: []cicdv1.IntegrationJobRefsPull{
-					{
-						ID:   30,
-						Ref:  "bugfix/first",
-						Sha:  "0kokpenadiugpowkqe0qlemaogor",
-						Link: "first/pull",
-						Author: cicdv1.IntegrationJobRefsPullAuthor{
-							Name: "Amy",
-						},
-					},
+	tc := map[string]struct {
+		jobSpec cicdv1.IntegrationJobSpec
 
-					{
-						ID:   40,
-						Ref:  "bugfix/second",
-						Sha:  "10292dkkwe9gndlaietpqke204m",
-						Link: "second/pull",
-						Author: cicdv1.IntegrationJobRefsPullAuthor{
-							Name: "Bob",
-						},
-					},
-					{
-						ID:   50,
-						Ref:  "bugfix/third",
-						Sha:  "mbnaohe923jlakmdgokdlo402lk",
-						Link: "third/pull",
-						Author: cicdv1.IntegrationJobRefsPullAuthor{
-							Name: "Chris",
+		errorOccurs  bool
+		errorMessage string
+		expectedVars []corev1.EnvVar
+	}{
+		"urlError": {
+			jobSpec: cicdv1.IntegrationJobSpec{
+				Refs: cicdv1.IntegrationJobRefs{Link: "https://192.168.0.%31/"},
+			},
+			errorOccurs:  true,
+			errorMessage: "parse \"https://192.168.0.%31/\": invalid URL escape \"%31\"",
+		},
+		"nilSender": {
+			jobSpec: cicdv1.IntegrationJobSpec{
+				ConfigRef: cicdv1.IntegrationJobConfigRef{Name: "test-ic", Type: cicdv1.JobTypePreSubmit},
+				ID:        "dummy-id",
+				Refs: cicdv1.IntegrationJobRefs{
+					Repository: "yxzzzxh/test",
+					Link:       "https://hub.docker.io/test-repo",
+					Base:       cicdv1.IntegrationJobRefsBase{Ref: "master", Sha: "dkfpoekglfjpgarl2p4idmgisq"},
+				},
+			},
+			expectedVars: []corev1.EnvVar{
+				{Name: "CI_HEAD_SHA", Value: "dkfpoekglfjpgarl2p4idmgisq"},
+				{Name: "CI_HEAD_REF", Value: "master"},
+			},
+		},
+		"pull": {
+			jobSpec: cicdv1.IntegrationJobSpec{
+				ConfigRef: cicdv1.IntegrationJobConfigRef{Name: "test-ic", Type: cicdv1.JobTypePreSubmit},
+				ID:        "dummy-id",
+				Refs: cicdv1.IntegrationJobRefs{
+					Repository: "yxzzzxh/test",
+					Link:       "https://hub.docker.io/test-repo",
+					Base:       cicdv1.IntegrationJobRefsBase{Ref: "master", Sha: "dkfpoekglfjpgarl2p4idmgisq"},
+					Sender:     &cicdv1.IntegrationJobSender{Name: "test-user", Email: "test-user@test.com"},
+					Pulls: []cicdv1.IntegrationJobRefsPull{
+						{
+							ID:     30,
+							Ref:    "bugfix/first",
+							Sha:    "0kokpenadiugpowkqe0qlemaogor",
+							Link:   "first/pull",
+							Author: cicdv1.IntegrationJobRefsPullAuthor{Name: "Amy"},
 						},
 					},
 				},
+			},
+			expectedVars: []corev1.EnvVar{
+				{Name: "CI_SENDER_NAME", Value: "test-user"},
+				{Name: "CI_SENDER_EMAIL", Value: "test-user@test.com"},
+				{Name: "CI_HEAD_SHA", Value: " 0kokpenadiugpowkqe0qlemaogor"},
+				{Name: "CI_HEAD_REF", Value: " bugfix/first"},
+				{Name: "CI_BASE_SHA", Value: "dkfpoekglfjpgarl2p4idmgisq"},
+				{Name: "CI_BASE_REF", Value: "master"},
+			},
+		},
+		"multiPull": {
+			jobSpec: cicdv1.IntegrationJobSpec{
+				ConfigRef: cicdv1.IntegrationJobConfigRef{Name: "test-ic", Type: cicdv1.JobTypePreSubmit},
+				ID:        "dummy-id",
+				Refs: cicdv1.IntegrationJobRefs{
+					Repository: "yxzzzxh/test",
+					Link:       "https://hub.docker.io/test-repo",
+					Base:       cicdv1.IntegrationJobRefsBase{Ref: "master", Sha: "dkfpoekglfjpgarl2p4idmgisq"},
+					Sender:     &cicdv1.IntegrationJobSender{Name: "test-user", Email: "test-user@test.com"},
+					Pulls: []cicdv1.IntegrationJobRefsPull{
+						{
+							ID:     30,
+							Ref:    "bugfix/first",
+							Sha:    "0kokpenadiugpowkqe0qlemaogor",
+							Link:   "first/pull",
+							Author: cicdv1.IntegrationJobRefsPullAuthor{Name: "Amy"},
+						},
+						{
+							ID:     40,
+							Ref:    "bugfix/second",
+							Sha:    "10292dkkwe9gndlaietpqke204m",
+							Link:   "second/pull",
+							Author: cicdv1.IntegrationJobRefsPullAuthor{Name: "Bob"},
+						},
+						{
+							ID:     50,
+							Ref:    "bugfix/third",
+							Sha:    "mbnaohe923jlakmdgokdlo402lk",
+							Link:   "third/pull",
+							Author: cicdv1.IntegrationJobRefsPullAuthor{Name: "Chris"},
+						},
+					},
+				},
+			},
+			expectedVars: []corev1.EnvVar{
+				{Name: "CI_SENDER_NAME", Value: "test-user"},
+				{Name: "CI_SENDER_EMAIL", Value: "test-user@test.com"},
+				{Name: "CI_HEAD_SHA", Value: " 0kokpenadiugpowkqe0qlemaogor 10292dkkwe9gndlaietpqke204m mbnaohe923jlakmdgokdlo402lk"},
+				{Name: "CI_HEAD_REF", Value: " bugfix/first bugfix/second bugfix/third"},
+				{Name: "CI_BASE_SHA", Value: "dkfpoekglfjpgarl2p4idmgisq"},
+				{Name: "CI_BASE_REF", Value: "master"},
+			},
+		},
+		"push": {
+			jobSpec: cicdv1.IntegrationJobSpec{
+				ConfigRef: cicdv1.IntegrationJobConfigRef{Name: "test-ic", Type: cicdv1.JobTypePreSubmit},
+				ID:        "dummy-id",
+				Refs: cicdv1.IntegrationJobRefs{
+					Repository: "yxzzzxh/test",
+					Link:       "https://hub.docker.io/test-repo",
+					Base:       cicdv1.IntegrationJobRefsBase{Ref: "master", Sha: "dkfpoekglfjpgarl2p4idmgisq"},
+					Sender:     &cicdv1.IntegrationJobSender{Name: "test-user", Email: "test-user@test.com"},
+				},
+			},
+			expectedVars: []corev1.EnvVar{
+				{Name: "CI_SENDER_NAME", Value: "test-user"},
+				{Name: "CI_SENDER_EMAIL", Value: "test-user@test.com"},
+				{Name: "CI_HEAD_SHA", Value: "dkfpoekglfjpgarl2p4idmgisq"},
+				{Name: "CI_HEAD_REF", Value: "master"},
 			},
 		},
 	}
 
-	defaultEnv, err := generateDefaultEnvs(ij)
-	assert.Equal(t, nil, err)
-	for _, env := range defaultEnv {
-		if env.Name == "CI_HEAD_REF" {
-			assert.Equal(t, " bugfix/first bugfix/second bugfix/third", env.Value)
-		} else if env.Name == "CI_HEAD_SHA" {
-			assert.Equal(t, " 0kokpenadiugpowkqe0qlemaogor 10292dkkwe9gndlaietpqke204m mbnaohe923jlakmdgokdlo402lk", env.Value)
-		}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			ij := &cicdv1.IntegrationJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ij",
+					Namespace: "default",
+				},
+				Spec: c.jobSpec,
+			}
+
+			defaultEnv, err := generateDefaultEnvs(ij)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
+
+				u, err := url.Parse(c.jobSpec.Refs.Link)
+				require.NoError(t, err)
+				expectedVars := append([]corev1.EnvVar{
+					{Name: "CI", Value: "true"},
+					{Name: "CI_CONFIG_NAME", Value: c.jobSpec.ConfigRef.Name},
+					{Name: "CI_JOB_ID", Value: c.jobSpec.ID},
+					{Name: "CI_REPOSITORY", Value: c.jobSpec.Refs.Repository},
+					{Name: "CI_EVENT_TYPE", Value: string(c.jobSpec.ConfigRef.Type)},
+					{Name: "CI_WORKSPACE", Value: DefaultWorkingDir},
+					{Name: "CI_SERVER_URL", Value: fmt.Sprintf("%s://%s", u.Scheme, u.Host)},
+				}, c.expectedVars...)
+				require.Equal(t, expectedVars, defaultEnv)
+			}
+		})
 	}
 }
