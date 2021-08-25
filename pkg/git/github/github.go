@@ -338,6 +338,39 @@ func (c *Client) GetPullRequestDiff(id int) (*git.Diff, error) {
 	return &git.Diff{Changes: changes}, nil
 }
 
+// ListPullRequestCommits lists commits list of a pull request
+func (c *Client) ListPullRequestCommits(id int) ([]git.Commit, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/pulls/%d/commits", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []CommitResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, err
+	}
+
+	var commits []git.Commit
+	for _, commit := range resp {
+		commits = append(commits, git.Commit{
+			SHA:     commit.SHA,
+			Message: commit.Commit.Message,
+			Author: git.User{
+				Name:  commit.Commit.Author.Name,
+				Email: commit.Commit.Author.Email,
+			},
+			Committer: git.User{
+				Name:  commit.Commit.Committer.Name,
+				Email: commit.Commit.Committer.Email,
+			},
+		})
+	}
+
+	return commits, nil
+}
+
 // SetLabel sets label to the issue id
 func (c *Client) SetLabel(_ git.IssueType, id int, label string) error {
 	apiURL := fmt.Sprintf("%s/repos/%s/issues/%d/labels", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)

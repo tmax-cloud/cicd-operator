@@ -101,6 +101,14 @@ type Diff struct {
 	Changes []Change
 }
 
+// Commit is a commit structure
+type Commit struct {
+	SHA       string
+	Message   string
+	Author    User
+	Committer User
+}
+
 // Change is a diff of a changed file
 type Change struct {
 	Filename    string

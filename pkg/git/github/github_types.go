@@ -81,3 +81,19 @@ type DiffFile struct {
 	Deletions    int    `json:"deletions"`
 	Changes      int    `json:"changes"`
 }
+
+// CommitResponse is a commits list response
+type CommitResponse struct {
+	SHA    string `json:"sha"`
+	Commit struct {
+		Message string `json:"message"`
+		Author  struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+		} `json:"author"`
+		Committer struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+		} `json:"committer"`
+	} `json:"commit"`
+}

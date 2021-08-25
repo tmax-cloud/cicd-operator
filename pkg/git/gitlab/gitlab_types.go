@@ -99,3 +99,13 @@ type MergeRequestChanges struct {
 		Diff    string `json:"diff"`
 	} `json:"changes"`
 }
+
+// CommitResponse is a commits list response
+type CommitResponse struct {
+	ID             string `json:"id"`
+	Message        string `json:"message"`
+	AuthorName     string `json:"author_name"`
+	AuthorEmail    string `json:"author_email"`
+	CommitterName  string `json:"committer_name"`
+	CommitterEmail string `json:"committer_email"`
+}
