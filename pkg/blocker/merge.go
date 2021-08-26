@@ -17,9 +17,11 @@
 package blocker
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
+	"text/template"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -193,8 +195,28 @@ func (b *blocker) mergePullRequest(pr *PullRequest, ic *cicdv1.IntegrationConfig
 	log := b.log.WithName("merger").WithValues("repo", genPoolKey(ic))
 	log.Info(fmt.Sprintf("Merging PR #%d into %s", pr.ID, cicdv1.GitRef(pr.Base.Ref).GetBranch()))
 
-	// TODO - compile message
-	if err := gitCli.MergePullRequest(pr.ID, pr.Head.Sha, getMergeMethod(pr, ic), ""); err != nil {
+	// Compile commit message
+	commitMsg := ""
+	if ic.Spec.MergeConfig.CommitTemplate != "" {
+		var err error
+		// List commits of the pull request
+		pr.Commits, err = gitCli.ListPullRequestCommits(pr.ID)
+		if err != nil {
+			return err
+		}
+
+		tmpl := template.New("")
+		tmpl, err = tmpl.Parse(ic.Spec.MergeConfig.CommitTemplate)
+		if err != nil {
+			return err
+		}
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, pr); err != nil {
+			return err
+		}
+		commitMsg = buf.String()
+	}
+	if err := gitCli.MergePullRequest(pr.ID, pr.Head.Sha, getMergeMethod(pr, ic), commitMsg); err != nil {
 		return err
 	}
 	return nil

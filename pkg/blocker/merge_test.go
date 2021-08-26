@@ -223,7 +223,7 @@ func TestBlocker_retestAndMergeOnePool(t *testing.T) {
 			ic, cli := mergeTestConfig()
 			b := New(cli)
 			gitfake.Repos = map[string]*gitfake.Repo{
-				ic.Spec.Git.Repository: {PullRequests: map[int]*git.PullRequest{}},
+				ic.Spec.Git.Repository: {PullRequests: map[int]*git.PullRequest{}, Commits: map[string][]git.Commit{}},
 			}
 			gitfake.Branches = map[string]*git.Branch{
 				"master": {CommitID: c.baseSHA},
@@ -327,6 +327,107 @@ func TestBlocker_handleBatch(t *testing.T) {
 		}
 		assert.Equal(t, true, pool.CurrentBatch == nil, "CurrentBatch cleared")
 	})
+}
+
+func TestBlocker_mergePullRequest(t *testing.T) {
+	tc := map[string]struct {
+		pr             git.PullRequest
+		commits        []git.Commit
+		commitTemplate string
+
+		expectedCommitMessage string
+		errorOccurs           bool
+		errorMessage          string
+	}{
+		"default": {
+			pr: git.PullRequest{
+				ID:    5,
+				Title: "[feat] Add feature",
+				Head:  git.Head{Sha: testSHA},
+				Base:  git.Base{Ref: "master"},
+			},
+			expectedCommitMessage: "[feat] Add feature(#5)",
+		},
+		"commitTemplate": {
+			pr: git.PullRequest{
+				ID:    5,
+				Title: "[feat] Add feature",
+				Head:  git.Head{Sha: testSHA},
+				Base:  git.Base{Ref: "master"},
+			},
+			commits: []git.Commit{
+				{SHA: "7523ffa4cc506f4ab2a346a5c2d8eb369d0fdb30", Message: "[fix] Fix bugs", Author: git.User{Name: "author", Email: "author@tmax.co.kr"}, Committer: git.User{Name: "committer", Email: "committer@tmax.co.kr"}},
+				{SHA: "3bede531bd0bbe8d3735f2642193fb33800149e0", Message: "[feat] Add features", Author: git.User{Name: "author2", Email: "author2@tmax.co.kr"}, Committer: git.User{Name: "committer2", Email: "committer2@tmax.co.kr"}},
+			},
+			commitTemplate: `{{.Title}}(#{{.ID}})
+{{range .Commits}}
+{{.SHA}}
+{{.Message}}
+Author: {{.Author.Name}}({{.Author.Email}})
+Committer: {{.Committer.Name}}({{.Committer.Email}})
+{{end}}`,
+			expectedCommitMessage: `[feat] Add feature(#5)
+
+7523ffa4cc506f4ab2a346a5c2d8eb369d0fdb30
+[fix] Fix bugs
+Author: author(author@tmax.co.kr)
+Committer: committer(committer@tmax.co.kr)
+
+3bede531bd0bbe8d3735f2642193fb33800149e0
+[feat] Add features
+Author: author2(author2@tmax.co.kr)
+Committer: committer2(committer2@tmax.co.kr)
+`,
+		},
+		"commitTemplateError": {
+			pr: git.PullRequest{
+				ID:    5,
+				Title: "[feat] Add feature",
+				Head:  git.Head{Sha: testSHA},
+				Base:  git.Base{Ref: "master"},
+			},
+			commits: []git.Commit{
+				{SHA: "7523ffa4cc506f4ab2a346a5c2d8eb369d0fdb30", Message: "[fix] Fix bugs", Author: git.User{Name: "author", Email: "author@tmax.co.kr"}, Committer: git.User{Name: "committer", Email: "committer@tmax.co.kr"}},
+				{SHA: "7523ffa4cc506f4ab2a346a5c2d8eb369d0fdb30", Message: "[feat] Add features", Author: git.User{Name: "author2", Email: "author2@tmax.co.kr"}, Committer: git.User{Name: "committer2", Email: "committer2@tmax.co.kr"}},
+			},
+			commitTemplate: "{{.Titleeeeee}}({{.ID}})\n\nMessage",
+
+			errorOccurs:  true,
+			errorMessage: "template: :1:2: executing \"\" at <.Titleeeeee>: can't evaluate field Titleeeeee in type *blocker.PullRequest",
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			ic, cli := mergeTestConfig()
+			ic.Spec.MergeConfig.CommitTemplate = c.commitTemplate
+
+			gitCli, err := utils.GetGitCli(ic, cli)
+			require.NoError(t, err)
+			b := New(cli)
+
+			gitfake.Repos = map[string]*gitfake.Repo{
+				ic.Spec.Git.Repository: {
+					PullRequests: map[int]*git.PullRequest{
+						c.pr.ID: &c.pr,
+					},
+					PullRequestCommits: map[int][]git.Commit{
+						c.pr.ID: c.commits,
+					},
+					Commits: map[string][]git.Commit{},
+				},
+			}
+
+			err = b.mergePullRequest(&PullRequest{PullRequest: c.pr}, ic, gitCli)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.expectedCommitMessage, gitfake.Repos[ic.Spec.Git.Repository].Commits[c.pr.Base.Ref][0].Message)
+			}
+		})
+	}
 }
 
 type getMergeMethodTestCase struct {

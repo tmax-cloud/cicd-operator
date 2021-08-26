@@ -18,15 +18,16 @@ package blocker
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/go-logr/logr"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -192,4 +193,8 @@ type PullRequest struct {
 
 	// Statuses stores whole commit statuses of the PR
 	Statuses map[string]git.CommitStatus
+
+	// Commits are the list of commits in the PR
+	// Only set right before merging it, only if mergeConfig's commitTemplate is not empty
+	Commits []git.Commit
 }

@@ -299,7 +299,8 @@ Merge automation can be configured using `mergeConfig`.
 > Default: `merge`
 
 ### `commitTemplate`
-`commitTemplate` specifies the title template of the merge commit.
+`commitTemplate` specifies the title template of the merge commit. It should be a form of [golang template](https://pkg.go.dev/text/template).
+The template is compiled using a structure [`blocker.PullRequest`](../pkg/blocker/blocker.go)
 > Optional  
 > Default: `{{ .Title }}({{ .ID }})`
 

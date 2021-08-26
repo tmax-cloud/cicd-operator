@@ -42,6 +42,7 @@ type Repo struct {
 	PullRequests       map[int]*git.PullRequest
 	PullRequestDiffs   map[int]*git.Diff
 	PullRequestCommits map[int][]git.Commit
+	Commits            map[string][]git.Commit
 	CommitStatuses     map[string][]git.CommitStatus
 	Comments           map[int][]git.IssueComment
 }
@@ -252,7 +253,7 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 }
 
 // MergePullRequest merges a pull request
-func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, message string) error {
+func (c *Client) MergePullRequest(id int, _ string, _ git.MergeMethod, message string) error {
 	if Repos == nil {
 		return fmt.Errorf("repos not initialized")
 	}
@@ -261,13 +262,23 @@ func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, me
 		return fmt.Errorf("404 no such repository")
 	}
 
-	_, exist := repo.PullRequests[id]
+	pr, exist := repo.PullRequests[id]
 	if !exist {
 		return fmt.Errorf("404 no such pr")
 	}
 
 	repo.PullRequests[id].Mergeable = false
 	repo.PullRequests[id].State = git.PullRequestStateClosed
+	commit := git.Commit{
+		SHA:     pr.Head.Sha,
+		Message: message,
+	}
+
+	if message == "" {
+		commit.Message = fmt.Sprintf("%s(#%d)", pr.Title, pr.ID)
+	}
+
+	repo.Commits[pr.Base.Ref] = append(repo.Commits[pr.Base.Ref], commit)
 
 	return nil
 }
