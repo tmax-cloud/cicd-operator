@@ -113,6 +113,9 @@ type Batch struct {
 
 	// Job is a IntegrationJob's namespaced name for the batch job
 	Job types.NamespacedName
+
+	// Processing is an indicator that the batch is under process
+	Processing bool
 }
 
 // Contains checks if a PR is in the batch

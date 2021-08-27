@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sort"
 	"text/template"
+	"time"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -48,7 +49,7 @@ func (b *blocker) loopMerge() {
 
 func (b *blocker) retestAndMerge() {
 	for _, pool := range b.Pools {
-		b.retestAndMergeOnePool(pool)
+		go b.retestAndMergeOnePool(pool)
 	}
 }
 
@@ -74,6 +75,12 @@ func (b *blocker) retestAndMergeOnePool(pool *PRPool) {
 
 	// Exit if we're waiting for batch re-test
 	if pool.CurrentBatch != nil {
+		// Do nothing if it's still processing
+		if pool.CurrentBatch.Processing {
+			log.Info("Handling is in process.. waiting for the completion", "pool", pool.Name)
+			return
+		}
+
 		if err := b.handleBatch(pool, ic, gitCli); err != nil {
 			log.Error(err, "")
 		}
@@ -134,6 +141,13 @@ func (b *blocker) retestAndMergeOnePool(pool *PRPool) {
 }
 
 func (b *blocker) handleBatch(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli git.Client) error {
+	pool.CurrentBatch.Processing = true
+	defer func() {
+		if pool.CurrentBatch != nil {
+			pool.CurrentBatch.Processing = false
+		}
+	}()
+
 	// Check if the tests for batch is successful
 	ij := &cicdv1.IntegrationJob{}
 	if err := b.client.Get(context.Background(), pool.CurrentBatch.Job, ij); err != nil {
@@ -145,11 +159,15 @@ func (b *blocker) handleBatch(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli
 		// If batch test is successful, merge them all, sequentially
 		// TODO - what if the target branch is updated during the test...? (manually by a user)
 		for len(pool.CurrentBatch.PRs) > 0 {
-			pr := pool.CurrentBatch.PRs[0]
-			if err := b.mergePullRequest(pr, ic, gitCli); err != nil {
+			if err := b.tryMerge(pool.CurrentBatch.PRs[0], ic, gitCli); err != nil {
 				return err
 			}
 			pool.CurrentBatch.PRs = pool.CurrentBatch.PRs[1:]
+
+			// Wait 5 sec and give github/gitlab time to recalculate the mergeability
+			if len(pool.CurrentBatch.PRs) > 0 {
+				time.Sleep(5 * time.Second)
+			}
 		}
 		pool.CurrentBatch = nil
 	case cicdv1.IntegrationJobStateFailed:
@@ -169,6 +187,37 @@ func (b *blocker) handleBatch(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli
 		// Do nothing if it's still running
 	}
 	return nil
+}
+
+func (b *blocker) tryMerge(pr *PullRequest, ic *cicdv1.IntegrationConfig, gitCli git.Client) error {
+	var err error
+	const maxRetry = 3
+	backOff := 4 * time.Second
+
+	log := b.log.WithName("merger").
+		WithValues("repo", genPoolKey(ic)).
+		WithValues("ref", pr.Base.Ref).
+		WithValues("id", pr.ID)
+
+	for retry := 0; retry < maxRetry; retry++ {
+		if retry != 0 {
+			log.Info("Retrying...")
+		}
+		err = b.mergePullRequest(pr, ic, gitCli)
+		if err == nil {
+			return nil
+		}
+
+		log.Info("Error while merging...", "error", err.Error())
+
+		// Sleep & double backOff
+		if retry < maxRetry-1 {
+			time.Sleep(backOff)
+			backOff *= 2
+		}
+	}
+
+	return err
 }
 
 func getGitPRsFromPRs(prs []*PullRequest) []git.PullRequest {
