@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -59,64 +60,225 @@ func TestSortPullRequestByID(t *testing.T) {
 }
 
 func TestBlocker_retestAndMergeOnePool(t *testing.T) {
-	_, cli := mergeTestConfig()
-	b := New(cli)
-	pool := NewPRPool(testICNamespace, testICName)
+	tc := map[string]struct {
+		prs           []*PullRequest
+		baseSHA       string
+		existingBatch *Batch
+		existingJob   *cicdv1.IntegrationJob
 
-	baseBranch := "master"
-	baseSHA := "22ccae53032027186ba739dfaa473ee61a82b298"
-	newBaseSHA := "32cd89e8d07e37ab26d8c735090ae763884283db"
-	headBranch := "newnew"
-	headSHA := "3196ccc37bcae94852079b04fcbfaf928341d6e9"
-	prID := 12
-
-	pr := &PullRequest{
-		PullRequest: git.PullRequest{
-			ID: prID,
-			Base: git.Base{
-				Ref: baseBranch,
-				Sha: baseSHA,
+		expectedIJRefPulls   []cicdv1.IntegrationJobRefsPull
+		expectedBatchCreated bool
+		expectedPRMerged     bool
+	}{
+		"successful": {
+			baseSHA: "22ccae53032027186ba739dfaa473ee61a82b298",
+			prs: []*PullRequest{
+				{
+					PullRequest: git.PullRequest{
+						ID:        12,
+						Base:      git.Base{Ref: "master", Sha: "22ccae53032027186ba739dfaa473ee61a82b298"},
+						Head:      git.Head{Ref: "newnew", Sha: "3196ccc37bcae94852079b04fcbfaf928341d6e9"},
+						Mergeable: true,
+						State:     git.PullRequestStateOpen,
+					},
+					BlockerStatus: git.CommitStatusStateSuccess,
+					Statuses: map[string]git.CommitStatus{
+						"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:22ccae53032027186ba739dfaa473ee61a82b298"},
+					},
+				},
 			},
-			Head: git.Head{
-				Ref: headBranch,
-				Sha: headSHA,
-			},
+			expectedPRMerged: true,
 		},
-		BlockerStatus: git.CommitStatusStateSuccess,
-		Statuses: map[string]git.CommitStatus{
-			"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:" + baseSHA},
+		"baseUpdates": {
+			baseSHA: "32cd89e8d07e37ab26d8c735090ae763884283db",
+			prs: []*PullRequest{
+				{
+					PullRequest: git.PullRequest{
+						ID:        12,
+						Base:      git.Base{Ref: "master", Sha: "22ccae53032027186ba739dfaa473ee61a82b298"},
+						Head:      git.Head{Ref: "newnew", Sha: "3196ccc37bcae94852079b04fcbfaf928341d6e9"},
+						Mergeable: true,
+						State:     git.PullRequestStateOpen,
+					},
+					BlockerStatus: git.CommitStatusStateSuccess,
+					Statuses: map[string]git.CommitStatus{
+						"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:22ccae53032027186ba739dfaa473ee61a82b298"},
+					},
+				},
+			},
+			expectedIJRefPulls: []cicdv1.IntegrationJobRefsPull{
+				{ID: 12, Ref: "newnew", Sha: "3196ccc37bcae94852079b04fcbfaf928341d6e9", Author: cicdv1.IntegrationJobRefsPullAuthor{}},
+			},
+			expectedBatchCreated: true,
+		},
+		"multiplePRsRetest": {
+			baseSHA: "32cd89e8d07e37ab26d8c735090ae763884283db",
+			prs: []*PullRequest{
+				{
+					PullRequest: git.PullRequest{
+						ID:        12,
+						Base:      git.Base{Ref: "master", Sha: "22ccae53032027186ba739dfaa473ee61a82b298"},
+						Head:      git.Head{Ref: "fix/1", Sha: "3196ccc37bcae94852079b04fcbfaf928341d6e9"},
+						Mergeable: true,
+						State:     git.PullRequestStateOpen,
+					},
+					BlockerStatus: git.CommitStatusStateSuccess,
+					Statuses: map[string]git.CommitStatus{
+						"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:22ccae53032027186ba739dfaa473ee61a82b298"},
+					},
+				},
+				{
+					PullRequest: git.PullRequest{
+						ID:        13,
+						Base:      git.Base{Ref: "master", Sha: "22ccae53032027186ba739dfaa473ee61a82b298"},
+						Head:      git.Head{Ref: "fix/2", Sha: "3bede531bd0bbe8d3735f2642193fb33800149e0"},
+						Mergeable: true,
+						State:     git.PullRequestStateOpen,
+					},
+					BlockerStatus: git.CommitStatusStateSuccess,
+					Statuses: map[string]git.CommitStatus{
+						"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:22ccae53032027186ba739dfaa473ee61a82b298"},
+					},
+				},
+			},
+			expectedIJRefPulls: []cicdv1.IntegrationJobRefsPull{
+				{ID: 12, Ref: "fix/1", Sha: "3196ccc37bcae94852079b04fcbfaf928341d6e9", Author: cicdv1.IntegrationJobRefsPullAuthor{}},
+				{ID: 13, Ref: "fix/2", Sha: "3bede531bd0bbe8d3735f2642193fb33800149e0", Author: cicdv1.IntegrationJobRefsPullAuthor{}},
+			},
+			expectedBatchCreated: true,
+		},
+		"batchSuccessful": {
+			baseSHA: "32cd89e8d07e37ab26d8c735090ae763884283db",
+			prs: []*PullRequest{
+				{
+					PullRequest: git.PullRequest{
+						ID:        12,
+						Base:      git.Base{Ref: "master", Sha: "22ccae53032027186ba739dfaa473ee61a82b298"},
+						Head:      git.Head{Ref: "fix/1", Sha: "3196ccc37bcae94852079b04fcbfaf928341d6e9"},
+						Mergeable: true,
+						State:     git.PullRequestStateOpen,
+					},
+					BlockerStatus: git.CommitStatusStateSuccess,
+					Statuses: map[string]git.CommitStatus{
+						"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:22ccae53032027186ba739dfaa473ee61a82b298"},
+					},
+				},
+				{
+					PullRequest: git.PullRequest{
+						ID:        13,
+						Base:      git.Base{Ref: "master", Sha: "22ccae53032027186ba739dfaa473ee61a82b298"},
+						Head:      git.Head{Ref: "fix/2", Sha: "3bede531bd0bbe8d3735f2642193fb33800149e0"},
+						Mergeable: true,
+						State:     git.PullRequestStateOpen,
+					},
+					BlockerStatus: git.CommitStatusStateSuccess,
+					Statuses: map[string]git.CommitStatus{
+						"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:22ccae53032027186ba739dfaa473ee61a82b298"},
+					},
+				},
+			},
+			existingBatch: &Batch{
+				PRs: []*PullRequest{
+					{
+						PullRequest: git.PullRequest{
+							ID:        12,
+							Base:      git.Base{Ref: "master", Sha: "22ccae53032027186ba739dfaa473ee61a82b298"},
+							Head:      git.Head{Ref: "fix/1", Sha: "3196ccc37bcae94852079b04fcbfaf928341d6e9"},
+							Mergeable: true,
+							State:     git.PullRequestStateOpen,
+						},
+						BlockerStatus: git.CommitStatusStateSuccess,
+						Statuses: map[string]git.CommitStatus{
+							"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:22ccae53032027186ba739dfaa473ee61a82b298"},
+						},
+					},
+					{
+						PullRequest: git.PullRequest{
+							ID:        13,
+							Base:      git.Base{Ref: "master", Sha: "22ccae53032027186ba739dfaa473ee61a82b298"},
+							Head:      git.Head{Ref: "fix/2", Sha: "3bede531bd0bbe8d3735f2642193fb33800149e0"},
+							Mergeable: true,
+							State:     git.PullRequestStateOpen,
+						},
+						BlockerStatus: git.CommitStatusStateSuccess,
+						Statuses: map[string]git.CommitStatus{
+							"test-1": {Context: "test-1", State: git.CommitStatusStateSuccess, Description: "Job is successful    BaseSHA:22ccae53032027186ba739dfaa473ee61a82b298"},
+						},
+					},
+				},
+				Job: types.NamespacedName{Name: "batch-test", Namespace: "default"},
+			},
+			existingJob: &cicdv1.IntegrationJob{
+				ObjectMeta: metav1.ObjectMeta{Name: "batch-test", Namespace: "default"},
+				Spec:       cicdv1.IntegrationJobSpec{},
+				Status:     cicdv1.IntegrationJobStatus{State: cicdv1.IntegrationJobStateCompleted},
+			},
+			expectedPRMerged: true,
 		},
 	}
-	pool.PullRequests[prID] = pr
-	pool.MergePool.Add(pr)
 
-	gitfake.Branches = map[string]*git.Branch{
-		baseBranch: {CommitID: baseSHA},
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			// Init
+			ic, cli := mergeTestConfig()
+			b := New(cli)
+			gitfake.Repos = map[string]*gitfake.Repo{
+				ic.Spec.Git.Repository: {PullRequests: map[int]*git.PullRequest{}},
+			}
+			gitfake.Branches = map[string]*git.Branch{
+				"master": {CommitID: c.baseSHA},
+			}
+			pool := NewPRPool(testICNamespace, testICName)
+			for _, pr := range c.prs {
+				pool.PullRequests[pr.ID] = pr
+				pool.MergePool.Add(pr)
+				gitfake.Repos[ic.Spec.Git.Repository].PullRequests[pr.ID] = &pr.PullRequest
+			}
+			pool.CurrentBatch = c.existingBatch
+
+			if c.existingJob != nil {
+				require.NoError(t, cli.Create(context.Background(), c.existingJob))
+			}
+
+			// Test
+			b.retestAndMergeOnePool(pool)
+
+			// Delete pre-existing job
+			if c.existingJob != nil {
+				require.NoError(t, cli.Delete(context.Background(), c.existingJob))
+			}
+
+			ijList := &cicdv1.IntegrationJobList{}
+			require.NoError(t, cli.List(context.Background(), ijList))
+
+			if c.expectedIJRefPulls == nil {
+				require.Empty(t, ijList.Items)
+			} else {
+				require.Len(t, ijList.Items, 1)
+				require.Equal(t, c.expectedIJRefPulls, ijList.Items[0].Spec.Refs.Pulls, "IntegrationJobs")
+			}
+
+			if c.expectedBatchCreated {
+				require.NotNilf(t, pool.CurrentBatch, "Current batch")
+				require.NotEmpty(t, pool.CurrentBatch.Job.Name, "Current batch job")
+				require.NotEmpty(t, pool.CurrentBatch.Job.Namespace, "Current batch job")
+
+				require.Equal(t, c.prs, pool.CurrentBatch.PRs)
+			} else {
+				require.Nil(t, pool.CurrentBatch, "Current batch")
+			}
+
+			for _, pr := range c.prs {
+				if c.expectedPRMerged {
+					require.False(t, gitfake.Repos[ic.Spec.Git.Repository].PullRequests[pr.ID].Mergeable)
+					require.Equal(t, git.PullRequestStateClosed, gitfake.Repos[ic.Spec.Git.Repository].PullRequests[pr.ID].State)
+				} else {
+					require.True(t, gitfake.Repos[ic.Spec.Git.Repository].PullRequests[pr.ID].Mergeable)
+					require.Equal(t, git.PullRequestStateOpen, gitfake.Repos[ic.Spec.Git.Repository].PullRequests[pr.ID].State)
+				}
+			}
+		})
 	}
-
-	b.retestAndMergeOnePool(pool)
-	ijList := &cicdv1.IntegrationJobList{}
-	_ = cli.List(context.Background(), ijList)
-	assert.Equal(t, 0, len(ijList.Items), "No IntegrationJob created")
-	assert.Equal(t, false, pool.CurrentBatch != nil, "Current batch not created")
-
-	// TEST 2 - not based on the latest sha
-	gitfake.Branches[baseBranch].CommitID = newBaseSHA
-	b.retestAndMergeOnePool(pool)
-	ijList = &cicdv1.IntegrationJobList{}
-	_ = cli.List(context.Background(), ijList)
-
-	assert.Equal(t, 1, len(ijList.Items), "IntegrationJob created")
-	assert.Equal(t, true, pool.CurrentBatch != nil, "Current batch created")
-
-	// TEST 3 - after batch test completion
-	ij := ijList.Items[0]
-	ij.Status.State = cicdv1.IntegrationJobStateCompleted
-	_ = cli.Update(context.Background(), &ij)
-	b.retestAndMergeOnePool(pool)
-
-	assert.Equal(t, 1, len(ijList.Items), "IntegrationJob not created")
-	assert.Equal(t, false, pool.CurrentBatch != nil, "Current batch cleared")
 }
 
 func TestBlocker_handleBatch(t *testing.T) {

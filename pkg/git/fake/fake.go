@@ -18,11 +18,12 @@ package fake
 
 import (
 	"fmt"
+	"math/rand"
+	"net/http"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"math/rand"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -251,6 +252,22 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 
 // MergePullRequest merges a pull request
 func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, message string) error {
+	if Repos == nil {
+		return fmt.Errorf("repos not initialized")
+	}
+	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
+	if !repoExist {
+		return fmt.Errorf("404 no such repository")
+	}
+
+	_, exist := repo.PullRequests[id]
+	if !exist {
+		return fmt.Errorf("404 no such pr")
+	}
+
+	repo.PullRequests[id].Mergeable = false
+	repo.PullRequests[id].State = git.PullRequestStateClosed
+
 	return nil
 }
 

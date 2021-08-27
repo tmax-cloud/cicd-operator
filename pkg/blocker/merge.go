@@ -86,7 +86,7 @@ func (b *blocker) retestAndMergeOnePool(pool *PRPool) {
 	// Sort PRs - older (low id) one is prioritized
 	candidates := sortPullRequestByID(pool.MergePool[git.CommitStatusStateSuccess])
 
-	// PR with highest priority (oldest one)
+	// PR with the highest priority (the oldest one)
 	pr := candidates[0]
 	branch := cicdv1.GitRef(pr.Base.Ref).GetBranch()
 
@@ -109,17 +109,20 @@ func (b *blocker) retestAndMergeOnePool(pool *PRPool) {
 		pool.CurrentBatch = &Batch{}
 
 		// Collect batches, with same base branch
+		var prIDs []int
 		for _, p := range candidates {
 			if cicdv1.GitRef(p.Base.Ref).GetBranch() != branch {
-				break
+				continue
 			}
-			pool.CurrentBatch.PRs = append(pool.CurrentBatch.PRs, pr)
+			pool.CurrentBatch.PRs = append(pool.CurrentBatch.PRs, p)
+			prIDs = append(prIDs, p.ID)
 			if len(pool.CurrentBatch.PRs) == maxBatchSize {
 				break
 			}
 		}
 
 		// Retest it (create IJ)
+		log.Info(fmt.Sprintf("Batched tests - %+v", prIDs))
 		gitPRs := getGitPRsFromPRs(pool.CurrentBatch.PRs)
 		if err := b.createIntegrationJobForBatch(gitPRs, ic, &pool.CurrentBatch.Job); err != nil {
 			log.Error(err, "Fail to create integrationJob for batch.")
@@ -139,10 +142,12 @@ func (b *blocker) handleBatch(pool *PRPool, ic *cicdv1.IntegrationConfig, gitCli
 	case cicdv1.IntegrationJobStateCompleted:
 		// If batch test is successful, merge them all, sequentially
 		// TODO - what if the target branch is updated during the test...? (manually by a user)
-		for _, pr := range pool.CurrentBatch.PRs {
+		for len(pool.CurrentBatch.PRs) > 0 {
+			pr := pool.CurrentBatch.PRs[0]
 			if err := b.mergePullRequest(pr, ic, gitCli); err != nil {
 				return err
 			}
+			pool.CurrentBatch.PRs = pool.CurrentBatch.PRs[1:]
 		}
 		pool.CurrentBatch = nil
 	case cicdv1.IntegrationJobStateFailed:
