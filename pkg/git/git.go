@@ -51,6 +51,7 @@ type Client interface {
 	GetPullRequest(id int) (*PullRequest, error)
 	MergePullRequest(id int, sha string, method MergeMethod, message string) error
 	GetPullRequestDiff(id int) (*Diff, error)
+	ListPullRequestCommits(id int) ([]Commit, error)
 
 	// Issue Labels
 
