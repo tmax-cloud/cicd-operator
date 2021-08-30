@@ -424,7 +424,51 @@ Committer: committer2(committer2@tmax.co.kr)
 				require.Equal(t, c.errorMessage, err.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, c.expectedCommitMessage, gitfake.Repos[ic.Spec.Git.Repository].Commits[c.pr.Base.Ref][0].Message)
+			}
+		})
+	}
+}
+
+func TestBlocker_tryMerge(t *testing.T) {
+	tc := map[string]struct {
+		pr git.PullRequest
+
+		errorOccurs  bool
+		errorMessage string
+	}{
+		"success": {
+			pr: git.PullRequest{ID: 5},
+		},
+		"error": {
+			pr:           git.PullRequest{ID: 6},
+			errorOccurs:  true,
+			errorMessage: "404 no such pr",
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			ic, cli := mergeTestConfig()
+
+			gitCli, err := utils.GetGitCli(ic, cli)
+			require.NoError(t, err)
+			b := New(cli)
+
+			gitfake.Repos = map[string]*gitfake.Repo{
+				ic.Spec.Git.Repository: {
+					PullRequests: map[int]*git.PullRequest{
+						5: {},
+					},
+					Commits: map[string][]git.Commit{},
+				},
+			}
+
+			err = b.tryMerge(&PullRequest{PullRequest: c.pr}, ic, gitCli)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
