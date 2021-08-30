@@ -343,13 +343,19 @@ func (c *Client) GetPullRequest(id int) (*git.PullRequest, error) {
 }
 
 // MergePullRequest merges a pull request
-func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, _ string) error {
+func (c *Client) MergePullRequest(id int, sha string, method git.MergeMethod, msg string) error {
 	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%d/merge", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), id)
 
 	body := &MergeAcceptRequest{
 		Squash:             method == git.MergeMethodSquash,
 		Sha:                sha,
 		RemoveSourceBranch: false,
+	}
+
+	if method == git.MergeMethodSquash {
+		body.SquashCommitMessage = msg
+	} else {
+		body.MergeCommitMessage = msg
 	}
 
 	_, _, err := c.requestHTTP(http.MethodPut, apiURL, body)
