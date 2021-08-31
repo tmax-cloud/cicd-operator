@@ -2280,7 +2280,6 @@ spec:
                     description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.mergeConfig.properties.method"
                     enum:
                     - "squash"
-                    - "rebase"
                     - "merge"
                     type: "string"
                   query:

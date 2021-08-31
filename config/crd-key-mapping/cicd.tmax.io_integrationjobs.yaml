@@ -2484,33 +2484,36 @@ spec:
                   link:
                     description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.link"
                     type: "string"
-                  pull:
-                    description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.pull"
-                    properties:
-                      author:
-                        description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.pull.properties.author"
-                        properties:
-                          name:
-                            type: "string"
-                        required:
-                        - "name"
-                        type: "object"
-                      id:
-                        type: "integer"
-                      link:
-                        type: "string"
-                      ref:
-                        description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.pull.properties.ref"
-                        type: "string"
-                      sha:
-                        type: "string"
-                    required:
-                    - "author"
-                    - "id"
-                    - "link"
-                    - "ref"
-                    - "sha"
-                    type: "object"
+                  pulls:
+                    description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.pulls"
+                    items:
+                      description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.pulls.items"
+                      properties:
+                        author:
+                          description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.pulls.items.properties.author"
+                          properties:
+                            name:
+                              type: "string"
+                          required:
+                          - "name"
+                          type: "object"
+                        id:
+                          type: "integer"
+                        link:
+                          type: "string"
+                        ref:
+                          description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.pulls.items.properties.ref"
+                          type: "string"
+                        sha:
+                          type: "string"
+                      required:
+                      - "author"
+                      - "id"
+                      - "link"
+                      - "ref"
+                      - "sha"
+                      type: "object"
+                    type: "array"
                   repository:
                     description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.refs.properties.repository"
                     pattern: ".+/.+"
