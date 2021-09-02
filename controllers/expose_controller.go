@@ -165,18 +165,28 @@ func (e *exposeController) startResourceWatcher(reconciler exposeReconciler, exi
 
 	// Infinite watch (watch ends if there is no event on the resource in a specific amount of time)
 	for {
-		watcher, err := gvrCli.Watch(&metav1.ListOptions{FieldSelector: fields.OneTermEqualSelector(core.ObjectNameField, name).String()})
-		if err != nil {
-			e.log.Error(err, "")
-			continue
+		if doExit := e.loopWatch(gvrCli, name, rscUpdateCh, exit); doExit {
+			return
 		}
-		for {
-			select {
-			case result := <-watcher.ResultChan():
-				rscUpdateCh <- result.Object
-			case <-exit:
-				return
+	}
+}
+
+func (e *exposeController) loopWatch(gvrCli utils.RestClient, name string, rscUpdateCh chan runtime.Object, exitCh chan struct{}) bool {
+	watcher, err := gvrCli.Watch(&metav1.ListOptions{FieldSelector: fields.OneTermEqualSelector(core.ObjectNameField, name).String()})
+	if err != nil {
+		e.log.Error(err, "")
+		return false
+	}
+	for {
+		select {
+		case result := <-watcher.ResultChan():
+			if result.Object == nil {
+				e.log.Info("Restarting watcher")
+				return false
 			}
+			rscUpdateCh <- result.Object
+		case <-exitCh:
+			return true
 		}
 	}
 }
@@ -311,6 +321,9 @@ func (s *exposeServiceReconciler) reconcile(obj runtime.Object) error {
 	}()
 
 	exposeMode := exposeType(configs.ExposeMode)
+	if exposeMode == "" {
+		exposeMode = exposeTypeIngress
+	}
 
 	// Verify exposeMode
 	if err := s.validateExposeMode(exposeMode); err != nil {
