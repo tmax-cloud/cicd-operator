@@ -94,6 +94,7 @@ spec:
           email:
             receivers:
               - ck1_2@tmax.co.kr
+              - cqa1@tmax.co.kr
               - cqbqdd11519@gmail.com
             title: "CI/CD Operator {{ .Spec.Refs.Base.Ref.GetTag }} 배포 안내 메일"
             isHtml: true
@@ -110,7 +111,8 @@ spec:
                   <div>안녕하세요, CK1-2팀 김성현입니다.<br>HyperCloud CI/CD Operator {{ .Spec.Refs.Base.Ref.GetTag }} 배포 안내 메일입니다.</div>
                   <div>
                     <ul>
-                      <li>이미지: tmaxcloudck/cicd-operator:{{ .Spec.Refs.Base.Ref.GetTag }}</li>
+                      <li>이미지: docker.io/tmaxcloudck/cicd-operator:{{ .Spec.Refs.Base.Ref.GetTag }}</li>
+                      <li>이미지: docker.io/tmaxcloudck/cicd-blocker:{{ .Spec.Refs.Base.Ref.GetTag }}</li>
                     </ul>
                   </div>
                   <div>수정 사항은 릴리즈 노트 <a href="{{ .Spec.Refs.Link }}/releases/tag/{{ .Spec.Refs.Base.Ref.GetTag }}" target="_blank">{{ .Spec.Refs.Link }}/releases/tag/{{ .Spec.Refs.Base.Ref.GetTag }}</a> 참조 부탁드립니다.<br><br>감사합니다.</div>
