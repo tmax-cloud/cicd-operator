@@ -159,6 +159,53 @@ func TestExposeController_startResourceWatcher(t *testing.T) {
 	controller.startResourceWatcher(reconciler, exitCh)
 }
 
+func TestExposeController_loopWatch(t *testing.T) {
+	exitCh := make(chan struct{})
+	rscUpdateCh := make(chan runtime.Object)
+
+	logger := &fakeLogger{}
+	controller := &exposeController{
+		log: logger,
+	}
+	client := &fakeRestClient{
+		resources: map[string]runtime.Object{
+			"test": &corev1.Pod{},
+		},
+		fakeWatcher: watch.NewFake(),
+	}
+
+	tc := map[string]struct {
+		goFunc         func()
+		expectedReturn bool
+	}{
+		"exitNil": {
+			goFunc: func() {
+				client.fakeWatcher.Add(nil)
+			},
+			expectedReturn: false,
+		},
+		"exitTrue": {
+			goFunc: func() {
+				client.fakeWatcher.Add(&corev1.Pod{})
+				<-rscUpdateCh
+				exitCh <- struct{}{}
+			},
+			expectedReturn: true,
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			go c.goFunc()
+			if c.expectedReturn {
+				require.True(t, controller.loopWatch(client, "", rscUpdateCh, exitCh))
+			} else {
+				require.False(t, controller.loopWatch(client, "", rscUpdateCh, exitCh))
+			}
+		})
+	}
+}
+
 type fakeLogger struct {
 	info     []string
 	error    []error
