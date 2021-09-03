@@ -97,7 +97,7 @@ spec:
       containers:
       - command:
         - /controller
-        image: tmaxcloudck/cicd-operator:latest
+        image: docker.io/tmaxcloudck/cicd-operator:latest
         imagePullPolicy: Always
         name: manager
         resources:
