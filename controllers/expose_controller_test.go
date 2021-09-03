@@ -271,7 +271,6 @@ func TestExposeController_watchResource(t *testing.T) {
 			signaller: func(objects chan runtime.Object, c chan struct{}) {
 				c <- struct{}{}
 			},
-			errors: []error{fmt.Errorf("object cannot be nil")},
 		},
 	}
 
@@ -341,7 +340,7 @@ func Test_exposeIngressReconciler_reconcile(t *testing.T) {
 		"nilObj": {
 			obj:          nil,
 			errorOccurs:  true,
-			errorMessage: "object cannot be nil",
+			errorMessage: "obj is not an Ingress",
 		},
 		"notIngress": {
 			obj:          &corev1.Pod{},
@@ -462,7 +461,7 @@ func Test_exposeServiceReconciler_reconcile(t *testing.T) {
 		"nilObj": {
 			obj:          nil,
 			errorOccurs:  true,
-			errorMessage: "object cannot be nil",
+			errorMessage: "svc is not a Service",
 		},
 		"notService": {
 			obj:          &corev1.Pod{},
