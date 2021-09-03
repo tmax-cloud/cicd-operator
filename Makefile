@@ -111,9 +111,10 @@ test-unit:
 
 # Check coverage
 test-coverage:
-	go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+	go test -v -coverpkg=./... -coverprofile=profile.cov.tmp ./...
+	cat profile.cov.tmp | grep -v "_generated.deepcopy.go" > profile.cov
 	go tool cover -func profile.cov
-	rm -f profile.cov
+	rm -f profile.cov profile.cov.tmp
 
 save-sha-gen:
 	$(eval GENSHA=$(shell sha512sum api/v1/zz_generated.deepcopy.go))

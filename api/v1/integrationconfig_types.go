@@ -167,17 +167,20 @@ const (
 )
 
 // IntegrationConfigAPIReqRunPreBody is a body struct for IntegrationConfig's api request
+// +kubebuilder:object:generate=false
 type IntegrationConfigAPIReqRunPreBody struct {
 	BaseBranch string `json:"base_branch"`
 	HeadBranch string `json:"head_branch"`
 }
 
 // IntegrationConfigAPIReqRunPostBody is a body struct for IntegrationConfig's api request
+// +kubebuilder:object:generate=false
 type IntegrationConfigAPIReqRunPostBody struct {
 	Branch string `json:"branch"`
 }
 
 // IntegrationConfigAPIReqWebhookURL is a body struct for IntegrationConfig's api request
+// +kubebuilder:object:generate=false
 type IntegrationConfigAPIReqWebhookURL struct {
 	URL    string `json:"url"`
 	Secret string `json:"secret"`
