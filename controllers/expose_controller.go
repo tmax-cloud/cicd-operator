@@ -181,7 +181,6 @@ func (e *exposeController) loopWatch(gvrCli utils.RestClient, name string, rscUp
 		select {
 		case result := <-watcher.ResultChan():
 			if result.Object == nil {
-				e.log.Info("Restarting watcher")
 				return false
 			}
 			rscUpdateCh <- result.Object
@@ -212,6 +211,11 @@ func (e *exposeController) watchResource(rscUpdateCh chan runtime.Object, cfgUpd
 		case <-done:
 			return
 		}
+
+		if lastResource == nil {
+			continue
+		}
+
 		if err := reconciler.reconcile(lastResource); err != nil {
 			e.log.Error(err, "")
 		}
@@ -241,10 +245,6 @@ func (i *exposeIngressReconciler) getRefObject() runtime.Object {
 }
 
 func (i *exposeIngressReconciler) reconcile(obj runtime.Object) error {
-	if obj == nil {
-		return fmt.Errorf("object cannot be nil")
-	}
-
 	ing, ok := obj.(*networkingv1beta1.Ingress)
 	if !ok {
 		return fmt.Errorf("obj is not an Ingress")
@@ -304,10 +304,6 @@ func (s *exposeServiceReconciler) getRefObject() runtime.Object {
 }
 
 func (s *exposeServiceReconciler) reconcile(obj runtime.Object) error {
-	if obj == nil {
-		return fmt.Errorf("object cannot be nil")
-	}
-
 	svc, ok := obj.(*corev1.Service)
 	if !ok {
 		return fmt.Errorf("svc is not a Service")
