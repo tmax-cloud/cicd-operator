@@ -149,6 +149,7 @@ const (
 )
 
 // ApprovalAPIReqBody is a body struct for Approval's api request
+// +kubebuilder:object:generate=false
 type ApprovalAPIReqBody struct {
 	Reason string `json:"reason"`
 }
