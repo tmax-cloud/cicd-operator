@@ -18,6 +18,8 @@ package customs
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-logr/logr"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -29,7 +31,6 @@ import (
 	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 // SlackRunHandler handles slack custom task
@@ -112,7 +113,7 @@ func (a *SlackRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	if err := slack.SendMessage(url, compiledMessage); err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
-		cond.Reason = "EmailError"
+		cond.Reason = "SlackError"
 		cond.Message = err.Error()
 	} else {
 		cond.Status = corev1.ConditionTrue

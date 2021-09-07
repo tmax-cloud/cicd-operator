@@ -17,65 +17,115 @@
 package customs
 
 import (
-	"context"
-	"github.com/bmizerany/assert"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 func Test_compileTitleContent(t *testing.T) {
-	s := runtime.NewScheme()
-	utilruntime.Must(cicdv1.AddToScheme(s))
-	utilruntime.Must(tektonv1beta1.AddToScheme(s))
-	utilruntime.Must(tektonv1alpha1.AddToScheme(s))
+	tc := map[string]struct {
+		ijName string
+		ijSpec cicdv1.IntegrationJobSpec
+		title  string
 
-	ij := &cicdv1.IntegrationJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-ij-email",
-			Namespace: "default",
-		},
-		Spec: cicdv1.IntegrationJobSpec{
-			Refs: cicdv1.IntegrationJobRefs{
-				Base: cicdv1.IntegrationJobRefsBase{
-					Ref: cicdv1.GitRef("refs/tags/v0.2.3"),
+		errorOccurs    bool
+		errorMessage   string
+		expectedOutput string
+	}{
+		"normalTag": {
+			ijName: "test-ij-email",
+			ijSpec: cicdv1.IntegrationJobSpec{
+				Refs: cicdv1.IntegrationJobRefs{
+					Base: cicdv1.IntegrationJobRefsBase{
+						Ref: cicdv1.GitRef("refs/tags/v0.2.3"),
+					},
 				},
+				Jobs: []cicdv1.Job{{Container: corev1.Container{Name: "test-job"}}},
 			},
-			Jobs: []cicdv1.Job{{}},
+			title:          "Release Version {{ .Spec.Refs.Base.Ref.GetTag }}",
+			expectedOutput: "Release Version v0.2.3",
+		},
+		"normalBranch": {
+			ijName: "test-ij-email",
+			ijSpec: cicdv1.IntegrationJobSpec{
+				Refs: cicdv1.IntegrationJobRefs{
+					Base: cicdv1.IntegrationJobRefsBase{
+						Ref: cicdv1.GitRef("refs/heads/new-feat"),
+					},
+				},
+				Jobs: []cicdv1.Job{{Container: corev1.Container{Name: "test-job"}}},
+			},
+			title:          "Release Branch {{ .Spec.Refs.Base.Ref.GetBranch }}",
+			expectedOutput: "Release Branch new-feat",
+		},
+		"content": {
+			ijName: "test-ij-email",
+			ijSpec: cicdv1.IntegrationJobSpec{
+				Refs: cicdv1.IntegrationJobRefs{
+					Base: cicdv1.IntegrationJobRefsBase{
+						Ref: cicdv1.GitRef("refs/heads/new-feat"),
+					},
+				},
+				Jobs: []cicdv1.Job{{Container: corev1.Container{Name: "test-job"}}},
+			},
+			title:          "$INTEGRATION_JOB_NAME $JOB_NAME",
+			expectedOutput: "test-ij-email test-job",
+		},
+		"noIJ": {
+			ijName:       "test-ij-email-no",
+			ijSpec:       cicdv1.IntegrationJobSpec{Jobs: []cicdv1.Job{{Container: corev1.Container{Name: "test-job"}}}},
+			title:        "$INTEGRATION_JOB_NAME $JOB_NAME",
+			errorOccurs:  true,
+			errorMessage: "integrationjobs.cicd.tmax.io \"test-ij-email-no\" not found",
+		},
+		"parseErr": {
+			ijName:       "test-ij-email",
+			ijSpec:       cicdv1.IntegrationJobSpec{Jobs: []cicdv1.Job{{Container: corev1.Container{Name: "test-job"}}}},
+			title:        "Release Branch {{ ..Spec.Refs.Base.Ref.GetBranch }}",
+			errorOccurs:  true,
+			errorMessage: "template: contentTemplate:1: unexpected . after term \".\"",
+		},
+		"executeError": {
+			ijName:       "test-ij-email",
+			ijSpec:       cicdv1.IntegrationJobSpec{Jobs: []cicdv1.Job{{Container: corev1.Container{Name: "test-job"}}}},
+			title:        "Release Branch {{ .Spec.Refs.Base.Refffff }}",
+			errorOccurs:  true,
+			errorMessage: "template: contentTemplate:1:23: executing \"contentTemplate\" at <.Spec.Refs.Base.Refffff>: can't evaluate field Refffff in type v1.IntegrationJobRefsBase",
 		},
 	}
-	ij.Spec.Jobs[0].Name = "test-job"
 
-	cli := fake.NewFakeClientWithScheme(s, ij)
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			s := runtime.NewScheme()
+			utilruntime.Must(cicdv1.AddToScheme(s))
+			utilruntime.Must(tektonv1beta1.AddToScheme(s))
+			utilruntime.Must(tektonv1alpha1.AddToScheme(s))
 
-	// TEST - Title1
-	title := "Release Version {{ .Spec.Refs.Base.Ref.GetTag }}"
-	compiledTitle, err := compileString(ij.Namespace, ij.Name, ij.Spec.Jobs[0].Name, title, cli)
-	if err != nil {
-		t.Fatal(err)
+			ij := &cicdv1.IntegrationJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ij-email",
+					Namespace: "default",
+				},
+				Spec: c.ijSpec,
+			}
+
+			cli := fake.NewFakeClientWithScheme(s, ij)
+			output, err := compileString("default", c.ijName, ij.Spec.Jobs[0].Name, c.title, cli)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.expectedOutput, output)
+			}
+		})
 	}
-	assert.Equal(t, "Release Version v0.2.3", compiledTitle)
-
-	// TEST - Title2
-	ij.Spec.Refs.Base.Ref = "refs/heads/new-feat"
-	_ = cli.Update(context.Background(), ij)
-	title = "Release Branch {{ .Spec.Refs.Base.Ref.GetBranch }}"
-	compiledTitle, err = compileString(ij.Namespace, ij.Name, ij.Spec.Jobs[0].Name, title, cli)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, "Release Branch new-feat", compiledTitle)
-
-	// TEST - Content1
-	content := "$INTEGRATION_JOB_NAME $JOB_NAME"
-	compiledContent, err := compileString(ij.Namespace, ij.Name, ij.Spec.Jobs[0].Name, content, cli)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, "test-ij-email test-job", compiledContent)
 }
