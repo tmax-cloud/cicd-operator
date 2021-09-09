@@ -19,6 +19,10 @@ package customs
 import (
 	"context"
 	"fmt"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/operator-framework/operator-lib/status"
 	"github.com/stretchr/testify/require"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
@@ -31,13 +35,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"knative.dev/pkg/apis"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
-	"time"
 )
 
 const (
@@ -46,7 +47,7 @@ const (
 )
 
 type approvalHandlerTestCase struct {
-	preFunc    func(t *testing.T, run *tektonv1alpha1.Run)
+	preFunc    func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler)
 	verifyFunc func(t *testing.T, run *tektonv1alpha1.Run, approval *cicdv1.Approval)
 
 	errorOccurs  bool
@@ -56,18 +57,6 @@ type approvalHandlerTestCase struct {
 func TestApprovalRunHandler_Handle(t *testing.T) {
 	if _, exist := os.LookupEnv("CI"); !exist {
 		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-	}
-	s := runtime.NewScheme()
-	utilruntime.Must(corev1.AddToScheme(s))
-	utilruntime.Must(cicdv1.AddToScheme(s))
-	utilruntime.Must(tektonv1alpha1.AddToScheme(s))
-
-	fakeCli := fake.NewFakeClientWithScheme(s)
-
-	handler := &ApprovalRunHandler{
-		Client: fakeCli,
-		Log:    ctrl.Log.WithName("controllers").WithName("ApprovalRun"),
-		Scheme: s,
 	}
 
 	tc := map[string]approvalHandlerTestCase{
@@ -97,7 +86,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			},
 		},
 		"creationNoMail": {
-			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				configs.EnableMail = false
 			},
 			verifyFunc: func(t *testing.T, run *tektonv1alpha1.Run, approval *cicdv1.Approval) {
@@ -125,13 +114,13 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			},
 		},
 		"creationApproversCM": {
-			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				configMapName := "approver-cm-1"
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Name: configMapName, Namespace: testApprovalRunNamespace},
 					Data:       map[string]string{cicdv1.CustomTaskApprovalApproversConfigMapKey: "admin2@tmax.co.kr=admin2@tmax.co.kr,admin3@tmax.co.kr"},
 				}
-				require.NoError(t, fakeCli.Create(context.Background(), cm))
+				require.NoError(t, handler.Client.Create(context.Background(), cm))
 				run.Spec.Params[1].Value.StringVal = configMapName
 			},
 			verifyFunc: func(t *testing.T, run *tektonv1alpha1.Run, approval *cicdv1.Approval) {
@@ -160,12 +149,28 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				require.Equal(t, "admin3@tmax.co.kr", approval.Spec.Users[2])
 			},
 		},
+		"createError": {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
+				s := runtime.NewScheme()
+				utilruntime.Must(corev1.AddToScheme(s))
+				utilruntime.Must(cicdv1.AddToScheme(s))
+				handler.Scheme = s
+			},
+			verifyFunc: func(t *testing.T, run *tektonv1alpha1.Run, approval *cicdv1.Approval) {
+				// Verify Run status
+				cond := run.Status.GetCondition(apis.ConditionSucceeded)
+				require.NotNil(t, cond)
+				require.True(t, cond.IsFalse())
+				require.Equal(t, "CannotCreateApproval", cond.Reason)
+				require.Equal(t, "no kind is registered for the type v1alpha1.Run in scheme \"pkg/runtime/scheme.go:101\"", cond.Message)
+			},
+		},
 		"approvalApproved": {
-			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				tt, err := time.Parse("2006-01-02 15:04:05 -0700 MST", "2021-07-23 14:40:30 +0900 KST")
 				require.NoError(t, err)
 
-				require.NoError(t, createApprovalForRun(fakeCli, cicdv1.ApprovalStatus{
+				require.NoError(t, createApprovalForRun(handler.Client, cicdv1.ApprovalStatus{
 					Result:       cicdv1.ApprovalResultApproved,
 					Approver:     "admin",
 					Reason:       "good",
@@ -181,11 +186,11 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			},
 		},
 		"approvalRejected": {
-			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				tt, err := time.Parse("2006-01-02 15:04:05 -0700 MST", "2021-07-23 14:40:30 +0900 KST")
 				require.NoError(t, err)
 
-				require.NoError(t, createApprovalForRun(fakeCli, cicdv1.ApprovalStatus{
+				require.NoError(t, createApprovalForRun(handler.Client, cicdv1.ApprovalStatus{
 					Result:       cicdv1.ApprovalResultRejected,
 					Approver:     "admin",
 					Reason:       "no!",
@@ -201,7 +206,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			},
 		},
 		"alreadyCompleted": {
-			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				run.Status.SetCondition(&apis.Condition{
 					Type:   apis.ConditionSucceeded,
 					Status: corev1.ConditionTrue,
@@ -217,7 +222,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			},
 		},
 		"approvalReqMailError": {
-			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				approvalStatus := cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultAwaiting}
 				approvalStatus.Conditions.SetCondition(status.Condition{
 					Type:    cicdv1.ApprovalConditionSentRequestMail,
@@ -225,7 +230,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 					Reason:  "ErrorSendingMail",
 					Message: "some smtp-related error message!",
 				})
-				require.NoError(t, createApprovalForRun(fakeCli, approvalStatus))
+				require.NoError(t, createApprovalForRun(handler.Client, approvalStatus))
 			},
 			verifyFunc: func(t *testing.T, run *tektonv1alpha1.Run, approval *cicdv1.Approval) {
 				cond := run.Status.GetCondition(apis.ConditionSucceeded)
@@ -236,7 +241,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			},
 		},
 		"approvalResMailError": {
-			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				approvalStatus := cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultAwaiting}
 				approvalStatus.Conditions.SetCondition(status.Condition{
 					Type:    cicdv1.ApprovalConditionSentResultMail,
@@ -244,7 +249,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 					Reason:  "ErrorSendingMail",
 					Message: "some smtp-related error message!",
 				})
-				require.NoError(t, createApprovalForRun(fakeCli, approvalStatus))
+				require.NoError(t, createApprovalForRun(handler.Client, approvalStatus))
 			},
 			verifyFunc: func(t *testing.T, run *tektonv1alpha1.Run, approval *cicdv1.Approval) {
 				cond := run.Status.GetCondition(apis.ConditionSucceeded)
@@ -255,7 +260,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			},
 		},
 		"malformedRun": {
-			preFunc: func(t *testing.T, run *tektonv1alpha1.Run) {
+			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				run.Spec.Params = nil
 			},
 			verifyFunc: func(t *testing.T, run *tektonv1alpha1.Run, approval *cicdv1.Approval) {
@@ -272,12 +277,25 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			configs.EnableMail = true
 
+			s := runtime.NewScheme()
+			utilruntime.Must(corev1.AddToScheme(s))
+			utilruntime.Must(cicdv1.AddToScheme(s))
+			utilruntime.Must(tektonv1alpha1.AddToScheme(s))
+
+			fakeCli := fake.NewFakeClientWithScheme(s)
+
+			handler := &ApprovalRunHandler{
+				Client: fakeCli,
+				Log:    ctrl.Log.WithName("controllers").WithName("ApprovalRun"),
+				Scheme: s,
+			}
+
 			// Init Run
 			run := generateApprovalRun()
 			require.NoError(t, fakeCli.Create(context.Background(), run))
 			require.NoError(t, fakeCli.Get(context.Background(), types.NamespacedName{Name: testApprovalRunName, Namespace: testApprovalRunNamespace}, run))
 			if c.preFunc != nil {
-				c.preFunc(t, run)
+				c.preFunc(t, run, handler)
 			}
 			require.NoError(t, fakeCli.Update(context.Background(), run))
 			require.NoError(t, fakeCli.Status().Update(context.Background(), run))
@@ -298,6 +316,322 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			// Delete run, approval
 			_ = fakeCli.Delete(context.Background(), &tektonv1alpha1.Run{ObjectMeta: metav1.ObjectMeta{Name: testApprovalRunName, Namespace: testApprovalRunNamespace}})
 			_ = fakeCli.Delete(context.Background(), &cicdv1.Approval{ObjectMeta: metav1.ObjectMeta{Name: testApprovalRunName, Namespace: testApprovalRunNamespace}})
+		})
+	}
+}
+
+func TestApprovalRunHandler_reflectApprovalEmailStatus(t *testing.T) {
+	tc := map[string]struct {
+		approvalConditions status.Conditions
+		expectedMessage    string
+	}{
+		"bothFail": {
+			approvalConditions: []status.Condition{
+				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: corev1.ConditionFalse, Reason: "smtp-error", Message: "smtp 403 error!"},
+				{Type: cicdv1.ApprovalConditionSentResultMail, Status: corev1.ConditionFalse, Reason: "receiver-error", Message: "receiver is not valid"},
+			},
+			expectedMessage: "RequestMail : smtp-error-smtp 403 error!, ResultMail : receiver-error-receiver is not valid",
+		},
+		"reqFail": {
+			approvalConditions: []status.Condition{
+				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: corev1.ConditionFalse, Reason: "smtp-error", Message: "smtp 403 error!"},
+				{Type: cicdv1.ApprovalConditionSentResultMail, Status: corev1.ConditionTrue},
+			},
+			expectedMessage: "RequestMail : smtp-error-smtp 403 error!",
+		},
+		"resFail": {
+			approvalConditions: []status.Condition{
+				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: corev1.ConditionTrue},
+				{Type: cicdv1.ApprovalConditionSentResultMail, Status: corev1.ConditionFalse, Reason: "receiver-error", Message: "receiver is not valid"},
+			},
+			expectedMessage: "ResultMail : receiver-error-receiver is not valid",
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			handler := &ApprovalRunHandler{}
+			cond := &apis.Condition{}
+			handler.reflectApprovalEmailStatus(&cicdv1.Approval{Status: cicdv1.ApprovalStatus{Conditions: c.approvalConditions}}, cond)
+			require.Equal(t, c.expectedMessage, cond.Message)
+		})
+	}
+}
+
+func TestApprovalRunHandler_setApprovalRunStatus(t *testing.T) {
+	tc := map[string]struct {
+		cond    *apis.Condition
+		status  corev1.ConditionStatus
+		reason  string
+		message string
+	}{
+		"nil": {
+			cond: nil,
+		},
+		"notNil": {
+			cond:    &apis.Condition{},
+			status:  corev1.ConditionTrue,
+			reason:  "reason1",
+			message: "message1",
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			handler := &ApprovalRunHandler{}
+			handler.setApprovalRunStatus(c.cond, c.status, c.reason, c.message)
+
+			if c.cond == nil {
+				require.Nil(t, c.cond)
+			} else {
+				require.NotNil(t, c.cond)
+				require.Equal(t, c.status, c.cond.Status)
+				require.Equal(t, c.reason, c.cond.Reason)
+				require.Equal(t, c.message, c.cond.Message)
+			}
+		})
+	}
+}
+
+func TestApprovalRunHandler_newApproval(t *testing.T) {
+	tc := map[string]struct {
+		params []tektonv1beta1.Param
+
+		expectedApprovalSpec cicdv1.ApprovalSpec
+		errorOccurs          bool
+		errorMessage         string
+	}{
+		"normal": {
+			params: []tektonv1beta1.Param{
+				{Name: cicdv1.CustomTaskApprovalParamKeyApprovers, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"admin1=admin@tmax.co.kr"}}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-cm"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyMessage, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-message"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-ij"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJobJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-job"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeySenderName, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-sender"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeySenderEmail, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-email@tmax.co.kr"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyLink, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-link"}},
+			},
+			expectedApprovalSpec: cicdv1.ApprovalSpec{
+				SkipSendMail:   false,
+				PipelineRun:    "pr-1",
+				IntegrationJob: "test-ij",
+				JobName:        "test-job",
+				Message:        "test-message",
+				Sender: &cicdv1.ApprovalSender{
+					Name:  "test-sender",
+					Email: "test-email@tmax.co.kr",
+				},
+				Link: "test-link",
+				Users: []string{
+					"admin1=admin@tmax.co.kr",
+					"admin",
+					"admin2=admin2@tmax.co.kr",
+				},
+			},
+		},
+		"noLink": {
+			params: []tektonv1beta1.Param{
+				{Name: cicdv1.CustomTaskApprovalParamKeyApprovers, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"admin1=admin@tmax.co.kr"}}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-cm"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyMessage, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-message"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-ij"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJobJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-job"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeySenderName, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-sender"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeySenderEmail, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-email@tmax.co.kr"}},
+			},
+			errorOccurs:  true,
+			errorMessage: "there is no param link for Run",
+		},
+		"noSenderName": {
+			params: []tektonv1beta1.Param{
+				{Name: cicdv1.CustomTaskApprovalParamKeyApprovers, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"admin1=admin@tmax.co.kr"}}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-cm"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyMessage, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-message"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-ij"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJobJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-job"}},
+			},
+			errorOccurs:  true,
+			errorMessage: "there is no param senderName for Run",
+		},
+		"noJobName": {
+			params: []tektonv1beta1.Param{
+				{Name: cicdv1.CustomTaskApprovalParamKeyApprovers, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"admin1=admin@tmax.co.kr"}}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-cm"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyMessage, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-message"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyIntegrationJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-ij"}},
+			},
+			errorOccurs:  true,
+			errorMessage: "there is no param integration-job-job for Run",
+		},
+		"noIJName": {
+			params: []tektonv1beta1.Param{
+				{Name: cicdv1.CustomTaskApprovalParamKeyApprovers, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"admin1=admin@tmax.co.kr"}}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-cm"}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyMessage, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-message"}},
+			},
+			errorOccurs:  true,
+			errorMessage: "there is no param integration-job for Run",
+		},
+		"noMessage": {
+			params: []tektonv1beta1.Param{
+				{Name: cicdv1.CustomTaskApprovalParamKeyApprovers, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"admin1=admin@tmax.co.kr"}}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-cm"}},
+			},
+			errorOccurs:  true,
+			errorMessage: "there is no param message for Run",
+		},
+		"noCM": {
+			params: []tektonv1beta1.Param{
+				{Name: cicdv1.CustomTaskApprovalParamKeyApprovers, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"admin1=admin@tmax.co.kr"}}},
+			},
+			errorOccurs:  true,
+			errorMessage: "there is no param approvers-config-map for Run",
+		},
+		"noApprovers": {
+			errorOccurs:  true,
+			errorMessage: "there is no param approvers for Run",
+		},
+		"wrongCM": {
+			params: []tektonv1beta1.Param{
+				{Name: cicdv1.CustomTaskApprovalParamKeyApprovers, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"admin1=admin@tmax.co.kr"}}},
+				{Name: cicdv1.CustomTaskApprovalParamKeyApproversCM, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "test-cm-no"}},
+			},
+			errorOccurs:  true,
+			errorMessage: "there is no param message for Run",
+		},
+	}
+
+	s := runtime.NewScheme()
+	utilruntime.Must(corev1.AddToScheme(s))
+	utilruntime.Must(cicdv1.AddToScheme(s))
+	utilruntime.Must(tektonv1alpha1.AddToScheme(s))
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cm",
+			Namespace: "test-ns",
+		},
+		Data: map[string]string{
+			cicdv1.CustomTaskApprovalApproversConfigMapKey: "admin\nadmin2=admin2@tmax.co.kr",
+		},
+	}
+
+	configMapFail := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cm-fail",
+			Namespace: "test-ns",
+		},
+		Data: map[string]string{
+			cicdv1.CustomTaskApprovalApproversConfigMapKey: "admin\nadmin2==@@",
+		},
+	}
+
+	configMapNoKey := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cm-no",
+			Namespace: "test-ns",
+		},
+		Data: map[string]string{
+			"": "admin\nadmin2==@@",
+		},
+	}
+
+	fakeCli := fake.NewFakeClientWithScheme(s, configMap, configMapFail, configMapNoKey)
+	handler := &ApprovalRunHandler{Client: fakeCli}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			run := &tektonv1alpha1.Run{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "run-1",
+					Namespace: "test-ns",
+					OwnerReferences: []metav1.OwnerReference{
+						{APIVersion: "", Kind: "PipelineRun", Name: "pr-1"},
+						{APIVersion: "tekton.dev/v1beta1", Kind: "PipelineRun", Name: "pr-1"},
+					},
+				},
+				Spec: tektonv1alpha1.RunSpec{
+					Params: c.params,
+				},
+			}
+			configs.EnableMail = true
+			approval, err := handler.newApproval(run)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.expectedApprovalSpec, approval.Spec)
+			}
+		})
+	}
+}
+
+func Test_searchParam(t *testing.T) {
+	tc := map[string]struct {
+		params       []tektonv1beta1.Param
+		key          string
+		expectedKind tektonv1beta1.ParamType
+
+		expectedString string
+		expectedArray  []string
+		errorOccurs    bool
+		errorMessage   string
+	}{
+		"string": {
+			params: []tektonv1beta1.Param{
+				{Name: "key1", Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "val1"}},
+				{Name: "key2", Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"val2", "val3"}}},
+			},
+			key:            "key1",
+			expectedKind:   tektonv1beta1.ParamTypeString,
+			expectedString: "val1",
+		},
+		"array": {
+			params: []tektonv1beta1.Param{
+				{Name: "key1", Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "val1"}},
+				{Name: "key2", Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"val2", "val3"}}},
+			},
+			key:           "key2",
+			expectedKind:  tektonv1beta1.ParamTypeArray,
+			expectedArray: []string{"val2", "val3"},
+		},
+		"wrongType": {
+			params: []tektonv1beta1.Param{
+				{Name: "key1", Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "val1"}},
+				{Name: "key2", Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"val2", "val3"}}},
+			},
+			key:          "key2",
+			expectedKind: tektonv1beta1.ParamTypeString,
+			errorOccurs:  true,
+			errorMessage: "parameter key2 is expected to be string ,got array",
+		},
+		"noParam": {
+			params: []tektonv1beta1.Param{
+				{Name: "key1", Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: "val1"}},
+				{Name: "key2", Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeArray, ArrayVal: []string{"val2", "val3"}}},
+			},
+			key:          "key3",
+			errorOccurs:  true,
+			errorMessage: "there is no param key3 for Run",
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			str, arr, err := searchParam(c.params, c.key, c.expectedKind)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
+				if c.expectedKind == tektonv1beta1.ParamTypeString {
+					require.Equal(t, c.expectedString, str)
+				} else {
+					require.Equal(t, c.expectedArray, arr)
+				}
+			}
 		})
 	}
 }
