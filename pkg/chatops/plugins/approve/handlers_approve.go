@@ -18,13 +18,14 @@ package approve
 
 import (
 	"fmt"
+	"strings"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"strings"
 )
 
 // Command types for approve handler
@@ -41,6 +42,11 @@ type Handler struct {
 }
 
 var log = logf.Log.WithName("approve-plugin")
+
+// Name returns a name of the approval plugin
+func (h *Handler) Name() string {
+	return "approve"
+}
 
 // Handle handles a raw webhook
 func (h *Handler) Handle(wh *git.Webhook, ic *cicdv1.IntegrationConfig) error {

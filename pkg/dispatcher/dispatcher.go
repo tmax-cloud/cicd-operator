@@ -35,6 +35,11 @@ type Dispatcher struct {
 	Client client.Client
 }
 
+// Name returns a name of dispatcher plugin
+func (d *Dispatcher) Name() string {
+	return "dispatcher"
+}
+
 // Handle handles pull-request and push events
 func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	var job *cicdv1.IntegrationJob

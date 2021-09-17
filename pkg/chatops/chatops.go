@@ -17,10 +17,11 @@
 package chatops
 
 import (
+	"strings"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 // chatOps triggers tests/retests via comments
@@ -37,6 +38,11 @@ func New(c client.Client) *chatOps {
 	}
 
 	return co
+}
+
+// Name returns a name of the chatOps plugin
+func (c *chatOps) Name() string {
+	return "chatOps"
 }
 
 // Handle actually handles the webhook payload to create IntegrationJob

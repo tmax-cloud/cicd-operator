@@ -18,13 +18,14 @@ package size
 
 import (
 	"fmt"
+	"strings"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"strings"
 )
 
 const (
@@ -49,6 +50,11 @@ var log = logf.Log.WithName("size-plugin")
 // Size plugin finds out how many lines are changed by the pull request and label the size to the pull request
 type Size struct {
 	Client client.Client
+}
+
+// Name returns a name of size plugin
+func (s *Size) Name() string {
+	return "size"
 }
 
 // Handle handles a pull request event and set size label to the pull request
