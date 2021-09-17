@@ -256,7 +256,7 @@ func (i *exposeIngressReconciler) reconcile(obj runtime.Object) error {
 	}
 
 	defer func() {
-		if configs.ExposeMode == string(exposeTypeIngress) {
+		if configs.ExposeMode == string(exposeTypeIngress) || configs.ExposeMode == "" {
 			i.hostUpdateCh <- ing.Spec.Rules[0].Host
 		}
 		if err := i.client.Update(ing, &metav1.UpdateOptions{}); err != nil {

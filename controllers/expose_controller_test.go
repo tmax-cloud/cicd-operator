@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -206,24 +205,6 @@ func TestExposeController_loopWatch(t *testing.T) {
 	}
 }
 
-type fakeLogger struct {
-	info     []string
-	error    []error
-	errorMsg []string
-}
-
-func (f *fakeLogger) Info(msg string, _ ...interface{}) {
-	f.info = append(f.info, msg)
-}
-func (f *fakeLogger) Enabled() bool { return true }
-func (f *fakeLogger) Error(err error, msg string, _ ...interface{}) {
-	f.error = append(f.error, err)
-	f.errorMsg = append(f.errorMsg, msg)
-}
-func (f *fakeLogger) V(_ int) logr.InfoLogger                 { return f }
-func (f *fakeLogger) WithValues(_ ...interface{}) logr.Logger { return f }
-func (f *fakeLogger) WithName(_ string) logr.Logger           { return f }
-
 type fakeExposeReconciler struct {
 	client       utils.RestClient
 	resourceName string
@@ -356,6 +337,13 @@ func Test_exposeIngressReconciler_reconcile(t *testing.T) {
 			exposeMode:  "LoadBalancer",
 			obj:         &networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: networkingv1beta1.IngressSpec{Rules: []networkingv1beta1.IngressRule{{}}}},
 			expectedObj: &networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"kubernetes.io/ingress.class": "nginx"}}, Spec: networkingv1beta1.IngressSpec{Rules: []networkingv1beta1.IngressRule{{}}}},
+		},
+		"blankExposeMode": {
+			ingressHost:  "host.ingress.com",
+			obj:          &networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: networkingv1beta1.IngressSpec{Rules: []networkingv1beta1.IngressRule{{}}}},
+			expectedObj:  &networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"kubernetes.io/ingress.class": "nginx"}}, Spec: networkingv1beta1.IngressSpec{Rules: []networkingv1beta1.IngressRule{{Host: "host.ingress.com"}}}},
+			configHost:   true,
+			expectedHost: "host.ingress.com",
 		},
 		"setHost": {
 			exposeMode:   "Ingress",
