@@ -23,21 +23,33 @@ import (
 
 // Plugin is a webhook plugin interface, which handles git webhook payloads
 type Plugin interface {
+	Name() string
 	Handle(*git.Webhook, *cicdv1.IntegrationConfig) error
 }
 
 var plugins = map[git.EventType][]Plugin{}
 
 // HandleEvent passes webhook event to plugins
-func HandleEvent(wh *git.Webhook, ic *cicdv1.IntegrationConfig) error {
+func HandleEvent(wh *git.Webhook, ic *cicdv1.IntegrationConfig, wantedPlugins ...string) error {
 	var retErr error
 	plugins := getPlugins(wh.EventType)
 	for _, p := range plugins {
-		if err := p.Handle(wh, ic); err != nil {
-			retErr = err
+		if len(wantedPlugins) == 0 || contains(wantedPlugins, p.Name()) {
+			if err := p.Handle(wh, ic); err != nil {
+				retErr = err
+			}
 		}
 	}
 	return retErr
+}
+
+func contains(list []string, needle string) bool {
+	for _, s := range list {
+		if s == needle {
+			return true
+		}
+	}
+	return false
 }
 
 // AddPlugin adds handler for specific events

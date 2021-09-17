@@ -20,16 +20,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"regexp"
+
 	"github.com/gorilla/mux"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
-	"io"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
-	"regexp"
 )
 
 const (
@@ -115,7 +116,7 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 	}
 
 	// Trigger Run!
-	if err := server.HandleEvent(wh, ic); err != nil {
+	if err := server.HandleEvent(wh, ic, "dispatcher"); err != nil {
 		log.Info(err.Error())
 		_ = utils.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("req: %s, cannot handle event, err : %s", reqID, err.Error()))
 		return
