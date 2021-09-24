@@ -59,13 +59,24 @@ const (
 )
 
 // PipelineManager manages pipelines
-type PipelineManager struct {
+type PipelineManager interface {
+	Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error)
+	ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error
+}
+
+// pipelineManager is an actual implementation
+type pipelineManager struct {
 	Client client.Client
 	Scheme *runtime.Scheme
 }
 
+// NewPipelineManager initiates a new PipelineManager
+func NewPipelineManager(c client.Client, s *runtime.Scheme) PipelineManager {
+	return &pipelineManager{Client: c, Scheme: s}
+}
+
 // Generate generates (but not creates) a PipelineRun object
-func (p *PipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
+func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
 
 	// Workspace defs
@@ -124,7 +135,7 @@ func (p *PipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 	}, nil
 }
 
-func (p *PipelineManager) convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns string) (*tektonv1beta1.PipelineDeclaredResource, error) {
+func (p *pipelineManager) convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns string) (*tektonv1beta1.PipelineDeclaredResource, error) {
 	// Get resource type
 	var t tektonv1beta1.PipelineResourceType
 	if binding.ResourceSpec != nil {
@@ -234,7 +245,7 @@ func generateLabel(j *cicdv1.IntegrationJob) map[string]string {
 
 // ReflectStatus reflects PipelineRun's status into IntegrationJob's status
 // It also set commit status for remote git server
-func (p *PipelineManager) ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error {
+func (p *pipelineManager) ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error {
 	oldState := job.Status.State
 	oldMessage := job.Status.Message
 
@@ -317,7 +328,7 @@ func initState(job *cicdv1.IntegrationJob) []bool {
 	return stateChanged
 }
 
-func (p *PipelineManager) reflectJobStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job, jStatus *cicdv1.JobStatus, ij *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) bool {
+func (p *pipelineManager) reflectJobStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job, jStatus *cicdv1.JobStatus, ij *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) bool {
 	changed := false
 
 	runStatus := getJobRunStatus(pr, j)
@@ -388,7 +399,7 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobSt
 	return jobStatus
 }
 
-func (p *PipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, job *cicdv1.IntegrationJob, stateChanged []bool) error {
+func (p *pipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, job *cicdv1.IntegrationJob, stateChanged []bool) error {
 	// Skip if token is nil
 	if cfg.Spec.Git.Token == nil {
 		return nil
@@ -477,7 +488,7 @@ func ParseBaseFromDescription(desc string) string {
 
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch;delete
 
-func (p *PipelineManager) emitEvents(job *cicdv1.IntegrationJob, oldState cicdv1.IntegrationJobState, oldMessage string) error {
+func (p *pipelineManager) emitEvents(job *cicdv1.IntegrationJob, oldState cicdv1.IntegrationJobState, oldMessage string) error {
 	if oldState == job.Status.State && oldMessage == job.Status.Message {
 		return nil
 	}

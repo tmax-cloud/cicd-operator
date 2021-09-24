@@ -19,6 +19,8 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"time"
+
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -32,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
 )
 
 // Scheduler schedules PipelineRun for IntegrationJob
@@ -40,7 +41,7 @@ import (
 var log = logf.Log.WithName("job-scheduler")
 
 // New is a constructor for a scheduler
-func New(c client.Client, s *runtime.Scheme, pm *pipelinemanager.PipelineManager) *scheduler {
+func New(c client.Client, s *runtime.Scheme, pm pipelinemanager.PipelineManager) *scheduler {
 	log.Info("New scheduler")
 	sch := &scheduler{
 		k8sClient: c,
@@ -64,7 +65,7 @@ type scheduler struct {
 	k8sClient client.Client
 	scheme    *runtime.Scheme
 
-	pm *pipelinemanager.PipelineManager
+	pm pipelinemanager.PipelineManager
 
 	jobPool pool.JobPool
 

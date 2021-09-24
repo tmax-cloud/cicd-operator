@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"context"
-	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
@@ -76,57 +76,60 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		}
 	}
 
-	defer func() {
-		instance.Status.Conditions.SetCondition(*cond)
-		p := client.MergeFrom(original)
-		if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
-			log.Error(err, "")
-		}
-	}()
+	var err error
+	specChanged := false
 
-	exit, err := r.handleFinalizer(instance, original)
+	defer func(ic *cicdv1.IntegrationConfig, specChanged *bool) {
+		ic.Status.Conditions.SetCondition(*cond)
+		p := client.MergeFrom(original)
+
+		if *specChanged {
+			if err := r.Client.Patch(ctx, ic, p); err != nil {
+				log.Error(err, "")
+			}
+		} else {
+			if err := r.Client.Status().Patch(ctx, ic, p); err != nil {
+				log.Error(err, "")
+			}
+		}
+	}(instance, &specChanged)
+
+	specChanged, err = r.handleFinalizer(instance)
 	if err != nil {
 		log.Error(err, "")
 		cond.Reason = "CannotHandleFinalizer"
 		cond.Message = err.Error()
 		return ctrl.Result{}, nil
 	}
-	if exit {
+	if specChanged {
 		return ctrl.Result{}, nil
 	}
 
 	// Set secret
-	secretChanged := r.setSecretString(instance)
+	r.setSecretString(instance)
 
 	// Set webhook registered
-	webhookConditionChanged := r.setWebhookRegisteredCond(instance)
+	r.setWebhookRegisteredCond(instance)
 
 	// Set ready
-	readyConditionChanged := r.setReadyCond(instance)
-
-	// Git credential secret - referred by tekton
-	if err := r.createGitSecret(instance); err != nil {
-		log.Error(err, "")
-		cond.Reason = "CannotCreateSecret"
-		cond.Message = err.Error()
-		return ctrl.Result{}, nil
-	}
+	r.setReadyCond(instance, cond)
 
 	// Service account for running PipelineRuns
 	if err := r.createServiceAccount(instance); err != nil {
 		log.Error(err, "")
+		cond.Status = corev1.ConditionFalse
 		cond.Reason = "CannotCreateAccount"
 		cond.Message = err.Error()
 		return ctrl.Result{}, nil
 	}
 
-	// If conditions changed, update status
-	if secretChanged || webhookConditionChanged || readyConditionChanged {
-		p := client.MergeFrom(original)
-		if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
-			log.Error(err, "")
-			return ctrl.Result{}, err
-		}
+	// Git credential secret - referred by tekton
+	if err := r.createGitSecret(instance); err != nil {
+		log.Error(err, "")
+		cond.Status = corev1.ConditionFalse
+		cond.Reason = "CannotCreateSecret"
+		cond.Message = err.Error()
+		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -139,7 +142,7 @@ func (r *IntegrationConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1.IntegrationConfig) (bool, error) {
+func (r *IntegrationConfigReconciler) handleFinalizer(instance *cicdv1.IntegrationConfig) (bool, error) {
 	// Check first if finalizer is already set
 	found := false
 	idx := -1
@@ -152,10 +155,6 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 	}
 	if !found {
 		instance.Finalizers = append(instance.Finalizers, finalizer)
-		p := client.MergeFrom(original)
-		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
-			return false, err
-		}
 		return true, nil
 	}
 
@@ -191,12 +190,6 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 			instance.Finalizers[last] = ""
 			instance.Finalizers = instance.Finalizers[:last]
 		}
-
-		p := client.MergeFrom(original)
-		if err := r.Client.Patch(context.Background(), instance, p); err != nil {
-			return false, err
-		}
-
 		return true, nil
 	}
 
@@ -204,19 +197,14 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance, original *cicdv1
 }
 
 // Set status.secrets, return if it's changed or not
-func (r *IntegrationConfigReconciler) setSecretString(instance *cicdv1.IntegrationConfig) bool {
-	secretChanged := false
+func (r *IntegrationConfigReconciler) setSecretString(instance *cicdv1.IntegrationConfig) {
 	if instance.Status.Secrets == "" {
 		instance.Status.Secrets = utils.RandomString(20)
-		secretChanged = true
 	}
-
-	return secretChanged
 }
 
 // Set webhook-registered condition, return if it's changed or not
-func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.IntegrationConfig) bool {
-	webhookConditionChanged := false
+func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.IntegrationConfig) {
 	webhookRegistered := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionWebhookRegistered)
 	if webhookRegistered == nil {
 		webhookRegistered = &status.Condition{
@@ -229,8 +217,8 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 	if instance.Spec.Git.Token == nil {
 		webhookRegistered.Reason = cicdv1.IntegrationConfigConditionReasonNoGitToken
 		webhookRegistered.Message = "Skipped to register webhook"
-		webhookConditionChanged = instance.Status.Conditions.SetCondition(*webhookRegistered)
-		return webhookConditionChanged
+		_ = instance.Status.Conditions.SetCondition(*webhookRegistered)
+		return
 	}
 
 	// Register only if the condition is false
@@ -241,8 +229,8 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 
 		gitCli, err := utils.GetGitCli(instance, r.Client)
 		if err != nil {
-			webhookRegistered.Reason = "invalidGitType"
-			webhookRegistered.Message = fmt.Sprintf("git type %s is not supported", instance.Spec.Git.Type)
+			webhookRegistered.Reason = "gitCliErr"
+			webhookRegistered.Message = err.Error()
 		} else {
 			addr := instance.GetWebhookServerAddress()
 			isUnique := true
@@ -271,30 +259,17 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 				}
 			}
 		}
-		webhookConditionChanged = instance.Status.Conditions.SetCondition(*webhookRegistered)
+		_ = instance.Status.Conditions.SetCondition(*webhookRegistered)
 	}
-
-	return webhookConditionChanged
 }
 
 // Set ready condition, return if it's changed or not
-func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationConfig) bool {
-	ready := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionReady)
-	if ready == nil {
-		ready = &status.Condition{
-			Type:   cicdv1.IntegrationConfigConditionReady,
-			Status: corev1.ConditionFalse,
-		}
-	}
-
+func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationConfig, cond *status.Condition) {
 	// For now, only checked is if webhook-registered is true & secrets are set
 	webhookRegistered := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionWebhookRegistered)
 	if instance.Status.Secrets != "" && webhookRegistered != nil && (webhookRegistered.Status == corev1.ConditionTrue || webhookRegistered.Reason == cicdv1.IntegrationConfigConditionReasonNoGitToken) {
-		ready.Status = corev1.ConditionTrue
+		cond.Status = corev1.ConditionTrue
 	}
-	readyConditionChanged := instance.Status.Conditions.SetCondition(*ready)
-
-	return readyConditionChanged
 }
 
 // Create git credential secret
@@ -326,11 +301,7 @@ func (r *IntegrationConfigReconciler) createGitSecret(instance *cicdv1.Integrati
 		return nil
 	}
 
-	if err := utils.CreateOrPatchObject(secret, original, instance, r.Client, r.Scheme); err != nil {
-		return err
-	}
-
-	return nil
+	return utils.CreateOrPatchObject(secret, original, instance, r.Client, r.Scheme)
 }
 
 // Update content of git secret (only content. not applying to etcd)
@@ -423,14 +394,8 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 	// Update if resourceVersion exists, but create if not
 	if sa.ResourceVersion != "" {
 		p := client.MergeFrom(original)
-		if err := r.Client.Patch(context.Background(), sa, p); err != nil {
-			return err
-		}
-	} else {
-		if err := r.Client.Create(context.Background(), sa); err != nil {
-			return err
-		}
+		return r.Client.Patch(context.Background(), sa, p)
 	}
 
-	return nil
+	return r.Client.Create(context.Background(), sa)
 }
