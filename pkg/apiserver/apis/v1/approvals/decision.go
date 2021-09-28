@@ -20,14 +20,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
+	"github.com/tmax-cloud/cicd-operator/pkg/events"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 	"k8s.io/apimachinery/pkg/types"
@@ -82,6 +85,7 @@ func (h *handler) updateDecision(w http.ResponseWriter, req *http.Request, decis
 		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, no Approval %s/%s is found", reqID, ns, approvalName))
 		return
 	}
+	approval.SetGroupVersionKind(cicdv1.GroupVersion.WithKind("Approval"))
 	original := approval.DeepCopy()
 
 	// If Approval is already in approved/rejected status, respond with error
@@ -105,6 +109,10 @@ func (h *handler) updateDecision(w http.ResponseWriter, req *http.Request, decis
 
 	if !isApprover {
 		log.Info(fmt.Sprintf("requested user (%s) is not an approver", user))
+
+		// Emit event
+		_ = events.Emit(h.k8sClient, approval, corev1.EventTypeWarning, "ApproveNotAllowed", fmt.Sprintf("User: %s", user))
+
 		_ = utils.RespondError(w, http.StatusForbidden, fmt.Sprintf("req: %s, approval %s/%s is not requested to you", reqID, ns, approvalName))
 		return
 	}
@@ -121,6 +129,9 @@ func (h *handler) updateDecision(w http.ResponseWriter, req *http.Request, decis
 	approval.Status.Reason = userReq.Reason
 	approval.Status.Approver = user
 	approval.Status.DecisionTime = &metav1.Time{Time: time.Now()}
+
+	// Emit event
+	_ = events.Emit(h.k8sClient, approval, corev1.EventTypeNormal, string(decision), fmt.Sprintf("User: %s, Reason: %s", user, userReq.Reason))
 
 	_ = utils.RespondJSON(w, struct{}{})
 }
