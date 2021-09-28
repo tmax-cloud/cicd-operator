@@ -159,11 +159,10 @@ func init() {
 }
 
 // SetDefaults sets default values for the status
-func (s *IntegrationJobStatus) SetDefaults() error {
+func (s *IntegrationJobStatus) SetDefaults() {
 	if s.State == "" {
 		s.State = IntegrationJobStatePending
 	}
-	return nil
 }
 
 // GetReportServerAddress returns Server address for reports (IntegrationJob details)

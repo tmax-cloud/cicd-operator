@@ -41,7 +41,7 @@ func TestIntegrationJobStatus_SetDefaults(t *testing.T) {
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
 			ijStatus := &IntegrationJobStatus{State: c.currentState}
-			require.NoError(t, ijStatus.SetDefaults())
+			ijStatus.SetDefaults()
 			require.Equal(t, c.expectedState, ijStatus.State)
 		})
 	}

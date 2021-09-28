@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/pkg/pipelinemanager"
@@ -44,12 +45,12 @@ type integrationJobReconciler struct {
 	Scheme *runtime.Scheme
 
 	scheduler scheduler.Scheduler
-	pm        *pipelinemanager.PipelineManager
+	pm        pipelinemanager.PipelineManager
 }
 
 // NewIntegrationJobReconciler is a constructor of integrationJobReconciler
 func NewIntegrationJobReconciler(cli client.Client, scheme *runtime.Scheme, log logr.Logger) *integrationJobReconciler {
-	pm := &pipelinemanager.PipelineManager{Client: cli, Scheme: scheme}
+	pm := pipelinemanager.NewPipelineManager(cli, scheme)
 	return &integrationJobReconciler{
 		Client: cli,
 		Scheme: scheme,
@@ -84,7 +85,7 @@ func (r *integrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	exit, err := r.handleFinalizer(instance, original)
 	if err != nil {
 		log.Error(err, "")
-		r.patchStatus(instance, original, err.Error())
+		r.patchJobFailed(instance, original, err.Error())
 		return ctrl.Result{}, nil
 	}
 	if exit {
@@ -103,7 +104,7 @@ func (r *integrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	config := &cicdv1.IntegrationConfig{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: instance.Spec.ConfigRef.Name, Namespace: instance.Namespace}, config); err != nil {
 		log.Error(err, "")
-		r.patchStatus(instance, original, err.Error())
+		r.patchJobFailed(instance, original, err.Error())
 		return ctrl.Result{}, nil
 	}
 
@@ -112,23 +113,19 @@ func (r *integrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: pipelinemanager.Name(instance), Namespace: instance.Namespace}, pr); err != nil {
 		if !errors.IsNotFound(err) {
 			log.Error(err, "")
-			r.patchStatus(instance, original, err.Error())
+			r.patchJobFailed(instance, original, err.Error())
 			return ctrl.Result{}, nil
 		}
 		pr = nil
 	}
 
 	// Set default values for IntegrationJob.status
-	if err := instance.Status.SetDefaults(); err != nil {
-		log.Error(err, "")
-		r.patchStatus(instance, original, err.Error())
-		return ctrl.Result{}, nil
-	}
+	instance.Status.SetDefaults()
 
 	// Check PipelineRun's status and update IntegrationJob's status
 	if err := r.pm.ReflectStatus(pr, instance, config); err != nil {
 		log.Error(err, "")
-		r.patchStatus(instance, original, err.Error())
+		r.patchJobFailed(instance, original, err.Error())
 		return ctrl.Result{}, nil
 	}
 
@@ -188,7 +185,7 @@ func (r *integrationJobReconciler) handleFinalizer(instance, original *cicdv1.In
 	return false, nil
 }
 
-func (r *integrationJobReconciler) patchStatus(instance *cicdv1.IntegrationJob, original *cicdv1.IntegrationJob, message string) {
+func (r *integrationJobReconciler) patchJobFailed(instance *cicdv1.IntegrationJob, original *cicdv1.IntegrationJob, message string) {
 	instance.Status.State = cicdv1.IntegrationJobStateFailed
 	instance.Status.Message = message
 	p := client.MergeFrom(original)

@@ -19,6 +19,7 @@ package pipelinemanager
 import (
 	"context"
 	"fmt"
+
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (p *PipelineManager) handleNotification(jobStatus *cicdv1.JobStatus, ij *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error {
+func (p *pipelineManager) handleNotification(jobStatus *cicdv1.JobStatus, ij *cicdv1.IntegrationJob, cfg *cicdv1.IntegrationConfig) error {
 	// Get jobSpec spec
 	jobSpec := getSpecFromStatus(jobStatus, ij.Spec.ConfigRef.Type, cfg)
 	if jobSpec == nil {
@@ -61,7 +62,7 @@ func (p *PipelineManager) handleNotification(jobStatus *cicdv1.JobStatus, ij *ci
 	return nil
 }
 
-func (p *PipelineManager) handleEmailNotification(ij *cicdv1.IntegrationJob, job *cicdv1.Job, email *cicdv1.NotiEmail) error {
+func (p *pipelineManager) handleEmailNotification(ij *cicdv1.IntegrationJob, job *cicdv1.Job, email *cicdv1.NotiEmail) error {
 	runSpec := commonNotiRun(cicdv1.CustomTaskKindEmail, ij.Name, job.Name, ij.Namespace)
 	runSpec.Spec.Params = generateEmailRunParams(ij, job, email)
 
@@ -85,7 +86,7 @@ func (p *PipelineManager) handleEmailNotification(ij *cicdv1.IntegrationJob, job
 	return nil
 }
 
-func (p *PipelineManager) handleSlackNotification(ij *cicdv1.IntegrationJob, job *cicdv1.Job, slack *cicdv1.NotiSlack) error {
+func (p *pipelineManager) handleSlackNotification(ij *cicdv1.IntegrationJob, job *cicdv1.Job, slack *cicdv1.NotiSlack) error {
 	runSpec := commonNotiRun(cicdv1.CustomTaskKindSlack, ij.Name, job.Name, ij.Namespace)
 	runSpec.Spec.Params = generateSlackRunParams(ij, job, slack)
 
