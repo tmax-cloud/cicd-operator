@@ -162,29 +162,27 @@ func TestExposeController_loopWatch(t *testing.T) {
 	exitCh := make(chan struct{})
 	rscUpdateCh := make(chan runtime.Object)
 
-	logger := &fakeLogger{}
-	controller := &exposeController{
-		log: logger,
-	}
-	client := &fakeRestClient{
-		resources: map[string]runtime.Object{
-			"test": &corev1.Pod{},
-		},
-		fakeWatcher: watch.NewFake(),
-	}
-
 	tc := map[string]struct {
-		goFunc         func()
+		goFunc    func(client *fakeRestClient)
+		noWatcher bool
+
 		expectedReturn bool
 	}{
+		"invalidClient": {
+			goFunc: func(client *fakeRestClient) {
+				exitCh <- struct{}{}
+			},
+			noWatcher:      true,
+			expectedReturn: false,
+		},
 		"exitNil": {
-			goFunc: func() {
+			goFunc: func(client *fakeRestClient) {
 				client.fakeWatcher.Add(nil)
 			},
 			expectedReturn: false,
 		},
 		"exitTrue": {
-			goFunc: func() {
+			goFunc: func(client *fakeRestClient) {
 				client.fakeWatcher.Add(&corev1.Pod{})
 				<-rscUpdateCh
 				exitCh <- struct{}{}
@@ -195,7 +193,22 @@ func TestExposeController_loopWatch(t *testing.T) {
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
-			go c.goFunc()
+			logger := &fakeLogger{}
+			controller := &exposeController{
+				log: logger,
+			}
+			client := &fakeRestClient{
+				resources: map[string]runtime.Object{
+					"test": &corev1.Pod{},
+				},
+				fakeWatcher: watch.NewFake(),
+			}
+
+			if c.noWatcher {
+				client.fakeWatcher = nil
+			}
+
+			go c.goFunc(client)
 			if c.expectedReturn {
 				require.True(t, controller.loopWatch(client, "", rscUpdateCh, exitCh))
 			} else {
@@ -213,7 +226,7 @@ type fakeExposeReconciler struct {
 	savedObjects []runtime.Object
 }
 
-func (f *fakeExposeReconciler) reconcile(object runtime.Object) error {
+func (f *fakeExposeReconciler) reconcile(object runtime.Object, _ exposeType) error {
 	if object == nil {
 		return fmt.Errorf("object cannot be nil")
 	}
@@ -226,37 +239,56 @@ func (f *fakeExposeReconciler) getRefObject() runtime.Object { return f.refObj }
 
 func TestExposeController_watchResource(t *testing.T) {
 	tc := map[string]struct {
-		signaller func(chan runtime.Object, chan struct{})
+		signaller  func(chan runtime.Object, chan struct{})
+		exposeMode string
 
 		errors  []error
 		objects []runtime.Object
 	}{
 		"pod": {
+			exposeMode: "Ingress",
 			signaller: func(objects chan runtime.Object, c chan struct{}) {
 				objects <- &corev1.Pod{ObjectMeta: metav1.ObjectMeta{ResourceVersion: "version"}}
 			},
 			objects: []runtime.Object{&corev1.Pod{ObjectMeta: metav1.ObjectMeta{ResourceVersion: "version"}}},
 		},
 		"podNoResourceVersion": {
+			exposeMode: "Ingress",
 			signaller: func(objects chan runtime.Object, c chan struct{}) {
 				objects <- &corev1.Pod{}
 			},
 		},
 		"nil": {
+			exposeMode: "Ingress",
 			signaller: func(objects chan runtime.Object, c chan struct{}) {
 				objects <- nil
 			},
 			errors: []error{fmt.Errorf("object does not implement the Object interfaces")},
 		},
 		"cfg": {
+			exposeMode: "Ingress",
 			signaller: func(objects chan runtime.Object, c chan struct{}) {
 				c <- struct{}{}
 			},
+		},
+		"blankExposeMode": {
+			exposeMode: "",
+			signaller: func(objects chan runtime.Object, c chan struct{}) {
+				c <- struct{}{}
+			},
+		},
+		"invalidExposeMode": {
+			exposeMode: "NodePort",
+			signaller: func(objects chan runtime.Object, c chan struct{}) {
+				objects <- &corev1.Pod{ObjectMeta: metav1.ObjectMeta{ResourceVersion: "version"}}
+			},
+			errors: []error{fmt.Errorf("exposeMode NodePort is not valid")},
 		},
 	}
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
+			configs.ExposeMode = c.exposeMode
 			rscUpdateCh := make(chan runtime.Object)
 			cfgUpdateCh := make(chan struct{})
 			done := make(chan struct{})
@@ -278,6 +310,46 @@ func TestExposeController_watchResource(t *testing.T) {
 
 			require.Equal(t, c.errors, logger.error)
 			require.Equal(t, c.objects, reconciler.savedObjects)
+		})
+	}
+}
+
+func TestExposeController_validateExposeMode(t *testing.T) {
+	logger := &fakeLogger{}
+	controller := &exposeController{
+		log: logger,
+	}
+
+	tc := map[string]struct {
+		mode         exposeType
+		errorOccurs  bool
+		errorMessage string
+	}{
+		"Ingress": {
+			mode: exposeTypeIngress,
+		},
+		"LoadBalancer": {
+			mode: exposeTypeLoadBalancer,
+		},
+		"ClusterIP": {
+			mode: exposeTypeClusterIP,
+		},
+		"invalid": {
+			mode:         exposeType("hi"),
+			errorOccurs:  true,
+			errorMessage: "exposeMode hi is not valid",
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			err := controller.validateExposeMode(c.mode)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -338,13 +410,6 @@ func Test_exposeIngressReconciler_reconcile(t *testing.T) {
 			obj:         &networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: networkingv1beta1.IngressSpec{Rules: []networkingv1beta1.IngressRule{{}}}},
 			expectedObj: &networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"kubernetes.io/ingress.class": "nginx"}}, Spec: networkingv1beta1.IngressSpec{Rules: []networkingv1beta1.IngressRule{{}}}},
 		},
-		"blankExposeMode": {
-			ingressHost:  "host.ingress.com",
-			obj:          &networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: networkingv1beta1.IngressSpec{Rules: []networkingv1beta1.IngressRule{{}}}},
-			expectedObj:  &networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"kubernetes.io/ingress.class": "nginx"}}, Spec: networkingv1beta1.IngressSpec{Rules: []networkingv1beta1.IngressRule{{Host: "host.ingress.com"}}}},
-			configHost:   true,
-			expectedHost: "host.ingress.com",
-		},
 		"setHost": {
 			exposeMode:   "Ingress",
 			ingressHost:  "host.ingress.com",
@@ -364,7 +429,6 @@ func Test_exposeIngressReconciler_reconcile(t *testing.T) {
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
-			configs.ExposeMode = c.exposeMode
 			configs.IngressHost = c.ingressHost
 			configs.IngressClass = "nginx"
 
@@ -392,7 +456,7 @@ func Test_exposeIngressReconciler_reconcile(t *testing.T) {
 				require.NoError(t, reconciler.client.Create(c.obj, nil))
 			}
 
-			err := reconciler.reconcile(c.obj)
+			err := reconciler.reconcile(c.obj, exposeType(c.exposeMode))
 			if c.errorOccurs {
 				require.Error(t, err)
 				require.Equal(t, c.errorMessage, err.Error())
@@ -456,12 +520,6 @@ func Test_exposeServiceReconciler_reconcile(t *testing.T) {
 			errorOccurs:  true,
 			errorMessage: "svc is not a Service",
 		},
-		"invalidExposeMode": {
-			exposeMode:   "NodePort",
-			obj:          &corev1.Service{},
-			errorOccurs:  true,
-			errorMessage: "exposeMode NodePort is not valid",
-		},
 		"noop": {
 			exposeMode:  "Ingress",
 			obj:         &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc1"}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.0.0.3"}},
@@ -492,8 +550,6 @@ func Test_exposeServiceReconciler_reconcile(t *testing.T) {
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
-			configs.ExposeMode = c.exposeMode
-
 			reconciler := &exposeServiceReconciler{
 				log: ctrl.Log.WithName(""),
 				client: &fakeRestClient{
@@ -518,7 +574,7 @@ func Test_exposeServiceReconciler_reconcile(t *testing.T) {
 				require.NoError(t, reconciler.client.Create(c.obj, nil))
 			}
 
-			err := reconciler.reconcile(c.obj)
+			err := reconciler.reconcile(c.obj, exposeType(c.exposeMode))
 			if c.errorOccurs {
 				require.Error(t, err)
 				require.Equal(t, c.errorMessage, err.Error())
@@ -532,43 +588,6 @@ func Test_exposeServiceReconciler_reconcile(t *testing.T) {
 				into := c.expectedObj.DeepCopyObject()
 				require.NoError(t, reconciler.client.Get(objMeta.GetName(), nil, into))
 				require.Equal(t, c.expectedObj, into)
-			}
-		})
-	}
-}
-
-func Test_exposeServiceReconciler_validateExposeMode(t *testing.T) {
-	s := &exposeServiceReconciler{}
-
-	tc := map[string]struct {
-		mode         exposeType
-		errorOccurs  bool
-		errorMessage string
-	}{
-		"Ingress": {
-			mode: exposeTypeIngress,
-		},
-		"LoadBalancer": {
-			mode: exposeTypeLoadBalancer,
-		},
-		"ClusterIP": {
-			mode: exposeTypeClusterIP,
-		},
-		"invalid": {
-			mode:         exposeType("hi"),
-			errorOccurs:  true,
-			errorMessage: "exposeMode hi is not valid",
-		},
-	}
-
-	for name, c := range tc {
-		t.Run(name, func(t *testing.T) {
-			err := s.validateExposeMode(c.mode)
-			if c.errorOccurs {
-				require.Error(t, err)
-				require.Equal(t, c.errorMessage, err.Error())
-			} else {
-				require.NoError(t, err)
 			}
 		})
 	}
@@ -664,11 +683,14 @@ func (f *fakeRestClient) Get(name string, _ *metav1.GetOptions, into runtime.Obj
 	return json.Unmarshal(body, into)
 }
 
-func (f *fakeRestClient) List(listOpt *metav1.ListOptions, into runtime.Object) error {
+func (f *fakeRestClient) List(_ *metav1.ListOptions, _ runtime.Object) error {
 	return nil
 }
 
-func (f *fakeRestClient) Watch(listOpt *metav1.ListOptions) (watch.Interface, error) {
+func (f *fakeRestClient) Watch(_ *metav1.ListOptions) (watch.Interface, error) {
+	if f.fakeWatcher == nil {
+		return nil, fmt.Errorf("no watcher")
+	}
 	return f.fakeWatcher, nil
 }
 

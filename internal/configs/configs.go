@@ -24,8 +24,11 @@ import (
 
 // Initiate-related channel
 var (
-	Initiated = false
-	InitCh    = make(chan struct{}, 1)
+	ControllerInitiated = false
+	ControllerInitCh    = make(chan struct{}, 1)
+
+	BlockerInitiated = false
+	BlockerInitCh    = make(chan struct{}, 1)
 )
 
 type cfgType int

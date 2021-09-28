@@ -35,10 +35,10 @@ func ApplyBlockerConfigChange(cm *corev1.ConfigMap) error {
 	})
 
 	// Init
-	if !Initiated {
-		Initiated = true
-		if len(InitCh) < cap(InitCh) {
-			InitCh <- struct{}{}
+	if !BlockerInitiated {
+		BlockerInitiated = true
+		if len(BlockerInitCh) < cap(BlockerInitCh) {
+			BlockerInitCh <- struct{}{}
 		}
 	}
 
