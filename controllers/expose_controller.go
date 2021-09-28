@@ -138,7 +138,7 @@ func (e *exposeController) updateExternalURL(hostname string) {
 }
 
 type exposeReconciler interface {
-	reconcile(object runtime.Object) error
+	reconcile(object runtime.Object, mode exposeType) error
 
 	getClient() utils.RestClient
 	getResourceName() string
@@ -216,9 +216,31 @@ func (e *exposeController) watchResource(rscUpdateCh chan runtime.Object, cfgUpd
 			continue
 		}
 
-		if err := reconciler.reconcile(lastResource); err != nil {
+		// Get expose mode
+		exposeMode := exposeType(configs.ExposeMode)
+		if exposeMode == "" {
+			exposeMode = exposeTypeIngress
+		}
+
+		if err := e.validateExposeMode(exposeMode); err != nil {
+			e.log.Error(err, "")
+			continue
+		}
+
+		// Reconcile svc & ingress
+		if err := reconciler.reconcile(lastResource, exposeMode); err != nil {
 			e.log.Error(err, "")
 		}
+	}
+}
+
+func (e *exposeController) validateExposeMode(mode exposeType) error {
+	switch mode {
+	case exposeTypeClusterIP, exposeTypeLoadBalancer, exposeTypeIngress:
+		// These are valid values
+		return nil
+	default:
+		return fmt.Errorf("exposeMode %s is not valid", mode)
 	}
 }
 
@@ -244,19 +266,19 @@ func (i *exposeIngressReconciler) getRefObject() runtime.Object {
 	return i.obj
 }
 
-func (i *exposeIngressReconciler) reconcile(obj runtime.Object) error {
+func (i *exposeIngressReconciler) reconcile(obj runtime.Object, exposeMode exposeType) error {
 	ing, ok := obj.(*networkingv1beta1.Ingress)
 	if !ok {
 		return fmt.Errorf("obj is not an Ingress")
 	}
 
-	i.log.Info(fmt.Sprintf("Reconciling ingress %s", ing.Name))
+	i.log.Info(fmt.Sprintf("Reconciling ingress %s, desired mode: %s", ing.Name, exposeMode))
 	if len(ing.Spec.Rules) == 0 {
 		return fmt.Errorf("rules for ingress are not set")
 	}
 
 	defer func() {
-		if configs.ExposeMode == string(exposeTypeIngress) || configs.ExposeMode == "" {
+		if exposeMode == exposeTypeIngress {
 			i.hostUpdateCh <- ing.Spec.Rules[0].Host
 		}
 		if err := i.client.Update(ing, &metav1.UpdateOptions{}); err != nil {
@@ -303,28 +325,19 @@ func (s *exposeServiceReconciler) getRefObject() runtime.Object {
 	return s.obj
 }
 
-func (s *exposeServiceReconciler) reconcile(obj runtime.Object) error {
+func (s *exposeServiceReconciler) reconcile(obj runtime.Object, exposeMode exposeType) error {
 	svc, ok := obj.(*corev1.Service)
 	if !ok {
 		return fmt.Errorf("svc is not a Service")
 	}
 
-	s.log.Info(fmt.Sprintf("Reconciling service %s", svc.Name))
-	defer func() {
+	s.log.Info(fmt.Sprintf("Reconciling service %s, desired mode: %s", svc.Name, exposeMode))
+
+	defer func(svc *corev1.Service) {
 		if err := s.client.Update(svc, &metav1.UpdateOptions{}); err != nil {
 			s.log.Error(err, "")
 		}
-	}()
-
-	exposeMode := exposeType(configs.ExposeMode)
-	if exposeMode == "" {
-		exposeMode = exposeTypeIngress
-	}
-
-	// Verify exposeMode
-	if err := s.validateExposeMode(exposeMode); err != nil {
-		return err
-	}
+	}(svc)
 
 	// Configure Service properly
 	s.configureService(exposeMode, svc)
@@ -342,16 +355,6 @@ func (s *exposeServiceReconciler) reconcile(obj runtime.Object) error {
 	s.hostUpdateCh <- externalHost
 
 	return nil
-}
-
-func (s *exposeServiceReconciler) validateExposeMode(mode exposeType) error {
-	switch mode {
-	case exposeTypeClusterIP, exposeTypeLoadBalancer, exposeTypeIngress:
-		// These are valid values
-		return nil
-	default:
-		return fmt.Errorf("exposeMode %s is not valid", mode)
-	}
 }
 
 func (s *exposeServiceReconciler) configureService(mode exposeType, svc *corev1.Service) {

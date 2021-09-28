@@ -122,15 +122,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Start garbage collector
-	gc, err := collector.New(mgr.GetClient())
-	if err != nil {
-		setupLog.Error(err, "error initializing garbage collector")
-		os.Exit(1)
-	}
-	go gc.Start()
-
 	// Config Controller
+	// Initiate first, before any other components start
 	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), Handlers: map[string]configs.Handler{}}
 	go cfgCtrl.Start()
 	cfgCtrl.Add(configs.ConfigMapNameCICDConfig, configs.ApplyControllerConfigChange)
@@ -138,7 +131,16 @@ func main() {
 	cfgCtrl.Add(configs.ConfigMapNamePluginConfig, configs.ApplyPluginConfigChange)
 	cfgCtrl.Add(configs.ConfigMapNameBlockerConfig, configs.ApplyBlockerConfigChange)
 	// Wait for initial config reconcile
-	<-configs.InitCh
+	<-configs.ControllerInitCh
+	<-configs.BlockerInitCh
+
+	// Start garbage collector
+	gc, err := collector.New(mgr.GetClient())
+	if err != nil {
+		setupLog.Error(err, "error initializing garbage collector")
+		os.Exit(1)
+	}
+	go gc.Start()
 
 	// Controllers
 	if err = (&controllers.IntegrationConfigReconciler{

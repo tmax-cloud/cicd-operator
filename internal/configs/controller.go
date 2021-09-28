@@ -43,7 +43,7 @@ func ApplyControllerConfigChange(cm *corev1.ConfigMap) error {
 		"maxPipelineRun":            {Type: cfgTypeInt, IntVal: &MaxPipelineRun, IntDefault: 5},                                // Max PipelineRun count
 		"enableMail":                {Type: cfgTypeBool, BoolVal: &EnableMail, BoolDefault: false},                             // Enable Mail
 		"externalHostName":          {Type: cfgTypeString, StringVal: &ExternalHostName},                                       // External Hostname
-		"exposeMode":                {Type: cfgTypeString, StringVal: &ExposeMode},                                             // Expose mode
+		"exposeMode":                {Type: cfgTypeString, StringVal: &ExposeMode, StringDefault: "Ingress"},                   // Expose mode
 		"reportRedirectUriTemplate": {Type: cfgTypeString, StringVal: &ReportRedirectURITemplate},                              // RedirectUriTemplate for report access
 		"smtpHost":                  {Type: cfgTypeString, StringVal: &SMTPHost},                                               // SMTP Host
 		"smtpUserSecret":            {Type: cfgTypeString, StringVal: &SMTPUserSecret},                                         // SMTP Cred
@@ -60,10 +60,10 @@ func ApplyControllerConfigChange(cm *corev1.ConfigMap) error {
 	}
 
 	// Init
-	if !Initiated {
-		Initiated = true
-		if len(InitCh) < cap(InitCh) {
-			InitCh <- struct{}{}
+	if !ControllerInitiated {
+		ControllerInitiated = true
+		if len(ControllerInitCh) < cap(ControllerInitCh) {
+			ControllerInitCh <- struct{}{}
 		}
 	}
 

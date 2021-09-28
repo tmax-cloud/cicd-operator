@@ -19,16 +19,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"os"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/controllers"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/logrotate"
 	"github.com/tmax-cloud/cicd-operator/pkg/blocker"
-	"io"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -93,7 +94,7 @@ func main() {
 	go cfgCtrl.Start()
 	cfgCtrl.Add(configs.ConfigMapNameBlockerConfig, configs.ApplyBlockerConfigChange)
 	// Wait for initial config reconcile
-	<-configs.InitCh
+	<-configs.BlockerInitCh
 
 	// Blocker
 	b := blocker.New(mgr.GetClient())
