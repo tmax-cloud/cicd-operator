@@ -65,8 +65,6 @@ rules:
   - watch
 - apiGroups:
   - apiregistration.k8s.io
-  resourceNames:
-  - v1.cicdapi.tmax.io
   resources:
   - apiservices
   verbs:

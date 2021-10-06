@@ -20,12 +20,11 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	authorization "k8s.io/client-go/kubernetes/typed/authorization/v1"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -46,33 +45,6 @@ func Namespace() (string, error) {
 		ns = "cicd-system"
 	}
 	return ns, nil
-}
-
-// AuthClient is a K8s client for Authorization
-func AuthClient() (*authorization.AuthorizationV1Client, error) {
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return nil, err
-	}
-	c, err := authorization.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
-}
-
-// Client is a k8s client
-func Client(scheme *runtime.Scheme) (client.Client, error) {
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := client.New(cfg, client.Options{Scheme: scheme})
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
 }
 
 // CreateOrPatchObject patches the object if it exists, and creates one if not

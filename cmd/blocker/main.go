@@ -90,7 +90,7 @@ func main() {
 	}
 
 	// Config Controller
-	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), Handlers: map[string]configs.Handler{}}
+	cfgCtrl := &controllers.ConfigReconciler{Config: mgr.GetConfig(), Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), Handlers: map[string]configs.Handler{}}
 	go cfgCtrl.Start()
 	cfgCtrl.Add(configs.ConfigMapNameBlockerConfig, configs.ApplyBlockerConfigChange)
 	// Wait for initial config reconcile

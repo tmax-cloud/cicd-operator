@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/go-logr/logr"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
@@ -26,14 +28,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"k8s.io/client-go/rest"
 )
 
 // ConfigReconciler reconciles a Approval object
 type ConfigReconciler struct {
 	client typedcorev1.ConfigMapInterface
 	Log    logr.Logger
+	Config *rest.Config
 
 	lastResourceVersions map[string]string
 	Handlers             map[string]configs.Handler
@@ -42,7 +44,7 @@ type ConfigReconciler struct {
 // Start starts the config map reconciler
 func (r *ConfigReconciler) Start() {
 	var err error
-	r.client, err = newConfigMapClient()
+	r.client, err = newConfigMapClient(r.Config)
 	if err != nil {
 		r.Log.Error(err, "")
 		os.Exit(1)
@@ -102,12 +104,7 @@ func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 	return nil
 }
 
-func newConfigMapClient() (typedcorev1.ConfigMapInterface, error) {
-	conf, err := config.GetConfig()
-	if err != nil {
-		return nil, err
-	}
-
+func newConfigMapClient(conf *rest.Config) (typedcorev1.ConfigMapInterface, error) {
 	clientSet, err := kubernetes.NewForConfig(conf)
 	if err != nil {
 		return nil, err

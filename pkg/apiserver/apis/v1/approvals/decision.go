@@ -85,7 +85,6 @@ func (h *handler) updateDecision(w http.ResponseWriter, req *http.Request, decis
 		_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, no Approval %s/%s is found", reqID, ns, approvalName))
 		return
 	}
-	approval.SetGroupVersionKind(cicdv1.GroupVersion.WithKind("Approval"))
 	original := approval.DeepCopy()
 
 	// If Approval is already in approved/rejected status, respond with error
