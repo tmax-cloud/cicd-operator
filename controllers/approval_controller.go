@@ -39,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -123,49 +122,54 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Create Role/RoleBinding if not exists
 	if err := r.createOrUpdateRole(instance); err != nil {
 		log.Error(err, "updating roles")
-		r.patchStatus(instance, original, err.Error())
+		r.setError(instance, err.Error())
 		return ctrl.Result{}, nil
 	}
 	if err := r.createOrUpdateRoleBinding(instance); err != nil {
 		log.Error(err, "updating rolebindings")
-		r.patchStatus(instance, original, err.Error())
+		r.setError(instance, err.Error())
 		return ctrl.Result{}, nil
 	}
 
 	// Process mails
-	if err := r.processMail(instance, sentReqMailCond, sentResMailCond); err != nil {
-		log.Error(err, "")
-		r.patchStatus(instance, original, err.Error())
-		return ctrl.Result{}, nil
-	}
-
+	r.processMail(instance, sentReqMailCond, sentResMailCond)
 	return ctrl.Result{}, nil
 }
 
-func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, resCond *status.Condition) error {
+func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, resCond *status.Condition) {
+	if instance.Spec.SkipSendMail {
+		return
+	}
+
 	// Set SentRequestMail
-	if !instance.Spec.SkipSendMail && (reqCond == nil || reqCond.Status == "" || reqCond.Status == corev1.ConditionUnknown) {
+	if reqCond == nil || reqCond.Status == "" || reqCond.Status == corev1.ConditionUnknown {
 		title, content, err := r.generateMail(instance, configMapKeyRequestTitle, configMapKeyRequestContent)
 		if err != nil {
-			return err
+			reqCond.Status = corev1.ConditionFalse
+			reqCond.Reason = "EmailGenerateError"
+			reqCond.Message = err.Error()
+		} else {
+			r.sendMail(utils.ParseEmailFromUsers(instance.Spec.Users), title, content, reqCond)
 		}
-		r.sendMail(utils.ParseEmailFromUsers(instance.Spec.Users), title, content, reqCond)
 	}
 
 	// Set SentResultMail - only if is decided
-	if !instance.Spec.SkipSendMail && (instance.Status.Result == cicdv1.ApprovalResultApproved || instance.Status.Result == cicdv1.ApprovalResultRejected) {
-		if resCond == nil || resCond.Status == corev1.ConditionUnknown {
-			title, content, err := r.generateMail(instance, configMapKeyResultTitle, configMapKeyResultContent)
-			if err != nil {
-				return err
-			}
-			if instance.Spec.Sender != nil {
-				r.sendMail([]string{instance.Spec.Sender.Email}, title, content, resCond)
-			}
+	if instance.Status.Result != cicdv1.ApprovalResultApproved && instance.Status.Result != cicdv1.ApprovalResultRejected {
+		return
+	}
+	if instance.Spec.Sender == nil {
+		return
+	}
+	if resCond == nil || resCond.Status == corev1.ConditionUnknown {
+		title, content, err := r.generateMail(instance, configMapKeyResultTitle, configMapKeyResultContent)
+		if err != nil {
+			resCond.Status = corev1.ConditionFalse
+			resCond.Reason = "EmailGenerateError"
+			resCond.Message = err.Error()
+		} else {
+			r.sendMail([]string{instance.Spec.Sender.Email}, title, content, resCond)
 		}
 	}
-
-	return nil
 }
 
 func (r *ApprovalReconciler) roleAndBindingName(approvalName string) string {
@@ -173,23 +177,22 @@ func (r *ApprovalReconciler) roleAndBindingName(approvalName string) string {
 }
 
 func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error {
-	notExist := false
 	role := &rbac.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        r.roleAndBindingName(approval.Name),
-			Namespace:   approval.Namespace,
-			Labels:      r.labelsForRoleAndBinding(approval),
-			Annotations: r.annotationsForRoleAndBinding(approval),
+			Name:      r.roleAndBindingName(approval.Name),
+			Namespace: approval.Namespace,
 		},
 	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: role.Name, Namespace: role.Namespace}, role); err != nil {
-		if errors.IsNotFound(err) {
-			notExist = true
-		} else {
+		if !errors.IsNotFound(err) {
 			return err
 		}
 	}
 	original := role.DeepCopy()
+
+	// Set labels, annotations
+	role.Labels = r.labelsForRoleAndBinding(approval)
+	role.Annotations = r.annotationsForRoleAndBinding(approval)
 
 	// Set rules
 	role.Rules = []rbac.PolicyRule{{
@@ -199,33 +202,14 @@ func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error
 		Verbs:         []string{"update"},
 	}}
 
-	if err := controllerutil.SetOwnerReference(approval, role, r.Scheme); err != nil {
-		return err
-	}
-
-	if notExist {
-		// Create
-		if err := r.Client.Create(context.Background(), role); err != nil {
-			return err
-		}
-	} else {
-		// Update
-		p := client.MergeFrom(original)
-		if err := r.Client.Patch(context.Background(), role, p); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return utils.CreateOrPatchObject(role, original, approval, r.Client, r.Scheme)
 }
 
 func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval) error {
 	binding := &rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        r.roleAndBindingName(approval.Name),
-			Namespace:   approval.Namespace,
-			Labels:      r.labelsForRoleAndBinding(approval),
-			Annotations: r.annotationsForRoleAndBinding(approval),
+			Name:      r.roleAndBindingName(approval.Name),
+			Namespace: approval.Namespace,
 		},
 	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}, binding); err != nil {
@@ -234,6 +218,10 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 		}
 	}
 	original := binding.DeepCopy()
+
+	// Set labels, annotations
+	binding.Labels = r.labelsForRoleAndBinding(approval)
+	binding.Annotations = r.annotationsForRoleAndBinding(approval)
 
 	// Set bindings
 	binding.RoleRef = rbac.RoleRef{
@@ -284,11 +272,7 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 		})
 	}
 
-	if err := utils.CreateOrPatchObject(binding, original, approval, r.Client, r.Scheme); err != nil {
-		return err
-	}
-
-	return nil
+	return utils.CreateOrPatchObject(binding, original, approval, r.Client, r.Scheme)
 }
 
 func (r *ApprovalReconciler) labelsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
@@ -359,13 +343,9 @@ func (r *ApprovalReconciler) sendMail(users []string, title, content string, con
 	cond.Message = ""
 }
 
-func (r *ApprovalReconciler) patchStatus(instance *cicdv1.Approval, original *cicdv1.Approval, message string) {
+func (r *ApprovalReconciler) setError(instance *cicdv1.Approval, message string) {
 	instance.Status.Result = cicdv1.ApprovalResultError
 	instance.Status.Reason = message
-	p := client.MergeFrom(original)
-	if err := r.Client.Status().Patch(context.Background(), instance, p); err != nil {
-		r.Log.Error(err, "")
-	}
 }
 
 // SetupWithManager sets ApprovalReconciler to the manager
