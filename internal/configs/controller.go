@@ -24,10 +24,9 @@ import (
 
 // Configs to be configured by command line arguments
 
-// Names of config maps
+// ConfigMapNameCICDConfig is a name of the controller's configmap name
 const (
-	ConfigMapNameCICDConfig    = "cicd-config"
-	ConfigMapNameEmailTemplate = "email-template"
+	ConfigMapNameCICDConfig = "cicd-config"
 )
 
 var controllerConfigUpdateChan []chan struct{}
@@ -77,17 +76,6 @@ func ApplyControllerConfigChange(cm *corev1.ConfigMap) error {
 	return nil
 }
 
-// ApplyEmailTemplateConfigChange is a configmap handler for email-template configmap
-func ApplyEmailTemplateConfigChange(cm *corev1.ConfigMap) error {
-	getVars(cm.Data, map[string]operatorConfig{
-		"request-title":   {Type: cfgTypeString, StringVal: &ApprovalRequestMailTitle, StringDefault: "[CI/CD] Approval '{{.Name}}' is requested to you"},
-		"request-content": {Type: cfgTypeString, StringVal: &ApprovalRequestMailContent, StringDefault: "{{.Name}}"},
-		"result-title":    {Type: cfgTypeString, StringVal: &ApprovalResultMailTitle, StringDefault: "[CI/CD] Approval is {{.Status.Result}}"},
-		"result-content":  {Type: cfgTypeString, StringVal: &ApprovalResultMailContent, StringDefault: "{{.Name}}"},
-	})
-	return nil
-}
-
 // Configs for manager
 var (
 	// MaxPipelineRun is the number of PipelineRuns that can run simultaneously
@@ -118,16 +106,6 @@ var (
 
 	// SMTPUserSecret is a credential secret for the SMTP server (should be basic type)
 	SMTPUserSecret string
-
-	// ApprovalRequestMailTitle is a title for the approval request mail
-	ApprovalRequestMailTitle string
-	// ApprovalRequestMailContent is a content of the approval request mail
-	ApprovalRequestMailContent string
-
-	// ApprovalResultMailTitle is a title for the approval result mail
-	ApprovalResultMailTitle string
-	// ApprovalResultMailContent is a content of the approval result mail
-	ApprovalResultMailContent string
 
 	// ExposeMode is a mode to be used for exposing the webhook server (Ingress/LoadBalancer/ClusterIP)
 	ExposeMode string

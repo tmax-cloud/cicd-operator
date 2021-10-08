@@ -20,13 +20,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"html/template"
+	"os"
+	"path"
+	"strings"
+
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
-	"html/template"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
 )
 
 // ApprovalReconciler reconciles a Approval object
@@ -55,6 +58,13 @@ const (
 	approvalSubReject  = "reject"
 
 	serviceAccountPrefix = "system:serviceaccount:"
+
+	configMapPathEnv           = "EMAIL_TEMPLATE_PATH"
+	configMapPathDefault       = "/templates/email"
+	configMapKeyRequestTitle   = "request-title"
+	configMapKeyRequestContent = "request-content"
+	configMapKeyResultTitle    = "result-title"
+	configMapKeyResultContent  = "result-content"
 )
 
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=approvals,verbs=get;list;watch;create;update;patch;delete
@@ -134,7 +144,7 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, resCond *status.Condition) error {
 	// Set SentRequestMail
 	if !instance.Spec.SkipSendMail && (reqCond == nil || reqCond.Status == "" || reqCond.Status == corev1.ConditionUnknown) {
-		title, content, err := r.generateMail(instance, &configs.ApprovalRequestMailTitle, &configs.ApprovalRequestMailContent)
+		title, content, err := r.generateMail(instance, configMapKeyRequestTitle, configMapKeyRequestContent)
 		if err != nil {
 			return err
 		}
@@ -144,7 +154,7 @@ func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, res
 	// Set SentResultMail - only if is decided
 	if !instance.Spec.SkipSendMail && (instance.Status.Result == cicdv1.ApprovalResultApproved || instance.Status.Result == cicdv1.ApprovalResultRejected) {
 		if resCond == nil || resCond.Status == corev1.ConditionUnknown {
-			title, content, err := r.generateMail(instance, &configs.ApprovalResultMailTitle, &configs.ApprovalResultMailContent)
+			title, content, err := r.generateMail(instance, configMapKeyResultTitle, configMapKeyResultContent)
 			if err != nil {
 				return err
 			}
@@ -157,7 +167,7 @@ func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, res
 	return nil
 }
 
-func roleAndBindingName(approvalName string) string {
+func (r *ApprovalReconciler) roleAndBindingName(approvalName string) string {
 	return "cicd-approval-" + approvalName
 }
 
@@ -165,10 +175,10 @@ func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error
 	notExist := false
 	role := &rbac.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        roleAndBindingName(approval.Name),
+			Name:        r.roleAndBindingName(approval.Name),
 			Namespace:   approval.Namespace,
-			Labels:      labelsForRoleAndBinding(approval),
-			Annotations: annotationsForRoleAndBinding(approval),
+			Labels:      r.labelsForRoleAndBinding(approval),
+			Annotations: r.annotationsForRoleAndBinding(approval),
 		},
 	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: role.Name, Namespace: role.Namespace}, role); err != nil {
@@ -211,10 +221,10 @@ func (r *ApprovalReconciler) createOrUpdateRole(approval *cicdv1.Approval) error
 func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval) error {
 	binding := &rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        roleAndBindingName(approval.Name),
+			Name:        r.roleAndBindingName(approval.Name),
 			Namespace:   approval.Namespace,
-			Labels:      labelsForRoleAndBinding(approval),
-			Annotations: annotationsForRoleAndBinding(approval),
+			Labels:      r.labelsForRoleAndBinding(approval),
+			Annotations: r.annotationsForRoleAndBinding(approval),
 		},
 	}
 	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}, binding); err != nil {
@@ -228,7 +238,7 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 	binding.RoleRef = rbac.RoleRef{
 		APIGroup: rbac.GroupName,
 		Kind:     "Role",
-		Name:     roleAndBindingName(approval.Name),
+		Name:     r.roleAndBindingName(approval.Name),
 	}
 
 	// Set users in role bindings
@@ -283,7 +293,7 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 	return nil
 }
 
-func labelsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
+func (r *ApprovalReconciler) labelsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
 	result := map[string]string{
 		cicdv1.JobLabelPrefix + "approval":       approval.Name,
 		cicdv1.JobLabelPrefix + "integrationJob": approval.Spec.IntegrationJob,
@@ -292,7 +302,7 @@ func labelsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
 	return result
 }
 
-func annotationsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
+func (r *ApprovalReconciler) annotationsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
 	result := map[string]string{}
 	if approval.Spec.Sender != nil {
 		result[cicdv1.JobLabelPrefix+"sender"] = approval.Spec.Sender.Name
@@ -300,17 +310,19 @@ func annotationsForRoleAndBinding(approval *cicdv1.Approval) map[string]string {
 	return result
 }
 
-func (r *ApprovalReconciler) generateMail(instance *cicdv1.Approval, titleTemplateCfg, contentTemplateCfg *string) (string, string, error) {
+func (r *ApprovalReconciler) generateMail(instance *cicdv1.Approval, titleKey, contentKey string) (string, string, error) {
+	templatePath := os.Getenv(configMapPathEnv)
+	if templatePath == "" {
+		templatePath = configMapPathDefault
+	}
+
 	// Get template
-	var err error
-	titleTemplate := template.New("")
-	titleTemplate, err = titleTemplate.Parse(*titleTemplateCfg)
+	titleTemplate, err := template.ParseFiles(path.Join(templatePath, titleKey))
 	if err != nil {
 		return "", "", err
 	}
 
-	contentTemplate := template.New("")
-	contentTemplate, err = contentTemplate.Parse(*contentTemplateCfg)
+	contentTemplate, err := template.ParseFiles(path.Join(templatePath, contentKey))
 	if err != nil {
 		return "", "", err
 	}

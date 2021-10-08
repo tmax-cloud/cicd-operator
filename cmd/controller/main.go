@@ -127,7 +127,6 @@ func main() {
 	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), Handlers: map[string]configs.Handler{}}
 	go cfgCtrl.Start()
 	cfgCtrl.Add(configs.ConfigMapNameCICDConfig, configs.ApplyControllerConfigChange)
-	cfgCtrl.Add(configs.ConfigMapNameEmailTemplate, configs.ApplyEmailTemplateConfigChange)
 	cfgCtrl.Add(configs.ConfigMapNamePluginConfig, configs.ApplyPluginConfigChange)
 	cfgCtrl.Add(configs.ConfigMapNameBlockerConfig, configs.ApplyBlockerConfigChange)
 	// Wait for initial config reconcile

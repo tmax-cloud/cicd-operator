@@ -20,13 +20,14 @@ package server
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"net/http"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -36,8 +37,8 @@ const (
 
 	paramKeyNamespace  = "namespace"
 	paramKeyConfigName = "configName"
-	paramKeyJobName    = "jobName"
-	paramKeyJobJobName = "jobJobName"
+	paramKeyIJName     = "jobName"
+	paramKeyJobName    = "jobJobName"
 )
 
 var logger = logf.Log.WithName("server")
@@ -68,7 +69,7 @@ func New(c client.Client, cfg *rest.Config) *server {
 	r.Methods(http.MethodPost).Subrouter().Handle(webhookPath, &webhookHandler{k8sClient: c})
 
 	// Add report handler
-	r.Methods(http.MethodGet).Subrouter().Handle(reportPath, &reportHandler{k8sClient: c, clientSet: clientSet})
+	r.Methods(http.MethodGet).Subrouter().Handle(reportPath, &reportHandler{k8sClient: c, podsGetter: clientSet.CoreV1()})
 
 	return &server{
 		k8sClient: c,

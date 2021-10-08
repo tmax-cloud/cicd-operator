@@ -20,26 +20,30 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"html/template"
+	"io"
+	"net/http"
+	"os"
+	"path"
+
 	"github.com/go-logr/logr"
 	"github.com/gorilla/mux"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	"html/template"
-	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"net/http"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 )
 
-var reportPath = fmt.Sprintf("/report/{%s}/{%s}/{%s}", paramKeyNamespace, paramKeyJobName, paramKeyJobJobName)
+var reportPath = fmt.Sprintf("/report/{%s}/{%s}/{%s}", paramKeyNamespace, paramKeyIJName, paramKeyJobName)
 
 const (
-	templateConfigMapName = "report-template"
-	templateConfigMapKey  = "template"
+	templateConfigMapPathEnv     = "REPORT_TEMPLATE_PATH"
+	templateConfigMapPathDefault = "/templates/report"
+	templateConfigMapKey         = "template"
 
 	errorLogNotExist = "log does not exist... maybe the pod does not exist"
 )
@@ -52,8 +56,8 @@ type report struct {
 }
 
 type reportHandler struct {
-	k8sClient client.Client
-	clientSet *kubernetes.Clientset
+	k8sClient  client.Client
+	podsGetter typedcorev1.PodsGetter
 }
 
 func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -62,19 +66,19 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	ns, nsExist := vars[paramKeyNamespace]
-	jobName, jobNameExist := vars[paramKeyJobName]
-	jobJobName, jobJobNameExist := vars[paramKeyJobJobName]
+	ns := vars[paramKeyNamespace]
+	ijName := vars[paramKeyIJName]
+	job := vars[paramKeyJobName]
 
-	if !nsExist || !jobNameExist || !jobJobNameExist {
+	if ns == "" || ijName == "" || job == "" {
 		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, path is not in form of '%s'", reqID, reportPath),
 			fmt.Sprintf("Bad request for path, path: %s", r.RequestURI))
 		return
 	}
 
 	iJob := &cicdv1.IntegrationJob{}
-	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: jobName, Namespace: ns}, iJob); err != nil {
-		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get IntegrationJob %s/%s", reqID, ns, jobName),
+	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: ijName, Namespace: ns}, iJob); err != nil {
+		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get IntegrationJob %s/%s", reqID, ns, ijName),
 			fmt.Sprintf("Bad request for path, path: %s", r.RequestURI))
 		return
 	}
@@ -101,17 +105,11 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get Job Status
-	var jobStatus *cicdv1.JobStatus
-	for _, j := range iJob.Status.Jobs {
-		if j.Name == jobJobName {
-			jobStatus = &j
-			break
-		}
-	}
+	jobStatus := h.getJobStatus(iJob, job)
 	if jobStatus == nil {
 		logAndRespond(w, log, http.StatusBadRequest,
-			fmt.Sprintf("req: %s, there is no job status %s in IntegrationJob %s/%s", reqID, jobJobName, ns, jobName),
-			fmt.Sprintf("Bad request for job, ns: %s, job: %s, jobJob: %s", ns, jobName, jobJobName))
+			fmt.Sprintf("req: %s, there is no job status %s in IntegrationJob %s/%s", reqID, job, ns, ijName),
+			fmt.Sprintf("Bad request for job, ns: %s, job: %s, jobJob: %s", ns, ijName, job))
 		return
 	}
 
@@ -122,27 +120,44 @@ func (h *reportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get template
-	templateStr, err := h.getTemplateString()
-	if err != nil {
-		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot get report template", reqID),
-			"Cannot get report template")
-		return
-	}
-
-	tmpl := template.New("")
-	tmpl, err = tmpl.Parse(templateStr)
+	tmpl, err := h.getTemplate()
 	if err != nil {
 		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot parse report template", reqID),
-			"Cannot parse report template")
+			"Cannot parse report template, err: "+err.Error())
 		return
 	}
 
 	// Publish report
-	if err := tmpl.Execute(w, report{JobName: jobName, JobJobName: jobJobName, JobStatus: jobStatus, Log: podLog}); err != nil {
+	// Maybe template.Execute writes header before returning 400...? so we do NOT call tmpl.Execute(w, ...) directly
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, report{JobName: ijName, JobJobName: job, JobStatus: jobStatus, Log: podLog}); err != nil {
 		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot execute report template", reqID),
-			"Cannot execute report template")
+			"Cannot execute report template, err: "+err.Error())
 		return
 	}
+	if _, err := w.Write(buf.Bytes()); err != nil {
+		logAndRespond(w, log, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot write result", reqID),
+			"Cannot write result, err: "+err.Error())
+		return
+	}
+}
+
+func (h *reportHandler) getJobStatus(ij *cicdv1.IntegrationJob, job string) *cicdv1.JobStatus {
+	for _, j := range ij.Status.Jobs {
+		if j.Name == job {
+			return &j
+		}
+	}
+	return nil
+}
+
+func (h *reportHandler) getTemplate() (*template.Template, error) {
+	templatePath := os.Getenv(templateConfigMapPathEnv)
+	if templatePath == "" {
+		templatePath = templateConfigMapPathDefault
+	}
+
+	return template.ParseFiles(path.Join(templatePath, templateConfigMapKey))
 }
 
 // +kubebuilder:rbac:groups="",resources=pods;pods/log,verbs=get;list;watch
@@ -172,7 +187,7 @@ func (h *reportHandler) getPodLogs(podName, namespace string, log logr.Logger) (
 }
 
 func (h *reportHandler) getPodLog(podName, namespace, container string) (string, error) {
-	podReq := h.clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{Container: container})
+	podReq := h.podsGetter.Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{Container: container})
 	podLogs, err := podReq.Stream(context.Background())
 	if err != nil {
 		return "", err
@@ -188,22 +203,4 @@ func (h *reportHandler) getPodLog(podName, namespace, container string) (string,
 	}
 
 	return buf.String(), nil
-}
-
-func (h *reportHandler) getTemplateString() (string, error) {
-	ns, err := utils.Namespace()
-	if err != nil {
-		return "", err
-	}
-	cm := &corev1.ConfigMap{}
-	if err := h.k8sClient.Get(context.Background(), types.NamespacedName{Name: templateConfigMapName, Namespace: ns}, cm); err != nil {
-		return "", err
-	}
-
-	templateString, templateFound := cm.Data[templateConfigMapKey]
-	if !templateFound {
-		return "", err
-	}
-
-	return templateString, nil
 }
