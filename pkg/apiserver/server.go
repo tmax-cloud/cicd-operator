@@ -19,12 +19,15 @@ package apiserver
 import (
 	"context"
 	"fmt"
-	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
-	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	"k8s.io/apimachinery/pkg/runtime"
 	"net/http"
 	"os"
 	"path"
+
+	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
+	"github.com/tmax-cloud/cicd-operator/internal/utils"
+	authorization "k8s.io/client-go/kubernetes/typed/authorization/v1"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,46 +49,55 @@ type Server interface {
 type server struct {
 	wrapper wrapper.RouterWrapper
 	client  client.Client
+	authCli *authorization.AuthorizationV1Client
+	cache   cache.Cache
 
 	apisHandler apiserver.APIHandler
 }
 
-// +kubebuilder:rbac:groups=apiregistration.k8s.io,resources=apiservices,resourceNames=v1.cicdapi.tmax.io,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apiregistration.k8s.io,resources=apiservices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,namespace=kube-system,resourceNames=extension-apiserver-authentication,verbs=get;list;watch
 
 // New is a constructor of server
-func New(scheme *runtime.Scheme) *server {
+func New(cli client.Client, cfg *rest.Config, cache cache.Cache) *server {
+	var err error
 	srv := &server{}
 	srv.wrapper = wrapper.New("/", nil, srv.rootHandler)
 	srv.wrapper.SetRouter(mux.NewRouter())
 	srv.wrapper.Router().HandleFunc("/", srv.rootHandler)
-
-	// Set client
-	cli, err := utils.Client(scheme)
+	srv.client = cli
+	srv.cache = cache
+	srv.authCli, err = authorization.NewForConfig(cfg)
 	if err != nil {
-		log.Error(err, "cannot get client")
+		log.Error(err, "cannot get authCli")
 		os.Exit(1)
 	}
-	srv.client = cli
 
 	// Set apisHandler
-	apisHandler, err := apis.NewHandler(srv.wrapper, srv.client, log)
+	apisHandler, err := apis.NewHandler(srv.wrapper, srv.client, srv.authCli, log)
 	if err != nil {
 		log.Error(err, "cannot add apis")
 		os.Exit(1)
 	}
 	srv.apisHandler = apisHandler
 
-	if err := createCert(context.Background(), srv.client); err != nil {
-		log.Error(err, "cannot create cert")
-		os.Exit(1)
-	}
-
 	return srv
 }
 
 // Start starts the server
 func (s *server) Start() {
+	// Wait for the cache init
+	if cacheInit := s.cache.WaitForCacheSync(nil); !cacheInit {
+		log.Error(fmt.Errorf("cannot wait for cache init"), "")
+		os.Exit(1)
+	}
+
+	// Create cert
+	if err := createCert(context.Background(), s.client); err != nil {
+		log.Error(err, "cannot create cert")
+		os.Exit(1)
+	}
+
 	addr := "0.0.0.0:34335"
 	log.Info(fmt.Sprintf("API aggregation server is running on %s", addr))
 
@@ -96,7 +108,7 @@ func (s *server) Start() {
 	}
 
 	httpServer := &http.Server{Addr: addr, Handler: s.wrapper.Router(), TLSConfig: cfg}
-	if err := httpServer.ListenAndServeTLS(path.Join(certDir, "tls.crt"), path.Join(certDir, "tls.key")); err != nil {
+	if err := httpServer.ListenAndServeTLS(path.Join(certDir, "tls.crt"), path.Join(certDir, "tls.key")); err != nil && err != http.ErrServerClosed {
 		log.Error(err, "cannot launch server")
 		os.Exit(1)
 	}
@@ -110,6 +122,7 @@ func (s *server) rootHandler(w http.ResponseWriter, _ *http.Request) {
 	_ = utils.RespondJSON(w, paths)
 }
 
+// addPath adds all the leaf API endpoints
 func addPath(paths *[]string, w wrapper.RouterWrapper) {
 	if w.Handler() != nil {
 		*paths = append(*paths, w.FullPath())

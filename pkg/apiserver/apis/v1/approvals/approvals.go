@@ -18,11 +18,12 @@ package approvals
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/go-logr/logr"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
-	"github.com/tmax-cloud/cicd-operator/internal/utils"
-	"net/http"
+	authorization "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/tmax-cloud/cicd-operator/internal/wrapper"
@@ -43,15 +44,11 @@ type handler struct {
 }
 
 // NewHandler instantiates a new approvals api handler
-func NewHandler(parent wrapper.RouterWrapper, cli client.Client, logger logr.Logger) (apiserver.APIHandler, error) {
+func NewHandler(parent wrapper.RouterWrapper, cli client.Client, authCli *authorization.AuthorizationV1Client, logger logr.Logger) (apiserver.APIHandler, error) {
 	handler := &handler{k8sClient: cli, log: logger}
 
 	// Authorizer
-	authClient, err := utils.AuthClient()
-	if err != nil {
-		return nil, err
-	}
-	handler.authorizer = apiserver.NewAuthorizer(authClient, apiserver.APIGroup, APIVersion, "update")
+	handler.authorizer = apiserver.NewAuthorizer(authCli, apiserver.APIGroup, APIVersion, "update")
 
 	// /approvals/<approval>
 	approvalWrapper := wrapper.New(fmt.Sprintf("/%s/{%s}", cicdv1.ApprovalKind, approvalNameParamKey), nil, nil)

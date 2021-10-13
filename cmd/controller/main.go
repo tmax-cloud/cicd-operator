@@ -124,7 +124,7 @@ func main() {
 
 	// Config Controller
 	// Initiate first, before any other components start
-	cfgCtrl := &controllers.ConfigReconciler{Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), Handlers: map[string]configs.Handler{}}
+	cfgCtrl := &controllers.ConfigReconciler{Config: mgr.GetConfig(), Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), Handlers: map[string]configs.Handler{}}
 	go cfgCtrl.Start()
 	cfgCtrl.Add(configs.ConfigMapNameCICDConfig, configs.ApplyControllerConfigChange)
 	cfgCtrl.Add(configs.ConfigMapNameEmailTemplate, configs.ApplyEmailTemplateConfigChange)
@@ -225,7 +225,7 @@ func main() {
 	go srv.Start()
 
 	// Start API aggregation server
-	apiServer := apiserver.New(mgr.GetScheme())
+	apiServer := apiserver.New(mgr.GetClient(), mgr.GetConfig(), mgr.GetCache())
 	go apiServer.Start()
 
 	setupLog.Info("starting manager")

@@ -26,7 +26,7 @@ import (
 
 // RouterWrapper is an interface for wrapper
 type RouterWrapper interface {
-	Add(child *wrapper) error
+	Add(child RouterWrapper) error
 	FullPath() string
 
 	Router() *mux.Router
@@ -34,7 +34,12 @@ type RouterWrapper interface {
 
 	Children() []RouterWrapper
 
+	Parent() RouterWrapper
+	SetParent(RouterWrapper)
+
 	Handler() http.HandlerFunc
+	SubPath() string
+	Methods() []string
 }
 
 // wrapper wraps router with tree structure
@@ -73,36 +78,57 @@ func (w *wrapper) Children() []RouterWrapper {
 	return w.children
 }
 
+// Parent returns its parent
+func (w *wrapper) Parent() RouterWrapper {
+	return w.parent
+}
+
+// SetParent sets parent
+func (w *wrapper) SetParent(parent RouterWrapper) {
+	w.parent = parent
+}
+
+// Handler returns its handler
 func (w *wrapper) Handler() http.HandlerFunc {
 	return w.handler
 }
 
+// SubPath returns its subPath
+func (w *wrapper) SubPath() string {
+	return w.subPath
+}
+
+// Methods returns its methods
+func (w *wrapper) Methods() []string {
+	return w.methods
+}
+
 // Add adds child as a child (child node of a tree) of w
-func (w *wrapper) Add(child *wrapper) error {
+func (w *wrapper) Add(child RouterWrapper) error {
 	if child == nil {
 		return fmt.Errorf("child is nil")
 	}
 
-	if child.parent != nil {
+	if child.Parent() != nil {
 		return fmt.Errorf("child already has parent")
 	}
 
-	if child.subPath == "" || child.subPath == "/" || child.subPath[0] != '/' {
+	if child.SubPath() == "" || child.SubPath() == "/" || child.SubPath()[0] != '/' {
 		return fmt.Errorf("child subpath is not valid")
 	}
 
-	child.parent = w
+	child.SetParent(w)
 	w.children = append(w.children, child)
 
-	child.router = w.router.PathPrefix(child.subPath).Subrouter()
+	child.SetRouter(w.router.PathPrefix(child.SubPath()).Subrouter())
 
-	if child.handler != nil {
-		if len(child.methods) > 0 {
-			child.router.Methods(child.methods...).Subrouter().HandleFunc("/", child.handler)
-			w.router.Methods(child.methods...).Subrouter().HandleFunc(child.subPath, child.handler)
+	if child.Handler() != nil {
+		if len(child.Methods()) > 0 {
+			child.Router().Methods(child.Methods()...).Subrouter().HandleFunc("/", child.Handler())
+			w.router.Methods(child.Methods()...).Subrouter().HandleFunc(child.SubPath(), child.Handler())
 		} else {
-			child.router.HandleFunc("/", child.handler)
-			w.router.HandleFunc(child.subPath, child.handler)
+			child.Router().HandleFunc("/", child.Handler())
+			w.router.HandleFunc(child.SubPath(), child.Handler())
 		}
 	}
 

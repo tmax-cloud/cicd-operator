@@ -18,11 +18,13 @@ package apis
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/go-logr/logr"
 	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	v1 "github.com/tmax-cloud/cicd-operator/pkg/apiserver/apis/v1"
-	"net/http"
+	authorization "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +37,7 @@ type handler struct {
 }
 
 // NewHandler instantiates a new apis handler
-func NewHandler(parent wrapper.RouterWrapper, cli client.Client, logger logr.Logger) (apiserver.APIHandler, error) {
+func NewHandler(parent wrapper.RouterWrapper, cli client.Client, authCli *authorization.AuthorizationV1Client, logger logr.Logger) (apiserver.APIHandler, error) {
 	handler := &handler{}
 
 	//apis
@@ -45,7 +47,7 @@ func NewHandler(parent wrapper.RouterWrapper, cli client.Client, logger logr.Log
 	}
 
 	// /apis/v1
-	v1Handler, err := v1.NewHandler(apiWrapper, cli, logger)
+	v1Handler, err := v1.NewHandler(apiWrapper, cli, authCli, logger)
 	if err != nil {
 		return nil, err
 	}

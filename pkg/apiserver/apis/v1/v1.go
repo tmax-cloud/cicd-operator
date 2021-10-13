@@ -18,6 +18,8 @@ package v1
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/go-logr/logr"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
@@ -26,7 +28,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver/apis/v1/approvals"
 	"github.com/tmax-cloud/cicd-operator/pkg/apiserver/apis/v1/integrationconfigs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/http"
+	authorization "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -41,7 +43,7 @@ type handler struct {
 }
 
 // NewHandler instantiates a new v1 api handler
-func NewHandler(parent wrapper.RouterWrapper, cli client.Client, logger logr.Logger) (apiserver.APIHandler, error) {
+func NewHandler(parent wrapper.RouterWrapper, cli client.Client, authCli *authorization.AuthorizationV1Client, logger logr.Logger) (apiserver.APIHandler, error) {
 	handler := &handler{}
 
 	// /v1
@@ -57,14 +59,14 @@ func NewHandler(parent wrapper.RouterWrapper, cli client.Client, logger logr.Log
 	}
 
 	// /v1/namespaces/<namespace>/approvals
-	approvalsHandler, err := approvals.NewHandler(namespaceWrapper, cli, logger)
+	approvalsHandler, err := approvals.NewHandler(namespaceWrapper, cli, authCli, logger)
 	if err != nil {
 		return nil, err
 	}
 	handler.approvalsHandler = approvalsHandler
 
 	// /v1/namespaces/<namespace>/integrationconfigs
-	icHandler, err := integrationconfigs.NewHandler(namespaceWrapper, cli, logger)
+	icHandler, err := integrationconfigs.NewHandler(namespaceWrapper, cli, authCli, logger)
 	if err != nil {
 		return nil, err
 	}
