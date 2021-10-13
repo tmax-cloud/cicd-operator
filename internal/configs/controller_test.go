@@ -17,9 +17,10 @@
 package configs
 
 import (
+	"testing"
+
 	"github.com/bmizerany/assert"
 	corev1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 func TestApplyControllerConfigChange(t *testing.T) {
@@ -96,39 +97,6 @@ func TestApplyControllerConfigChange(t *testing.T) {
 		IngressHost = ""
 		t.Run(name, func(t *testing.T) {
 			err := ApplyControllerConfigChange(c.ConfigMap)
-			c.AssertFunc(t, err)
-		})
-	}
-}
-
-func TestApplyEmailTemplateConfigChange(t *testing.T) {
-	tc := map[string]controllerTestCase{
-		"default": {ConfigMap: &corev1.ConfigMap{
-			Data: map[string]string{},
-		}, AssertFunc: func(t *testing.T, err error) {
-			assert.Equal(t, "[CI/CD] Approval '{{.Name}}' is requested to you", ApprovalRequestMailTitle)
-			assert.Equal(t, "{{.Name}}", ApprovalRequestMailContent)
-			assert.Equal(t, "[CI/CD] Approval is {{.Status.Result}}", ApprovalResultMailTitle)
-			assert.Equal(t, "{{.Name}}", ApprovalResultMailContent)
-		}},
-		"normal": {ConfigMap: &corev1.ConfigMap{
-			Data: map[string]string{
-				"request-title":   "test-request-title",
-				"request-content": "test-request-content",
-				"result-title":    "test-result-title",
-				"result-content":  "test-result-content",
-			},
-		}, AssertFunc: func(t *testing.T, err error) {
-			assert.Equal(t, "test-request-title", ApprovalRequestMailTitle)
-			assert.Equal(t, "test-request-content", ApprovalRequestMailContent)
-			assert.Equal(t, "test-result-title", ApprovalResultMailTitle)
-			assert.Equal(t, "test-result-content", ApprovalResultMailContent)
-		}},
-	}
-
-	for name, c := range tc {
-		t.Run(name, func(t *testing.T) {
-			err := ApplyEmailTemplateConfigChange(c.ConfigMap)
 			c.AssertFunc(t, err)
 		})
 	}

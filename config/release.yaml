@@ -100,6 +100,11 @@ spec:
         image: docker.io/tmaxcloudck/cicd-operator:v0.4.2
         imagePullPolicy: Always
         name: manager
+        env:
+          - name: EMAIL_TEMPLATE_PATH
+            value: /templates/email
+          - name: REPORT_TEMPLATE_PATH
+            value: /templates/report
         resources:
           requests:
             cpu: 100m
@@ -107,6 +112,10 @@ spec:
         volumeMounts:
           - mountPath: /logs
             name: operator-log
+          - name: email-template
+            mountPath: /templates/email
+          - name: report-template
+            mountPath: /templates/report
         readinessProbe:
           httpGet:
             path: /readyz
@@ -119,6 +128,12 @@ spec:
         - name: operator-log
           hostPath:
             path: /var/log/cicd-operator/logs
+        - name: email-template
+          configMap:
+            name: email-template
+        - name: report-template
+          configMap:
+            name: report-template
       terminationGracePeriodSeconds: 10
 ---
 apiVersion: v1
