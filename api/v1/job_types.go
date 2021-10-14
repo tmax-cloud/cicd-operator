@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/pkg/structs"
 	corev1 "k8s.io/api/core/v1"
@@ -109,10 +110,8 @@ type JobTaskRef struct {
 
 // JobApproval describes who can approve it
 type JobApproval struct {
-	// Approvers is a list of approvers, in a form of <User name>=<Email> (Email is optional)
-	// e.g., admin-tmax.co.kr
-	// e.g., admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr
-	Approvers []string `json:"approvers,omitempty"`
+	// Approvers is a list of approvers
+	Approvers []ApprovalUser `json:"approvers,omitempty"`
 
 	// ApproversConfigMap is a configMap Name containing
 	// approvers list should exist in configMap's 'approvers' key, as comma(,) separated list

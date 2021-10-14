@@ -14,10 +14,11 @@ Add following 'approval' job before the job which needs an approval in `Integrat
 ```yaml
 - name: approval
   approval:
-    approvers: # <User name>=<Email address> form (email is optional)
-      - admin@tmax.co.kr=sunghyun_kim3@tmax.co.kr
-      - test@tmax.co.kr
-      - system:serviceaccount:default:approver-account # Service account is also supported
+    approvers:
+      - name: admin@tmax.co.kr
+        email: sunghyun_kim3@tmax.co.kr
+      - name: test@tmax.co.kr
+      - name: system:serviceaccount:default:approver-account # Service account is also supported
 - name: need-approval
   image: busybox
   after:
@@ -32,6 +33,7 @@ kind: ConfigMap
 metadata:
   name: approver-test
 data:
+  # <User name>=<Email address> form (email is optional)
   approvers: |
     admin@tmax.co.kr=sunghyun_kim3@tmax.co.kr
     test@tmax.co.kr
@@ -44,7 +46,7 @@ data:
     approversConfigMap:
       name: approver-test
     approvers: # You can use both approvers & approversConfigMap
-      - system:serviceaccount:default:approver-account
+      - name: system:serviceaccount:default:approver-account
 - name: need-approval
   image: busybox
   after:
@@ -57,9 +59,10 @@ Enable email feature, following the [installation guide](./installation.md#enabl
 - name: approval
   approval:
     approvers:
-      - admin@tmax.co.kr=sunghyun_kim3@tmax.co.kr
-      - test@tmax.co.kr
-      - system:serviceaccount:default:approver-account
+      - name: admin@tmax.co.kr
+        email: sunghyun_kim3@tmax.co.kr
+      - name: test@tmax.co.kr
+      - name: system:serviceaccount:default:approver-account
     requestMessage: Please approve this! # Message to be sent via email when the Approval is created
 - name: need-approval
   image: busybox

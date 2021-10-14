@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -99,8 +98,7 @@ func (h *handler) updateDecision(w http.ResponseWriter, req *http.Request, decis
 
 	isApprover := false
 	for _, a := range approvers {
-		token := strings.Split(a, "=")
-		if token[0] == user {
+		if a.Name == user {
 			isApprover = true
 			break
 		}

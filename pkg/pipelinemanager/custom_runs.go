@@ -28,7 +28,14 @@ func generateApprovalRunTask(job *cicdv1.IntegrationJob, j *cicdv1.Job, task *te
 	task.TaskRef = generateCustomTaskRef(cicdv1.CustomTaskKindApproval)
 
 	// Get approvers
-	approvers := j.Approval.Approvers
+	var approvers []string
+	for _, approver := range j.Approval.Approvers {
+		param := approver.Name
+		if approver.Email != "" {
+			param += "=" + approver.Email
+		}
+		approvers = append(approvers, param)
+	}
 
 	// Get message
 	msg := j.Approval.RequestMessage

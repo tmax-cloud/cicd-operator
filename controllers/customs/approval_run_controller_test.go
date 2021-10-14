@@ -82,7 +82,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				require.Equal(t, "dev@tmax.co.kr", approval.Spec.Sender.Email)
 				require.Equal(t, "https://approval.ref", approval.Spec.Link)
 				require.Len(t, approval.Spec.Users, 1)
-				require.Equal(t, "admin@tmax.co.kr=admin@tmax.co.kr", approval.Spec.Users[0])
+				require.Equal(t, cicdv1.ApprovalUser{Name: "admin@tmax.co.kr", Email: "admin@tmax.co.kr"}, approval.Spec.Users[0])
 			},
 		},
 		"creationNoMail": {
@@ -110,7 +110,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				require.Equal(t, "dev@tmax.co.kr", approval.Spec.Sender.Email)
 				require.Equal(t, "https://approval.ref", approval.Spec.Link)
 				require.Len(t, approval.Spec.Users, 1)
-				require.Equal(t, "admin@tmax.co.kr=admin@tmax.co.kr", approval.Spec.Users[0])
+				require.Equal(t, cicdv1.ApprovalUser{Name: "admin@tmax.co.kr", Email: "admin@tmax.co.kr"}, approval.Spec.Users[0])
 			},
 		},
 		"creationApproversCM": {
@@ -144,9 +144,9 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				require.Equal(t, "dev@tmax.co.kr", approval.Spec.Sender.Email)
 				require.Equal(t, "https://approval.ref", approval.Spec.Link)
 				require.Len(t, approval.Spec.Users, 3)
-				require.Equal(t, "admin@tmax.co.kr=admin@tmax.co.kr", approval.Spec.Users[0])
-				require.Equal(t, "admin2@tmax.co.kr=admin2@tmax.co.kr", approval.Spec.Users[1])
-				require.Equal(t, "admin3@tmax.co.kr", approval.Spec.Users[2])
+				require.Equal(t, cicdv1.ApprovalUser{Name: "admin@tmax.co.kr", Email: "admin@tmax.co.kr"}, approval.Spec.Users[0])
+				require.Equal(t, cicdv1.ApprovalUser{Name: "admin2@tmax.co.kr", Email: "admin2@tmax.co.kr"}, approval.Spec.Users[1])
+				require.Equal(t, cicdv1.ApprovalUser{Name: "admin3@tmax.co.kr"}, approval.Spec.Users[2])
 			},
 		},
 		"createError": {
@@ -418,15 +418,15 @@ func TestApprovalRunHandler_newApproval(t *testing.T) {
 				IntegrationJob: "test-ij",
 				JobName:        "test-job",
 				Message:        "test-message",
-				Sender: &cicdv1.ApprovalSender{
+				Sender: &cicdv1.ApprovalUser{
 					Name:  "test-sender",
 					Email: "test-email@tmax.co.kr",
 				},
 				Link: "test-link",
-				Users: []string{
-					"admin1=admin@tmax.co.kr",
-					"admin",
-					"admin2=admin2@tmax.co.kr",
+				Users: []cicdv1.ApprovalUser{
+					{Name: "admin1", Email: "admin@tmax.co.kr"},
+					{Name: "admin"},
+					{Name: "admin2", Email: "admin2@tmax.co.kr"},
 				},
 			},
 		},

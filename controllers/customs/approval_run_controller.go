@@ -170,7 +170,7 @@ func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Appro
 	}
 
 	// Get parameters
-	_, approvers, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyApprovers, tektonv1beta1.ParamTypeArray)
+	_, approversStr, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyApprovers, tektonv1beta1.ParamTypeArray)
 	if err != nil {
 		return nil, err
 	}
@@ -187,11 +187,14 @@ func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Appro
 			if exist {
 				cmList, _ := utils.ParseApproversList(cmListStr)
 				if cmList != nil {
-					approvers = append(approvers, cmList...)
+					approversStr = append(approversStr, cmList...)
 				}
 			}
 		}
 	}
+
+	// Parse approvers in form of <Name>=<Email>
+	approvers := parseApprover(approversStr)
 
 	msg, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskApprovalParamKeyMessage, tektonv1beta1.ParamTypeString)
 	if err != nil {
@@ -232,7 +235,7 @@ func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Appro
 			Users:          approvers,
 			IntegrationJob: jobName,
 			JobName:        jobJobName,
-			Sender: &cicdv1.ApprovalSender{
+			Sender: &cicdv1.ApprovalUser{
 				Name:  sender,
 				Email: senderEmail,
 			},
@@ -240,6 +243,19 @@ func (a *ApprovalRunHandler) newApproval(run *tektonv1alpha1.Run) (*cicdv1.Appro
 			Link:    link,
 		},
 	}, nil
+}
+
+func parseApprover(approversStr []string) []cicdv1.ApprovalUser {
+	var approvers []cicdv1.ApprovalUser
+	for _, approverStr := range approversStr {
+		tok := strings.Split(approverStr, "=")
+		approver := cicdv1.ApprovalUser{Name: tok[0]}
+		if len(tok) > 1 {
+			approver.Email = tok[1]
+		}
+		approvers = append(approvers, approver)
+	}
+	return approvers
 }
 
 func searchParam(params []tektonv1beta1.Param, key string, expectedKind tektonv1beta1.ParamType) (string, []string, error) {
