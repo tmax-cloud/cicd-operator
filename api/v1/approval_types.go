@@ -68,17 +68,17 @@ type ApprovalSpec struct {
 	Message string `json:"message,omitempty"`
 
 	// Sender is a requester (probably be pull-request author or pusher)
-	Sender *ApprovalSender `json:"sender,omitempty"`
+	Sender *ApprovalUser `json:"sender,omitempty"`
 
 	// Link is a description link approvers may refer to
 	Link string `json:"link,omitempty"`
 
 	// Users are the list of the users who are requested to approve the Approval
-	Users []string `json:"users"`
+	Users []ApprovalUser `json:"users"`
 }
 
-// ApprovalSender is a git user who triggered the approval
-type ApprovalSender struct {
+// ApprovalUser is a user
+type ApprovalUser struct {
 	Name  string `json:"name"`
 	Email string `json:"email,omitempty"`
 }

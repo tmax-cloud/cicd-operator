@@ -18,11 +18,12 @@ package utils
 
 import (
 	"fmt"
-	"github.com/tmax-cloud/cicd-operator/pkg/git/fake"
 	"os"
 	"regexp"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+
+	"github.com/tmax-cloud/cicd-operator/pkg/git/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -82,19 +83,14 @@ func ParseApproversList(str string) ([]string, error) {
 }
 
 // ParseEmailFromUsers parses email from approvers list
-func ParseEmailFromUsers(users []string) []string {
+func ParseEmailFromUsers(users []cicdv1.ApprovalUser) []string {
 	var emails []string
 
 	emailRe := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 	for _, u := range users {
-		subs := strings.Split(u, "=")
-		if len(subs) < 2 {
-			continue
-		}
-		trimmed := strings.TrimSpace(subs[1])
-		if emailRe.MatchString(trimmed) {
-			emails = append(emails, trimmed)
+		if emailRe.MatchString(u.Email) {
+			emails = append(emails, u.Email)
 		}
 	}
 

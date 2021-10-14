@@ -18,6 +18,8 @@ package utils
 
 import (
 	"github.com/bmizerany/assert"
+	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+
 	"testing"
 )
 
@@ -47,11 +49,11 @@ test2@tmax.co.kr=test2@tmax.co.kr`
 
 func TestParseEmailFromUsers(t *testing.T) {
 	// Include test
-	users := []string{
-		"aweilfjlwesfj",
-		"aweilfjlwesfj=aweiojweio",
-		"aweilfjlwesfj=admin@tmax.co.kr",
-		"asdij@oisdjf.sdfioj=test@tmax.co.kr",
+	users := []cicdv1.ApprovalUser{
+		{Name: "aweilfjlwesfj"},
+		{Name: "aweilfjlwesfj", Email: "aweiojweio"},
+		{Name: "aweilfjlwesfj", Email: "admin@tmax.co.kr"},
+		{Name: "asdij@oisdjf.sdfioj", Email: "test@tmax.co.kr"},
 	}
 
 	tos := ParseEmailFromUsers(users)

@@ -243,21 +243,18 @@ func (r *ApprovalReconciler) createOrUpdateRoleBinding(approval *cicdv1.Approval
 
 	// Set users in role bindings
 	for _, u := range approval.Spec.Users {
-		token := strings.Split(u, "=")
-		user := token[0]
-
 		// Default is user
 		apiGroup := rbac.GroupName
 		kind := rbac.UserKind
-		name := user
+		name := u.Name
 		ns := approval.Namespace
 
 		// Check if it's ServiceAccount
-		if strings.HasPrefix(user, serviceAccountPrefix) {
+		if strings.HasPrefix(u.Name, serviceAccountPrefix) {
 			apiGroup = ""
 			kind = rbac.ServiceAccountKind
 
-			token := strings.Split(strings.TrimPrefix(user, serviceAccountPrefix), ":")
+			token := strings.Split(strings.TrimPrefix(u.Name, serviceAccountPrefix), ":")
 			if len(token) != 2 {
 				continue
 			}

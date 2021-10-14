@@ -28,7 +28,7 @@ spec:
           approversConfigMap:
             name: approver-test
           approvers: # You can use both approvers & approversConfigMap
-            - system:serviceaccount:default:approver-account # Service account is also supported
+            - name: system:serviceaccount:default:approver-account # Service account is also supported
           requestMessage: Please approve this! # Message to be sent via email when the Approval is created
       - name: test
         image: golang:1.14

@@ -915,7 +915,15 @@ spec:
                 description: Users are the list of the users who are requested to
                   approve the Approval
                 items:
-                  type: string
+                  description: ApprovalUser is a user
+                  properties:
+                    email:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
                 type: array
             required:
             - users
@@ -1125,11 +1133,17 @@ spec:
                           description: Approval
                           properties:
                             approvers:
-                              description: Approvers is a list of approvers, in a
-                                form of <User name>=<Email> (Email is optional) e.g.,
-                                admin-tmax.co.kr e.g., admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+                              description: Approvers is a list of approvers
                               items:
-                                type: string
+                                description: ApprovalUser is a user
+                                properties:
+                                  email:
+                                    type: string
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
                               type: array
                             approversConfigMap:
                               description: ApproversConfigMap is a configMap Name
@@ -2665,11 +2679,17 @@ spec:
                           description: Approval
                           properties:
                             approvers:
-                              description: Approvers is a list of approvers, in a
-                                form of <User name>=<Email> (Email is optional) e.g.,
-                                admin-tmax.co.kr e.g., admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+                              description: Approvers is a list of approvers
                               items:
-                                type: string
+                                description: ApprovalUser is a user
+                                properties:
+                                  email:
+                                    type: string
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
                               type: array
                             approversConfigMap:
                               description: ApproversConfigMap is a configMap Name
@@ -6970,11 +6990,17 @@ spec:
                       description: Approval
                       properties:
                         approvers:
-                          description: Approvers is a list of approvers, in a form
-                            of <User name>=<Email> (Email is optional) e.g., admin-tmax.co.kr
-                            e.g., admin-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+                          description: Approvers is a list of approvers
                           items:
-                            type: string
+                            description: ApprovalUser is a user
+                            properties:
+                              email:
+                                type: string
+                              name:
+                                type: string
+                            required:
+                            - name
+                            type: object
                           type: array
                         approversConfigMap:
                           description: ApproversConfigMap is a configMap Name containing

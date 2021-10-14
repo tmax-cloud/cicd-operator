@@ -90,7 +90,15 @@ spec:
                 description: Users are the list of the users who are requested to
                   approve the Approval
                 items:
-                  type: string
+                  description: ApprovalUser is a user
+                  properties:
+                    email:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
                 type: array
             required:
             - users

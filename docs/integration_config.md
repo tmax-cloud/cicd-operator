@@ -410,7 +410,8 @@ spec:
       - <Job Name>
       approval:
         approvers:
-        - <List (comma-seperated user names)>
+        - name: <User name>
+          email: <User email>
         approversConfigMap:
           name: <ConfigMap name>
     postSubmit:
