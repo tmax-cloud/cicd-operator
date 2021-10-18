@@ -18,10 +18,13 @@ package customs
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-logr/logr"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,14 +32,14 @@ import (
 	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 // EmailRunHandler handles email custom task
 type EmailRunHandler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	MailSender mail.Sender
 }
 
 // Handle sends email to the receivers
@@ -133,7 +136,13 @@ func (a *EmailRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error) {
 	}
 
 	// Send!
-	if err := mail.Send(receivers, compiledTitle, compiledContent, isHTML, a.Client); err != nil {
+	if !configs.EnableMail {
+		cond.Status = corev1.ConditionFalse
+		cond.Reason = "EmailDisabled"
+		cond.Message = "email is disabled"
+		return ctrl.Result{}, nil
+	}
+	if err := a.MailSender.Send(receivers, compiledTitle, compiledContent, isHTML); err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
 		cond.Reason = "EmailError"

@@ -29,22 +29,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Send actually sends email using SMTP call
-func Send(to []string, subject string, content string, isHTML bool, c client.Client) error {
-	if !configs.EnableMail {
-		return fmt.Errorf("email is disabled")
-	}
+// Sender is an email sender interface
+type Sender interface {
+	Send(to []string, subject string, content string, isHTML bool) error
+}
 
+type sender struct {
+	cli client.Client
+}
+
+// NewSender creates a new sender
+func NewSender(cli client.Client) Sender {
+	return &sender{cli: cli}
+}
+
+// Send actually sends email using SMTP call
+func (s *sender) Send(to []string, subject string, content string, isHTML bool) error {
 	if len(to) < 1 {
 		return nil
 	}
 
-	server, err := serverInfo(c)
-	if err != nil {
-		return err
-	}
-
-	auth, err := auth(server)
+	server, err := s.getServerInfo()
 	if err != nil {
 		return err
 	}
@@ -77,7 +82,11 @@ func Send(to []string, subject string, content string, isHTML bool, c client.Cli
 	}
 	msg += "\r\n" + content
 
-	return smtp.SendMail(server.host, auth, from, to, []byte(msg))
+	return smtp.SendMail(server.host, s.auth(server), from, to, []byte(msg))
+}
+
+func (s *sender) auth(server *smtpInfo) smtp.Auth {
+	return smtp.PlainAuth("", server.user, server.password, strings.Split(server.host, ":")[0])
 }
 
 type smtpInfo struct {
@@ -86,9 +95,9 @@ type smtpInfo struct {
 	password string
 }
 
-func serverInfo(c client.Client) (*smtpInfo, error) {
+func (s *sender) getServerInfo() (*smtpInfo, error) {
 	secret := &corev1.Secret{}
-	if err := c.Get(context.Background(), types.NamespacedName{Name: configs.SMTPUserSecret, Namespace: utils.Namespace()}, secret); err != nil {
+	if err := s.cli.Get(context.Background(), types.NamespacedName{Name: configs.SMTPUserSecret, Namespace: utils.Namespace()}, secret); err != nil {
 		return nil, err
 	}
 
@@ -105,9 +114,4 @@ func serverInfo(c client.Client) (*smtpInfo, error) {
 		password: string(password),
 	}
 	return info, nil
-}
-
-func auth(server *smtpInfo) (auth smtp.Auth, err error) {
-	hosts := strings.Split(server.host, ":")
-	return smtp.PlainAuth("", server.user, server.password, hosts[0]), nil
 }
