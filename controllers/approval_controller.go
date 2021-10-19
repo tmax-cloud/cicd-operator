@@ -46,8 +46,9 @@ import (
 // ApprovalReconciler reconciles a Approval object
 type ApprovalReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	MailSender mail.Sender
 }
 
 const (
@@ -338,25 +339,24 @@ func (r *ApprovalReconciler) generateMail(instance *cicdv1.Approval, titleKey, c
 }
 
 func (r *ApprovalReconciler) sendMail(users []string, title, content string, cond *status.Condition) {
-	sentMail := false
-	cond.Reason = "EmailDisabled"
-	if configs.EnableMail {
-		if err := mail.Send(users, title, content, true, r.Client); err != nil {
-			r.Log.Error(err, "")
-			cond.Reason = "ErrorSendingMail"
-			cond.Message = err.Error()
-		} else {
-			sentMail = true
-		}
+	cond.Status = corev1.ConditionFalse
+
+	if !configs.EnableMail {
+		cond.Reason = "EmailDisabled"
+		return
 	}
 
-	if sentMail {
-		cond.Status = corev1.ConditionTrue
-		cond.Reason = ""
-		cond.Message = ""
-	} else {
-		cond.Status = corev1.ConditionFalse
+	// Send mail
+	if err := r.MailSender.Send(users, title, content, true); err != nil {
+		r.Log.Error(err, "")
+		cond.Reason = "ErrorSendingMail"
+		cond.Message = err.Error()
+		return
 	}
+
+	cond.Status = corev1.ConditionTrue
+	cond.Reason = ""
+	cond.Message = ""
 }
 
 func (r *ApprovalReconciler) patchStatus(instance *cicdv1.Approval, original *cicdv1.Approval, message string) {

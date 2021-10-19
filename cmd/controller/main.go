@@ -35,6 +35,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/collector"
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
 	"github.com/tmax-cloud/cicd-operator/pkg/plugins/size"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
 	rbac "k8s.io/api/rbac/v1"
@@ -156,9 +157,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.ApprovalReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Approval"),
-		Scheme: mgr.GetScheme(),
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("controllers").WithName("Approval"),
+		Scheme:     mgr.GetScheme(),
+		MailSender: mail.NewSender(mgr.GetClient()),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Approval")
 		os.Exit(1)
@@ -177,9 +179,10 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}, &cicdv1.Approval{})
 	customRunController.AddKindHandler(cicdv1.CustomTaskKindEmail, &customs.EmailRunHandler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("EmailRun"),
-		Scheme: mgr.GetScheme(),
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("controllers").WithName("EmailRun"),
+		Scheme:     mgr.GetScheme(),
+		MailSender: mail.NewSender(mgr.GetClient()),
 	})
 	customRunController.AddKindHandler(cicdv1.CustomTaskKindSlack, &customs.SlackRunHandler{
 		Client: mgr.GetClient(),
