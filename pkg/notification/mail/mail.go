@@ -19,13 +19,14 @@ package mail
 import (
 	"context"
 	"fmt"
+	"net/smtp"
+	"strings"
+
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"net/smtp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 // Send actually sends email using SMTP call
@@ -86,13 +87,8 @@ type smtpInfo struct {
 }
 
 func serverInfo(c client.Client) (*smtpInfo, error) {
-	ns, err := utils.Namespace()
-	if err != nil {
-		return nil, err
-	}
-
 	secret := &corev1.Secret{}
-	if err := c.Get(context.Background(), types.NamespacedName{Name: configs.SMTPUserSecret, Namespace: ns}, secret); err != nil {
+	if err := c.Get(context.Background(), types.NamespacedName{Name: configs.SMTPUserSecret, Namespace: utils.Namespace()}, secret); err != nil {
 		return nil, err
 	}
 
