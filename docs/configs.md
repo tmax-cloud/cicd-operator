@@ -8,6 +8,8 @@ This guide shows how to configure the operator. Contents are as follows.
   - [`ingressHost`](#ingresshost)
   - [`externalHostName`](#externalhostname)
   - [`gitImage`](#gitimage)
+  - [`gitCheckoutStepCPURequest`](#gitcheckoutstepcpurequest)
+  - [`gitCheckoutStepMemRequest`](#gitcheckoutstepmemrequest)
   - [`reportRedirectUriTemplate`](#reportredirecturitemplate)
 - [Email Configurations](#email-configurations)
   - [`enableMail`](#enablemail)
@@ -57,6 +59,14 @@ External host name for the ingress. It should be the address a user/git server c
 ### `gitImage`
 Git image to be used for `git-checkout` steps
 > Default: docker.io/alpine/git:1.0.30
+
+### `gitCheckoutStepCPURequest`
+Resource (CPU) requirement for git checkout step
+> Default: 30m
+
+### `gitCheckoutStepMemRequest`
+Resource (Memory) requirement for git checkout step
+> Default: 100Mi
 
 ### `reportRedirectUriTemplate`
 Url template of commit status's detail page, which is compiled using `IntegrationJob` struct. If it's empty, it uses default report page.

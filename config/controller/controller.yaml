@@ -61,6 +61,8 @@ data:
   ingressClass: ""
   ingressHost: ""
   gitImage: "docker.io/alpine/git:1.0.30"
+  gitCheckoutStepCPURequest: "30m"
+  gitCheckoutStepMemRequest: "100Mi"
 ---
 apiVersion: v1
 kind: ConfigMap

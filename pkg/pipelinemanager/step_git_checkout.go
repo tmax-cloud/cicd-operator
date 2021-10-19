@@ -24,17 +24,11 @@ import (
 )
 
 const (
-	gitCheckoutCPUReq = "30m"
-	gitCheckoutMemReq = "100Mi"
+	gitCheckoutCPUReqDefault = "30m"
+	gitCheckoutMemReqDefault = "100Mi"
 )
 
-func gitCheckout() tektonv1beta1.Step {
-	step := tektonv1beta1.Step{}
-
-	step.Name = "git-clone"
-	step.Image = configs.GitImage
-	step.WorkingDir = DefaultWorkingDir
-	step.Script = `#!/bin/sh
+const defaultScript = `#!/bin/sh
 set -x
 set -e
 
@@ -66,9 +60,26 @@ fi
 
 git submodule update --init --recursive
 `
+
+func gitCheckout() tektonv1beta1.Step {
+	step := tektonv1beta1.Step{}
+
+	step.Name = "git-clone"
+	step.Image = configs.GitImage
+	step.WorkingDir = DefaultWorkingDir
+	step.Script = defaultScript
+
+	cpuReq, err := resource.ParseQuantity(configs.GitCheckoutStepCPURequest)
+	if err != nil {
+		cpuReq = resource.MustParse(gitCheckoutCPUReqDefault)
+	}
+	memReq, err := resource.ParseQuantity(configs.GitCheckoutStepMemRequest)
+	if err != nil {
+		memReq = resource.MustParse(gitCheckoutMemReqDefault)
+	}
 	resources := corev1.ResourceList{
-		"cpu":    resource.MustParse(gitCheckoutCPUReq),
-		"memory": resource.MustParse(gitCheckoutMemReq),
+		"cpu":    cpuReq,
+		"memory": memReq,
 	}
 	step.Resources = corev1.ResourceRequirements{
 		Limits:   resources,
