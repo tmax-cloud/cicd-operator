@@ -252,13 +252,10 @@ func TestEmailRunHandler_Handle(t *testing.T) {
 
 			go mockSMTPServer(l, t, exitCh)
 
-			ns, err := utils.Namespace()
-			require.NoError(t, err)
-
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "smtp-auth",
-					Namespace: ns,
+					Namespace: utils.Namespace(),
 				},
 				Type: corev1.SecretTypeBasicAuth,
 				Data: map[string][]byte{

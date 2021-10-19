@@ -110,10 +110,5 @@ func newConfigMapClient(conf *rest.Config) (typedcorev1.ConfigMapInterface, erro
 		return nil, err
 	}
 
-	namespace, err := utils.Namespace()
-	if err != nil {
-		return nil, err
-	}
-
-	return clientSet.CoreV1().ConfigMaps(namespace), nil
+	return clientSet.CoreV1().ConfigMaps(utils.Namespace()), nil
 }

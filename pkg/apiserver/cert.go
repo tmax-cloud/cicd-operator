@@ -21,11 +21,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"io/ioutil"
 	"os"
 	"path"
 	"time"
+
+	"github.com/tmax-cloud/cicd-operator/internal/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,10 +59,7 @@ func createCert(ctx context.Context, client client.Client) error {
 
 	// Get service name and namespace
 	svc := serviceName
-	ns, err := utils.Namespace()
-	if err != nil {
-		return err
-	}
+	ns := utils.Namespace()
 
 	// Create certs
 	tlsKey, tlsCrt, caCrt, err := certResources.CreateCerts(ctx, svc, ns, time.Now().AddDate(1, 0, 0))

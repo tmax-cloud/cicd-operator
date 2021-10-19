@@ -28,23 +28,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+const nsEnv = "NAMESPACE"
+const nsFilePathDefault = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+
+var nsFilePath = nsFilePathDefault
+
 // Namespace can retrieve current namespace
-func Namespace() (string, error) {
-	nsPath := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-	if FileExists(nsPath) {
-		// Running in k8s cluster
-		nsBytes, err := ioutil.ReadFile(nsPath)
-		if err != nil {
-			return "", fmt.Errorf("could not read file %s", nsPath)
-		}
-		return string(nsBytes), nil
+func Namespace() string {
+	if nsBytes, err := ioutil.ReadFile(nsFilePath); err == nil {
+		return string(nsBytes)
 	}
-	// Not running in k8s cluster (may be running locally)
-	ns := os.Getenv("NAMESPACE")
+
+	// Fallback to env, default values
+	// Not running in k8s cluster (maybe running locally)
+	ns := os.Getenv(nsEnv)
 	if ns == "" {
 		ns = "cicd-system"
 	}
-	return ns, nil
+	return ns
 }
 
 // CreateOrPatchObject patches the object if it exists, and creates one if not

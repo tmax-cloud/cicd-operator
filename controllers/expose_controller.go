@@ -66,10 +66,7 @@ type exposeController struct {
 
 // NewExposeController creates a new ExposeController
 func NewExposeController(cfg *rest.Config) (*exposeController, error) {
-	namespace, err := utils.Namespace()
-	if err != nil {
-		return nil, err
-	}
+	namespace := utils.Namespace()
 
 	controller := &exposeController{
 		cfg:                 cfg,
