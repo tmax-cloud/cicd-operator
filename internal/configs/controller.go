@@ -51,6 +51,8 @@ func ApplyControllerConfigChange(cm *corev1.ConfigMap) error {
 		"ingressClass":              {Type: cfgTypeString, StringVal: &IngressClass, StringDefault: ""},                        // Ingress class
 		"ingressHost":               {Type: cfgTypeString, StringVal: &IngressHost, StringDefault: ""},                         // Ingress host
 		"gitImage":                  {Type: cfgTypeString, StringVal: &GitImage, StringDefault: "docker.io/alpine/git:1.0.30"}, // Git image
+		"gitCheckoutStepCPURequest": {Type: cfgTypeString, StringVal: &GitCheckoutStepCPURequest, StringDefault: "30m"},        // Git checkout step CPU request
+		"gitCheckoutStepMemRequest": {Type: cfgTypeString, StringVal: &GitCheckoutStepMemRequest, StringDefault: "100Mi"},      // Git checkout step Memory request
 	})
 
 	// Check SMTP config.s
@@ -118,4 +120,10 @@ var (
 
 	// GitImage is an image url for the git-checkout step
 	GitImage string
+
+	// GitCheckoutStepCPURequest is a cpu request of a git checkout step
+	GitCheckoutStepCPURequest string
+
+	// GitCheckoutStepMemRequest is a memory request of a git checkout step
+	GitCheckoutStepMemRequest string
 )
