@@ -246,7 +246,6 @@ func mockSMTPServer(l net.Listener, t *testing.T, exitCh chan struct{}) {
 			case <-exitCh:
 				return
 			default:
-				t.Logf("accept: %v", err)
 				return
 			}
 		}
