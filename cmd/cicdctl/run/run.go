@@ -19,7 +19,6 @@ package run
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -53,15 +52,7 @@ func New(c *cli.Configs) cli.Command {
 		Use:   "pre [IntegrationConfig]",
 		Short: "Triggers preSubmit jobs of an IntegrationConfig",
 		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
-			if cmd.branch != "" {
-				log.Fatal("branch option cannot be used for pre")
-			}
-			if cmd.headBranch == "" {
-				log.Fatal("head-branch option should be set for pre")
-			}
-			cmd.RunCommand(args, subTypePre)
-		},
+		RunE:  cmd.runPre,
 	}
 	preCommand.Flags().StringVar(&cmd.baseBranch, "base-branch", "", "Base branch for the PullRequest event")
 	preCommand.Flags().StringVar(&cmd.headBranch, "head-branch", "", "Head branch for the PullRequest event")
@@ -71,12 +62,7 @@ func New(c *cli.Configs) cli.Command {
 		Use:   "post [IntegrationConfig]",
 		Short: "Triggers postSubmit jobs of an IntegrationConfig",
 		Args:  cobra.ExactArgs(1),
-		Run: func(c *cobra.Command, args []string) {
-			if cmd.headBranch != "" || cmd.baseBranch != "" {
-				log.Fatal("head-branch and base-branch options cannot be used for post")
-			}
-			cmd.RunCommand(args, subTypePost)
-		},
+		RunE:  cmd.runPost,
 	}
 	postCommand.Flags().StringVar(&cmd.branch, "branch", "", "Branch for the Push event")
 	cmd.Command.AddCommand(postCommand)
@@ -84,11 +70,28 @@ func New(c *cli.Configs) cli.Command {
 	return cmd
 }
 
+func (command *command) runPre(_ *cobra.Command, args []string) error {
+	if command.branch != "" {
+		return fmt.Errorf("branch option cannot be used for pre")
+	}
+	if command.headBranch == "" {
+		return fmt.Errorf("head-branch option should be set for pre")
+	}
+	return command.RunCommand(args, subTypePre)
+}
+
+func (command *command) runPost(_ *cobra.Command, args []string) error {
+	if command.headBranch != "" || command.baseBranch != "" {
+		return fmt.Errorf("head-branch and base-branch options cannot be used for post")
+	}
+	return command.RunCommand(args, subTypePost)
+}
+
 func (command *command) AddToCommand(cmd *cobra.Command) {
 	cmd.AddCommand(command.Command)
 }
 
-func (command *command) RunCommand(args []string, subType string) {
+func (command *command) RunCommand(args []string, subType string) error {
 	ic := args[0]
 
 	var subResource string
@@ -110,21 +113,22 @@ func (command *command) RunCommand(args []string, subType string) {
 
 	body, err := json.Marshal(obj)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Run!
 	client, ns, err := cli.GetClient(command.Config)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	cli.ExecAndHandleError(client.Post().
+	return cli.ExecAndHandleError(client.Post().
 		Resource(cicdv1.IntegrationConfigKind).
 		Namespace(ns).
 		Name(ic).
 		SubResource(subResource).
-		Body(body), nil)
-
-	fmt.Printf("Triggered %s jobs for IntegrationConfig %s/%s\n", subType, ns, ic)
+		Body(body), func(_ []byte) error {
+		fmt.Printf("Triggered %s jobs for IntegrationConfig %s/%s\n", subType, ns, ic)
+		return nil
+	})
 }

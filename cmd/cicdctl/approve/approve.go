@@ -19,7 +19,6 @@ package approve
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -42,12 +41,12 @@ func New(c *cli.Configs) cli.Command {
 	return cmd
 }
 
-func approvalCommand(kind string, fn func(cmd *cobra.Command, args []string)) *cobra.Command {
+func approvalCommand(kind string, fn func(cmd *cobra.Command, args []string) error) *cobra.Command {
 	return &cobra.Command{
 		Use:   kind + " [Approval] [reason]",
 		Short: strings.Title(kind) + "s an Approval",
 		Args:  cobra.ExactArgs(2),
-		Run:   fn,
+		RunE:  fn,
 	}
 }
 
@@ -56,7 +55,7 @@ func (command *command) AddToCommand(cmd *cobra.Command) {
 	cmd.AddCommand(command.RejectCommand)
 }
 
-func (command *command) RunCommand(cmd *cobra.Command, args []string) {
+func (command *command) RunCommand(cmd *cobra.Command, args []string) error {
 	approvals := args[0]
 	reason := args[1]
 
@@ -64,21 +63,22 @@ func (command *command) RunCommand(cmd *cobra.Command, args []string) {
 		Reason: reason,
 	})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Run!
 	client, ns, err := cli.GetClient(command.Config)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	cli.ExecAndHandleError(client.Put().
+	return cli.ExecAndHandleError(client.Put().
 		Resource(cicdv1.ApprovalKind).
 		Namespace(ns).
 		Name(approvals).
 		SubResource(cmd.Name()).
-		Body(body), nil)
-
-	fmt.Printf(strings.Title(cmd.Name())+"ed Approval %s/%s\n", ns, approvals)
+		Body(body), func(_ []byte) error {
+		fmt.Printf(strings.Title(cmd.Name())+"ed Approval %s/%s\n", ns, approvals)
+		return nil
+	})
 }
