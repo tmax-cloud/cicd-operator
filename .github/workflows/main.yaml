@@ -11,30 +11,45 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
       - name: crd test
         run: make test-crd
   test_gen:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
       - name: gen test
         run: make test-gen
   test_verify:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
       - name: verify test
         run: make test-verify
   test_unit:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
       - name: unit test
         run: make test-unit
   test_lint:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
       - uses: golangci/golangci-lint-action@v2.2.1
         with:
           version: v1.29
@@ -45,6 +60,9 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
       - name: build
         run: |
           docker login -u=tmaxcloudck -p=${{ secrets.DOCKER_HUB_PASSWORD }}

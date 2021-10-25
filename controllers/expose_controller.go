@@ -23,14 +23,13 @@ import (
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubernetes/pkg/apis/core"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -89,7 +88,7 @@ func NewExposeController(cfg *rest.Config) (*exposeController, error) {
 	})
 
 	// Ingress reconciler
-	ingClient, err := utils.NewGroupVersionResourceClient(cfg, namespace, networkingv1beta1.SchemeGroupVersion.WithResource(resourceIngress))
+	ingClient, err := utils.NewGroupVersionResourceClient(cfg, namespace, networkingv1.SchemeGroupVersion.WithResource(resourceIngress))
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +97,7 @@ func NewExposeController(cfg *rest.Config) (*exposeController, error) {
 		log:          controller.log.WithName(resourceIngress),
 		hostUpdateCh: controller.updateExternalURLCh,
 		resourceName: ingName,
-		obj:          &networkingv1beta1.Ingress{},
+		obj:          &networkingv1.Ingress{},
 	})
 
 	return controller, nil
@@ -169,7 +168,7 @@ func (e *exposeController) startResourceWatcher(reconciler exposeReconciler, exi
 }
 
 func (e *exposeController) loopWatch(gvrCli utils.RestClient, name string, rscUpdateCh chan runtime.Object, exitCh chan struct{}) bool {
-	watcher, err := gvrCli.Watch(&metav1.ListOptions{FieldSelector: fields.OneTermEqualSelector(core.ObjectNameField, name).String()})
+	watcher, err := gvrCli.Watch(&metav1.ListOptions{FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String()})
 	if err != nil {
 		e.log.Error(err, "")
 		return false
@@ -264,7 +263,7 @@ func (i *exposeIngressReconciler) getRefObject() runtime.Object {
 }
 
 func (i *exposeIngressReconciler) reconcile(obj runtime.Object, exposeMode exposeType) error {
-	ing, ok := obj.(*networkingv1beta1.Ingress)
+	ing, ok := obj.(*networkingv1.Ingress)
 	if !ok {
 		return fmt.Errorf("obj is not an Ingress")
 	}
@@ -284,7 +283,10 @@ func (i *exposeIngressReconciler) reconcile(obj runtime.Object, exposeMode expos
 	}()
 
 	// Check if class is set properly
-	ing.Annotations[networkingv1beta1.AnnotationIngressClass] = configs.IngressClass
+	if configs.IngressClass != "" {
+		ing.Annotations["kubernetes.io/ingress.class"] = configs.IngressClass
+		ing.Spec.IngressClassName = &configs.IngressClass
+	}
 
 	// Check if desired host is set properly
 	if configs.IngressHost != "" {

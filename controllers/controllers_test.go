@@ -17,6 +17,7 @@
 package controllers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -54,7 +56,7 @@ func (f *fakeManager) AddHealthzCheck(_ string, _ healthz.Checker) error {
 func (f *fakeManager) AddReadyzCheck(_ string, _ healthz.Checker) error {
 	return nil
 }
-func (f *fakeManager) Start(<-chan struct{}) error {
+func (f *fakeManager) Start(_ context.Context) error {
 	return nil
 }
 func (f *fakeManager) GetConfig() *rest.Config {
@@ -88,6 +90,10 @@ func (f *fakeManager) GetLogger() logr.Logger {
 	return log.Log
 }
 
+func (f *fakeManager) GetControllerOptions() v1alpha1.ControllerConfigurationSpec {
+	return v1alpha1.ControllerConfigurationSpec{}
+}
+
 type fakeLogger struct {
 	info     []string
 	error    []error
@@ -108,6 +114,6 @@ func (f *fakeLogger) Error(err error, msg string, _ ...interface{}) {
 	f.error = append(f.error, err)
 	f.errorMsg = append(f.errorMsg, msg)
 }
-func (f *fakeLogger) V(_ int) logr.InfoLogger                 { return f }
+func (f *fakeLogger) V(_ int) logr.Logger                     { return f }
 func (f *fakeLogger) WithValues(_ ...interface{}) logr.Logger { return f }
 func (f *fakeLogger) WithName(_ string) logr.Logger           { return f }

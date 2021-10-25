@@ -18,6 +18,9 @@ package trigger
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
@@ -27,8 +30,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
-	"time"
 )
 
 const (
@@ -47,8 +48,7 @@ func TestChatOps_handleTrigger(t *testing.T) {
 	ic := buildTestJobs()
 	wh := buildTestWebhookForTrigger()
 
-	fakeCli := fake.NewFakeClientWithScheme(s, ic)
-
+	fakeCli := fake.NewClientBuilder().WithScheme(s).WithObjects(ic).Build()
 	handler := &Handler{Client: fakeCli}
 
 	// /retest

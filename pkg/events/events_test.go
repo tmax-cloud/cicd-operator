@@ -18,6 +18,8 @@ package events
 
 import (
 	"context"
+	"testing"
+
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -26,7 +28,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 func TestEmit(t *testing.T) {
@@ -42,7 +43,7 @@ func TestEmit(t *testing.T) {
 		testCase("t-4", cicdv1.IntegrationJobStateFailed, "Test failed!!"),
 	}
 
-	fakeCli := fake.NewFakeClientWithScheme(s)
+	fakeCli := fake.NewClientBuilder().WithScheme(s).Build()
 
 	for _, c := range testCases {
 		if err := fakeCli.Create(context.Background(), c); err != nil {

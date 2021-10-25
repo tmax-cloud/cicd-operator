@@ -23,13 +23,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/operator-framework/operator-lib/status"
 	"github.com/stretchr/testify/require"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -162,7 +162,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 				require.NotNil(t, cond)
 				require.True(t, cond.IsFalse())
 				require.Equal(t, "CannotCreateApproval", cond.Reason)
-				require.Equal(t, "no kind is registered for the type v1alpha1.Run in scheme \"pkg/runtime/scheme.go:101\"", cond.Message)
+				require.Equal(t, "no kind is registered for the type v1alpha1.Run in scheme \"pkg/runtime/scheme.go:100\"", cond.Message)
 			},
 		},
 		"approvalApproved": {
@@ -224,9 +224,9 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 		"approvalReqMailError": {
 			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				approvalStatus := cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultAwaiting}
-				approvalStatus.Conditions.SetCondition(status.Condition{
+				meta.SetStatusCondition(&approvalStatus.Conditions, metav1.Condition{
 					Type:    cicdv1.ApprovalConditionSentRequestMail,
-					Status:  corev1.ConditionFalse,
+					Status:  metav1.ConditionFalse,
 					Reason:  "ErrorSendingMail",
 					Message: "some smtp-related error message!",
 				})
@@ -243,9 +243,9 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 		"approvalResMailError": {
 			preFunc: func(t *testing.T, run *tektonv1alpha1.Run, handler *ApprovalRunHandler) {
 				approvalStatus := cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultAwaiting}
-				approvalStatus.Conditions.SetCondition(status.Condition{
+				meta.SetStatusCondition(&approvalStatus.Conditions, metav1.Condition{
 					Type:    cicdv1.ApprovalConditionSentResultMail,
-					Status:  corev1.ConditionFalse,
+					Status:  metav1.ConditionFalse,
 					Reason:  "ErrorSendingMail",
 					Message: "some smtp-related error message!",
 				})
@@ -282,7 +282,7 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 			utilruntime.Must(cicdv1.AddToScheme(s))
 			utilruntime.Must(tektonv1alpha1.AddToScheme(s))
 
-			fakeCli := fake.NewFakeClientWithScheme(s)
+			fakeCli := fake.NewClientBuilder().WithScheme(s).Build()
 
 			handler := &ApprovalRunHandler{
 				Client: fakeCli,
@@ -322,27 +322,27 @@ func TestApprovalRunHandler_Handle(t *testing.T) {
 
 func TestApprovalRunHandler_reflectApprovalEmailStatus(t *testing.T) {
 	tc := map[string]struct {
-		approvalConditions status.Conditions
+		approvalConditions []metav1.Condition
 		expectedMessage    string
 	}{
 		"bothFail": {
-			approvalConditions: []status.Condition{
-				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: corev1.ConditionFalse, Reason: "smtp-error", Message: "smtp 403 error!"},
-				{Type: cicdv1.ApprovalConditionSentResultMail, Status: corev1.ConditionFalse, Reason: "receiver-error", Message: "receiver is not valid"},
+			approvalConditions: []metav1.Condition{
+				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionFalse, Reason: "smtp-error", Message: "smtp 403 error!"},
+				{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionFalse, Reason: "receiver-error", Message: "receiver is not valid"},
 			},
 			expectedMessage: "RequestMail : smtp-error-smtp 403 error!, ResultMail : receiver-error-receiver is not valid",
 		},
 		"reqFail": {
-			approvalConditions: []status.Condition{
-				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: corev1.ConditionFalse, Reason: "smtp-error", Message: "smtp 403 error!"},
-				{Type: cicdv1.ApprovalConditionSentResultMail, Status: corev1.ConditionTrue},
+			approvalConditions: []metav1.Condition{
+				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionFalse, Reason: "smtp-error", Message: "smtp 403 error!"},
+				{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionTrue},
 			},
 			expectedMessage: "RequestMail : smtp-error-smtp 403 error!",
 		},
 		"resFail": {
-			approvalConditions: []status.Condition{
-				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: corev1.ConditionTrue},
-				{Type: cicdv1.ApprovalConditionSentResultMail, Status: corev1.ConditionFalse, Reason: "receiver-error", Message: "receiver is not valid"},
+			approvalConditions: []metav1.Condition{
+				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionTrue},
+				{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionFalse, Reason: "receiver-error", Message: "receiver is not valid"},
 			},
 			expectedMessage: "ResultMail : receiver-error-receiver is not valid",
 		},
@@ -537,7 +537,7 @@ func TestApprovalRunHandler_newApproval(t *testing.T) {
 		},
 	}
 
-	fakeCli := fake.NewFakeClientWithScheme(s, configMap, configMapFail, configMapNoKey)
+	fakeCli := fake.NewClientBuilder().WithScheme(s).WithObjects(configMap, configMapFail, configMapNoKey).Build()
 	handler := &ApprovalRunHandler{Client: fakeCli}
 
 	for name, c := range tc {

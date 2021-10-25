@@ -17,6 +17,10 @@
 package hold
 
 import (
+	"os"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -26,12 +30,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
-	"time"
 )
 
 const (
@@ -60,7 +61,7 @@ func TestHandler_HandleChatOps(t *testing.T) {
 	utilruntime.Must(cicdv1.AddToScheme(s))
 
 	ic := buildTestConfigForHold()
-	fakeCli := fake.NewFakeClientWithScheme(s, ic)
+	fakeCli := fake.NewClientBuilder().WithScheme(s).WithObjects(ic).Build()
 	handler := &Handler{Client: fakeCli}
 
 	// Set configs value

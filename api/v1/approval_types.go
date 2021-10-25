@@ -20,14 +20,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/operator-framework/operator-lib/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Approval's kind string
-const (
-	ApprovalKind = "approvals"
-)
+// ApprovalKind is a kind string
+const ApprovalKind = "approvals"
 
 // ApprovalResult is a result of the Approval
 type ApprovalResult string
@@ -42,8 +39,8 @@ const (
 
 // Condition keys for Approval
 const (
-	ApprovalConditionSentRequestMail = status.ConditionType("SentRequestMail")
-	ApprovalConditionSentResultMail  = status.ConditionType("SentResultMail")
+	ApprovalConditionSentRequestMail = "SentRequestMail"
+	ApprovalConditionSentResultMail  = "SentResultMail"
 )
 
 // ApprovalSpec defines the desired state of Approval
@@ -98,7 +95,7 @@ type ApprovalStatus struct {
 	DecisionTime *metav1.Time `json:"decisionTime,omitempty"`
 
 	// Conditions of Approval
-	Conditions status.Conditions `json:"conditions"`
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 // +kubebuilder:object:root=true

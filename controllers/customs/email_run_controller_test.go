@@ -263,7 +263,7 @@ func TestEmailRunHandler_Handle(t *testing.T) {
 				run.Status.Conditions = append(run.Status.Conditions, *c.runCondition)
 			}
 
-			fakeCli := fake.NewFakeClientWithScheme(s, run, ij)
+			fakeCli := fake.NewClientBuilder().WithScheme(s).WithObjects(run, ij).Build()
 			sender := mail.NewFakeSender()
 			emailRunHandler := EmailRunHandler{Scheme: s, Client: fakeCli, Log: ctrl.Log, MailSender: sender}
 

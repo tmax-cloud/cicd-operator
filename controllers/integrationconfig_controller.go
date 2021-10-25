@@ -19,10 +19,10 @@ package controllers
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
-	"github.com/operator-framework/operator-lib/status"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -53,8 +53,7 @@ type IntegrationConfigReconciler struct {
 // +kubebuilder:rbac:groups="",resources=secrets;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles IntegrationConfig
-func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("integrationconfig", req.NamespacedName)
 
 	instance := &cicdv1.IntegrationConfig{}
@@ -68,11 +67,11 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	original := instance.DeepCopy()
 
 	// New Condition default
-	cond := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionReady)
+	cond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionReady)
 	if cond == nil {
-		cond = &status.Condition{
+		cond = &metav1.Condition{
 			Type:   cicdv1.IntegrationConfigConditionReady,
-			Status: corev1.ConditionFalse,
+			Status: metav1.ConditionFalse,
 		}
 	}
 
@@ -80,7 +79,7 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	specChanged := false
 
 	defer func(ic *cicdv1.IntegrationConfig, specChanged *bool) {
-		ic.Status.Conditions.SetCondition(*cond)
+		meta.SetStatusCondition(&ic.Status.Conditions, *cond)
 		p := client.MergeFrom(original)
 
 		if *specChanged {
@@ -117,7 +116,7 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// Service account for running PipelineRuns
 	if err := r.createServiceAccount(instance); err != nil {
 		log.Error(err, "")
-		cond.Status = corev1.ConditionFalse
+		cond.Status = metav1.ConditionFalse
 		cond.Reason = "CannotCreateAccount"
 		cond.Message = err.Error()
 		return ctrl.Result{}, nil
@@ -126,7 +125,7 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	// Git credential secret - referred by tekton
 	if err := r.createGitSecret(instance); err != nil {
 		log.Error(err, "")
-		cond.Status = corev1.ConditionFalse
+		cond.Status = metav1.ConditionFalse
 		cond.Reason = "CannotCreateSecret"
 		cond.Message = err.Error()
 		return ctrl.Result{}, nil
@@ -205,11 +204,11 @@ func (r *IntegrationConfigReconciler) setSecretString(instance *cicdv1.Integrati
 
 // Set webhook-registered condition, return if it's changed or not
 func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.IntegrationConfig) {
-	webhookRegistered := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionWebhookRegistered)
+	webhookRegistered := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
 	if webhookRegistered == nil {
-		webhookRegistered = &status.Condition{
+		webhookRegistered = &metav1.Condition{
 			Type:   cicdv1.IntegrationConfigConditionWebhookRegistered,
-			Status: corev1.ConditionFalse,
+			Status: metav1.ConditionFalse,
 		}
 	}
 
@@ -217,13 +216,13 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 	if instance.Spec.Git.Token == nil {
 		webhookRegistered.Reason = cicdv1.IntegrationConfigConditionReasonNoGitToken
 		webhookRegistered.Message = "Skipped to register webhook"
-		_ = instance.Status.Conditions.SetCondition(*webhookRegistered)
+		meta.SetStatusCondition(&instance.Status.Conditions, *webhookRegistered)
 		return
 	}
 
 	// Register only if the condition is false
-	if webhookRegistered.IsFalse() {
-		webhookRegistered.Status = corev1.ConditionFalse
+	if webhookRegistered.Status == metav1.ConditionFalse {
+		webhookRegistered.Status = metav1.ConditionFalse
 		webhookRegistered.Reason = ""
 		webhookRegistered.Message = ""
 
@@ -253,22 +252,22 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 					webhookRegistered.Reason = "webhookRegisterFailed"
 					webhookRegistered.Message = err.Error()
 				} else {
-					webhookRegistered.Status = corev1.ConditionTrue
+					webhookRegistered.Status = metav1.ConditionTrue
 					webhookRegistered.Reason = ""
 					webhookRegistered.Message = ""
 				}
 			}
 		}
-		_ = instance.Status.Conditions.SetCondition(*webhookRegistered)
+		meta.SetStatusCondition(&instance.Status.Conditions, *webhookRegistered)
 	}
 }
 
 // Set ready condition, return if it's changed or not
-func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationConfig, cond *status.Condition) {
+func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationConfig, cond *metav1.Condition) {
 	// For now, only checked is if webhook-registered is true & secrets are set
-	webhookRegistered := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionWebhookRegistered)
-	if instance.Status.Secrets != "" && webhookRegistered != nil && (webhookRegistered.Status == corev1.ConditionTrue || webhookRegistered.Reason == cicdv1.IntegrationConfigConditionReasonNoGitToken) {
-		cond.Status = corev1.ConditionTrue
+	webhookRegistered := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
+	if instance.Status.Secrets != "" && webhookRegistered != nil && (webhookRegistered.Status == metav1.ConditionTrue || webhookRegistered.Reason == cicdv1.IntegrationConfigConditionReasonNoGitToken) {
+		cond.Status = metav1.ConditionTrue
 	}
 }
 

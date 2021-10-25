@@ -20,13 +20,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/operator-framework/operator-lib/status"
 	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	gitfake "github.com/tmax-cloud/cicd-operator/pkg/git/fake"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,11 +56,11 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 		errorMessage           string
 		expectedWebhooks       []string
 		expectedFinalizers     []string
-		expectedReadyStatus    corev1.ConditionStatus
-		expectedReadyReason    status.ConditionReason
+		expectedReadyStatus    metav1.ConditionStatus
+		expectedReadyReason    string
 		expectedReadyMessage   string
-		expectedWebhookStatus  corev1.ConditionStatus
-		expectedWebhookReason  status.ConditionReason
+		expectedWebhookStatus  metav1.ConditionStatus
+		expectedWebhookReason  string
 		expectedWebhookMessage string
 	}{
 		"create": {
@@ -72,7 +72,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			},
 			scheme:               s,
 			expectedFinalizers:   []string{finalizer},
-			expectedReadyStatus:  corev1.ConditionFalse,
+			expectedReadyStatus:  metav1.ConditionFalse,
 			expectedReadyReason:  "",
 			expectedReadyMessage: "",
 		},
@@ -94,10 +94,10 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			scheme:                 s,
 			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
 			expectedFinalizers:     []string{finalizer},
-			expectedWebhookStatus:  corev1.ConditionTrue,
+			expectedWebhookStatus:  metav1.ConditionTrue,
 			expectedWebhookReason:  "",
 			expectedWebhookMessage: "",
-			expectedReadyStatus:    corev1.ConditionTrue,
+			expectedReadyStatus:    metav1.ConditionTrue,
 			expectedReadyReason:    "",
 			expectedReadyMessage:   "",
 		},
@@ -137,7 +137,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			notApplied:   true,
 			scheme:       sNoCicd,
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.IntegrationConfig in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.IntegrationConfig in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 		"ready": {
 			ic: &cicdv1.IntegrationConfig{
@@ -155,18 +155,18 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				},
 				Status: cicdv1.IntegrationConfigStatus{
 					Secrets: "test-secret",
-					Conditions: status.Conditions{
-						{Type: cicdv1.IntegrationConfigConditionReady, Status: corev1.ConditionTrue, Reason: "", Message: ""},
-						{Type: cicdv1.IntegrationConfigConditionWebhookRegistered, Status: corev1.ConditionTrue, Reason: "", Message: ""},
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.IntegrationConfigConditionReady, Status: metav1.ConditionTrue, Reason: "", Message: ""},
+						{Type: cicdv1.IntegrationConfigConditionWebhookRegistered, Status: metav1.ConditionTrue, Reason: "", Message: ""},
 					},
 				},
 			},
 			scheme:                 s,
 			expectedFinalizers:     []string{finalizer},
-			expectedWebhookStatus:  corev1.ConditionTrue,
+			expectedWebhookStatus:  metav1.ConditionTrue,
 			expectedWebhookReason:  "",
 			expectedWebhookMessage: "",
-			expectedReadyStatus:    corev1.ConditionTrue,
+			expectedReadyStatus:    metav1.ConditionTrue,
 			expectedReadyReason:    "",
 			expectedReadyMessage:   "",
 		},
@@ -188,18 +188,18 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				},
 				Status: cicdv1.IntegrationConfigStatus{
 					Secrets: "test-secret",
-					Conditions: status.Conditions{
-						{Type: cicdv1.IntegrationConfigConditionReady, Status: corev1.ConditionTrue, Reason: "", Message: ""},
-						{Type: cicdv1.IntegrationConfigConditionWebhookRegistered, Status: corev1.ConditionTrue, Reason: "", Message: ""},
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.IntegrationConfigConditionReady, Status: metav1.ConditionTrue, Reason: "", Message: ""},
+						{Type: cicdv1.IntegrationConfigConditionWebhookRegistered, Status: metav1.ConditionTrue, Reason: "", Message: ""},
 					},
 				},
 			},
 			scheme:                 s,
 			expectedFinalizers:     []string{finalizer},
-			expectedWebhookStatus:  corev1.ConditionTrue,
+			expectedWebhookStatus:  metav1.ConditionTrue,
 			expectedWebhookReason:  "",
 			expectedWebhookMessage: "",
-			expectedReadyStatus:    corev1.ConditionFalse,
+			expectedReadyStatus:    metav1.ConditionFalse,
 			expectedReadyReason:    "CannotCreateSecret",
 			expectedReadyMessage:   "secrets \"no-exist\" not found",
 		},
@@ -221,19 +221,19 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			scheme:                 sNoCore,
 			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
 			expectedFinalizers:     []string{finalizer},
-			expectedWebhookStatus:  corev1.ConditionTrue,
+			expectedWebhookStatus:  metav1.ConditionTrue,
 			expectedWebhookReason:  "",
 			expectedWebhookMessage: "",
-			expectedReadyStatus:    corev1.ConditionFalse,
+			expectedReadyStatus:    metav1.ConditionFalse,
 			expectedReadyReason:    "CannotCreateAccount",
-			expectedReadyMessage:   "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:101\"",
+			expectedReadyMessage:   "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 	}
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
 			configs.CurrentExternalHostName = "cicd-webhook.com"
-			fakeCli := fake.NewFakeClientWithScheme(c.scheme)
+			fakeCli := fake.NewClientBuilder().WithScheme(c.scheme).Build()
 			if !c.notApplied {
 				require.NoError(t, fakeCli.Create(context.Background(), c.ic))
 			}
@@ -249,7 +249,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 
 			reconciler := &IntegrationConfigReconciler{Log: &fakeLogger{}, Scheme: c.scheme, Client: fakeCli}
 
-			_, err := reconciler.Reconcile(ctrl.Request{NamespacedName: types.NamespacedName{Name: c.ic.Name, Namespace: c.ic.Namespace}})
+			_, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: c.ic.Name, Namespace: c.ic.Namespace}})
 			if c.errorOccurs {
 				require.Error(t, err)
 				require.Equal(t, c.errorMessage, err.Error())
@@ -276,7 +276,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 
 				require.Equal(t, c.expectedFinalizers, result.Finalizers)
 
-				webhookCond := result.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionWebhookRegistered)
+				webhookCond := meta.FindStatusCondition(result.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
 				if c.expectedWebhookStatus == "" {
 					require.Nil(t, webhookCond)
 				} else {
@@ -286,7 +286,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 					require.Equal(t, c.expectedWebhookMessage, webhookCond.Message)
 				}
 
-				readyCond := result.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionReady)
+				readyCond := meta.FindStatusCondition(result.Status.Conditions, cicdv1.IntegrationConfigConditionReady)
 				if c.expectedReadyStatus == "" {
 					require.Nil(t, readyCond)
 				} else {
@@ -432,7 +432,7 @@ func TestIntegrationConfigReconciler_handleFinalizer(t *testing.T) {
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
 			configs.CurrentExternalHostName = "cicd-webhook.com"
-			fakeCli := fake.NewFakeClientWithScheme(s)
+			fakeCli := fake.NewClientBuilder().WithScheme(s).Build()
 			if !c.notApplied {
 				require.NoError(t, fakeCli.Create(context.Background(), c.ic))
 			}
@@ -504,8 +504,8 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 		preRegisteredWebhookURL string
 
 		expectedWebhookURL string
-		expectedStatus     corev1.ConditionStatus
-		expectedReason     status.ConditionReason
+		expectedStatus     metav1.ConditionStatus
+		expectedReason     string
 		expectedMessage    string
 	}{
 		"create": {
@@ -523,7 +523,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 				},
 			},
 			expectedWebhookURL: "http://cicd-webhook.com/webhook/test-ns/test-ic",
-			expectedStatus:     corev1.ConditionTrue,
+			expectedStatus:     metav1.ConditionTrue,
 			expectedReason:     "",
 			expectedMessage:    "",
 		},
@@ -541,7 +541,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 				},
 			},
 			expectedWebhookURL: "",
-			expectedStatus:     corev1.ConditionFalse,
+			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "noGitToken",
 			expectedMessage:    "Skipped to register webhook",
 		},
@@ -560,7 +560,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 				},
 			},
 			expectedWebhookURL: "",
-			expectedStatus:     corev1.ConditionFalse,
+			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "gitCliErr",
 			expectedMessage:    "git type dummy is not supported",
 		},
@@ -579,7 +579,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 				},
 			},
 			expectedWebhookURL: "",
-			expectedStatus:     corev1.ConditionFalse,
+			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "webhookRegisterFailed",
 			expectedMessage:    "404 no such repository",
 		},
@@ -599,7 +599,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 			},
 			preRegisteredWebhookURL: "http://cicd-webhook.com/webhook/test-ns/test-ic",
 			expectedWebhookURL:      "",
-			expectedStatus:          corev1.ConditionFalse,
+			expectedStatus:          metav1.ConditionFalse,
 			expectedReason:          "webhookRegisterFailed",
 			expectedMessage:         "same webhook has already registered",
 		},
@@ -631,7 +631,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 				require.True(t, found)
 			}
 
-			cond := c.ic.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionWebhookRegistered)
+			cond := meta.FindStatusCondition(c.ic.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
 			require.NotNil(t, cond)
 			require.Equal(t, c.expectedStatus, cond.Status)
 			require.Equal(t, c.expectedReason, cond.Reason)
@@ -644,7 +644,7 @@ func TestIntegrationConfigReconciler_setReadyCond(t *testing.T) {
 	tc := map[string]struct {
 		ic *cicdv1.IntegrationConfig
 
-		expectedReadyCondStatus corev1.ConditionStatus
+		expectedReadyCondStatus metav1.ConditionStatus
 	}{
 		"create": {
 			ic: &cicdv1.IntegrationConfig{
@@ -659,7 +659,7 @@ func TestIntegrationConfigReconciler_setReadyCond(t *testing.T) {
 					},
 				},
 			},
-			expectedReadyCondStatus: corev1.ConditionFalse,
+			expectedReadyCondStatus: metav1.ConditionFalse,
 		},
 		"noop": {
 			ic: &cicdv1.IntegrationConfig{
@@ -674,13 +674,13 @@ func TestIntegrationConfigReconciler_setReadyCond(t *testing.T) {
 					},
 				},
 				Status: cicdv1.IntegrationConfigStatus{
-					Conditions: []status.Condition{
-						{Type: "webhook-registered", Status: corev1.ConditionTrue},
-						{Type: "ready", Status: corev1.ConditionTrue},
+					Conditions: []metav1.Condition{
+						{Type: "webhook-registered", Status: metav1.ConditionTrue},
+						{Type: "ready", Status: metav1.ConditionTrue},
 					},
 				},
 			},
-			expectedReadyCondStatus: corev1.ConditionTrue,
+			expectedReadyCondStatus: metav1.ConditionTrue,
 		},
 		"webhookRegistered": {
 			ic: &cicdv1.IntegrationConfig{
@@ -695,13 +695,13 @@ func TestIntegrationConfigReconciler_setReadyCond(t *testing.T) {
 					},
 				},
 				Status: cicdv1.IntegrationConfigStatus{
-					Conditions: []status.Condition{
-						{Type: "webhook-registered", Status: corev1.ConditionTrue},
+					Conditions: []metav1.Condition{
+						{Type: "webhook-registered", Status: metav1.ConditionTrue},
 					},
 					Secrets: "test-secret",
 				},
 			},
-			expectedReadyCondStatus: corev1.ConditionTrue,
+			expectedReadyCondStatus: metav1.ConditionTrue,
 		},
 		"noRegisterNeeded": {
 			ic: &cicdv1.IntegrationConfig{
@@ -716,24 +716,24 @@ func TestIntegrationConfigReconciler_setReadyCond(t *testing.T) {
 					},
 				},
 				Status: cicdv1.IntegrationConfigStatus{
-					Conditions: []status.Condition{
-						{Type: "webhook-registered", Status: corev1.ConditionFalse, Reason: "noGitToken"},
+					Conditions: []metav1.Condition{
+						{Type: "webhook-registered", Status: metav1.ConditionFalse, Reason: "noGitToken"},
 					},
 					Secrets: "test-secret",
 				},
 			},
-			expectedReadyCondStatus: corev1.ConditionTrue,
+			expectedReadyCondStatus: metav1.ConditionTrue,
 		},
 	}
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
 			reconciler := &IntegrationConfigReconciler{}
-			cond := c.ic.Status.Conditions.GetCondition("ready")
+			cond := meta.FindStatusCondition(c.ic.Status.Conditions, "ready")
 			if cond == nil {
-				cond = &status.Condition{
+				cond = &metav1.Condition{
 					Type:   cicdv1.IntegrationConfigConditionReady,
-					Status: corev1.ConditionFalse,
+					Status: metav1.ConditionFalse,
 				}
 			}
 			reconciler.setReadyCond(c.ic, cond)
@@ -790,7 +790,7 @@ func TestIntegrationConfigReconciler_createGitSecret(t *testing.T) {
 			},
 			scheme:       sNoCore,
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.Secret in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.Secret in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 		"updateSecretErr": {
 			ic: &cicdv1.IntegrationConfig{
@@ -845,7 +845,7 @@ func TestIntegrationConfigReconciler_createGitSecret(t *testing.T) {
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
-			fakeCli := fake.NewFakeClientWithScheme(c.scheme)
+			fakeCli := fake.NewClientBuilder().WithScheme(c.scheme).Build()
 			if c.secret != nil {
 				require.NoError(t, fakeCli.Create(context.Background(), c.secret))
 			}
@@ -873,7 +873,7 @@ func TestIntegrationConfigReconciler_updateGitSecret(t *testing.T) {
 	utilruntime.Must(corev1.AddToScheme(s))
 	utilruntime.Must(cicdv1.AddToScheme(s))
 
-	fakeCli := fake.NewFakeClientWithScheme(s)
+	fakeCli := fake.NewClientBuilder().WithScheme(s).Build()
 
 	tc := map[string]struct {
 		ic     *cicdv1.IntegrationConfig
@@ -1049,7 +1049,7 @@ func TestIntegrationConfigReconciler_createServiceAccount(t *testing.T) {
 			},
 			scheme:       sNoCore,
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 		"secretBlankName": {
 			ic: &cicdv1.IntegrationConfig{
@@ -1144,7 +1144,7 @@ func TestIntegrationConfigReconciler_createServiceAccount(t *testing.T) {
 			dontCreateIC: true,
 			scheme:       sNoCicd,
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.IntegrationConfig in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.IntegrationConfig in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 		"createSaError": {
 			ic: &cicdv1.IntegrationConfig{
@@ -1157,7 +1157,7 @@ func TestIntegrationConfigReconciler_createServiceAccount(t *testing.T) {
 			},
 			scheme:       sNoCore,
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 	}
 
@@ -1165,9 +1165,9 @@ func TestIntegrationConfigReconciler_createServiceAccount(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			reconciler := &IntegrationConfigReconciler{Scheme: c.scheme}
 			if c.dontCreateIC {
-				reconciler.Client = fake.NewFakeClientWithScheme(c.scheme)
+				reconciler.Client = fake.NewClientBuilder().WithScheme(c.scheme).Build()
 			} else {
-				reconciler.Client = fake.NewFakeClientWithScheme(c.scheme, c.ic)
+				reconciler.Client = fake.NewClientBuilder().WithScheme(c.scheme).WithObjects(c.ic).Build()
 			}
 			if c.sa != nil {
 				_ = reconciler.Client.Create(context.Background(), c.sa)

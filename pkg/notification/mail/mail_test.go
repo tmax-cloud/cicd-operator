@@ -32,7 +32,7 @@ import (
 )
 
 func TestNewSender(t *testing.T) {
-	fakeCli := fake.NewFakeClientWithScheme(scheme.Scheme)
+	fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	s := NewSender(fakeCli)
 	require.Equal(t, &sender{cli: fakeCli}, s)
 }
@@ -139,8 +139,7 @@ func Test_sender_Send(t *testing.T) {
 					corev1.BasicAuthPasswordKey: []byte("admin"),
 				},
 			}
-
-			fakeCli := fake.NewFakeClientWithScheme(scheme.Scheme, secret)
+			fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(secret).Build()
 			sender := &sender{cli: fakeCli}
 			err = sender.Send(c.users, c.title, c.content, c.isHTML)
 			if c.errorOccurs {
@@ -223,7 +222,7 @@ func Test_sender_getServerInfo(t *testing.T) {
 				},
 			}
 
-			fakeCli := fake.NewFakeClientWithScheme(scheme.Scheme, secret, secretWrong)
+			fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(secret, secretWrong).Build()
 			s := &sender{cli: fakeCli}
 
 			info, err := s.getServerInfo()

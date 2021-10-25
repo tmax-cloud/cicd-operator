@@ -17,6 +17,8 @@
 package size
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -25,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 const (
@@ -60,7 +61,7 @@ func TestSize_Handle(t *testing.T) {
 		},
 	}
 
-	fakeCli := fake.NewFakeClientWithScheme(s, ic)
+	fakeCli := fake.NewClientBuilder().WithScheme(s).WithObjects(ic).Build()
 	size := Size{Client: fakeCli}
 
 	tc := map[string]sizeTestCase{

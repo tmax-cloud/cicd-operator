@@ -43,7 +43,7 @@ func TestIntegrationConfig_GetToken(t *testing.T) {
 		},
 	}
 
-	cli := fake.NewFakeClientWithScheme(s, secret1)
+	cli := fake.NewClientBuilder().WithScheme(s).WithObjects(secret1).Build()
 
 	tc := map[string]struct {
 		gitToken *GitToken

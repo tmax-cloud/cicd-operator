@@ -563,5 +563,5 @@ func mergeTestConfig() (*cicdv1.IntegrationConfig, client.Client) {
 			},
 		},
 	}
-	return ic, fake.NewFakeClientWithScheme(s, ic)
+	return ic, fake.NewClientBuilder().WithScheme(s).WithObjects(ic).Build()
 }

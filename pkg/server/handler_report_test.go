@@ -33,6 +33,7 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	applyconfigurationscorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	restclient "k8s.io/client-go/rest"
@@ -262,7 +264,7 @@ func Test_reportHandler_ServeHTTP(t *testing.T) {
 				},
 			}
 
-			fakeCli := ctrlfake.NewFakeClientWithScheme(scheme.Scheme, pod1)
+			fakeCli := ctrlfake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(pod1).Build()
 			if c.ij != nil {
 				require.NoError(t, fakeCli.Create(context.Background(), c.ij))
 			}
@@ -392,7 +394,7 @@ func Test_reportHandler_getPodLogs(t *testing.T) {
 				},
 			}
 
-			fakeCli := ctrlfake.NewFakeClientWithScheme(scheme.Scheme, pod1)
+			fakeCli := ctrlfake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(pod1).Build()
 			testSrv := httptest.NewServer(&fakeLogHandler{
 				pods: map[string]struct{ containerLogs map[string]string }{
 					"default/pod1": {
@@ -482,6 +484,26 @@ type fakeLogStreamer struct {
 	ns  string
 }
 
+func (f *fakeLogStreamer) Apply(_ context.Context, _ *applyconfigurationscorev1.PodApplyConfiguration, _ metav1.ApplyOptions) (*corev1.Pod, error) {
+	return nil, nil
+}
+
+func (f *fakeLogStreamer) ApplyStatus(_ context.Context, _ *applyconfigurationscorev1.PodApplyConfiguration, _ metav1.ApplyOptions) (*corev1.Pod, error) {
+	return nil, nil
+}
+
+func (f *fakeLogStreamer) EvictV1(_ context.Context, _ *policyv1.Eviction) error {
+	return nil
+}
+
+func (f *fakeLogStreamer) EvictV1beta1(_ context.Context, _ *policyv1beta1.Eviction) error {
+	return nil
+}
+
+func (f *fakeLogStreamer) ProxyGet(_, _, _, _ string, _ map[string]string) restclient.ResponseWrapper {
+	return nil
+}
+
 func (f *fakeLogStreamer) Create(context.Context, *corev1.Pod, metav1.CreateOptions) (*corev1.Pod, error) {
 	return nil, nil
 }
@@ -507,10 +529,7 @@ func (f *fakeLogStreamer) Watch(context.Context, metav1.ListOptions) (watch.Inte
 func (f *fakeLogStreamer) Patch(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) (result *corev1.Pod, err error) {
 	return nil, nil
 }
-func (f *fakeLogStreamer) GetEphemeralContainers(context.Context, string, metav1.GetOptions) (*corev1.EphemeralContainers, error) {
-	return nil, nil
-}
-func (f *fakeLogStreamer) UpdateEphemeralContainers(context.Context, string, *corev1.EphemeralContainers, metav1.UpdateOptions) (*corev1.EphemeralContainers, error) {
+func (f *fakeLogStreamer) UpdateEphemeralContainers(_ context.Context, _ string, _ *corev1.Pod, _ metav1.UpdateOptions) (*corev1.Pod, error) {
 	return nil, nil
 }
 func (f *fakeLogStreamer) Bind(context.Context, *corev1.Binding, metav1.CreateOptions) error {

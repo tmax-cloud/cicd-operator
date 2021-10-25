@@ -111,7 +111,7 @@ func initTestEnv() (*handler, error) {
 			},
 		},
 	}
-	fakeCli := fake.NewFakeClientWithScheme(s, ic)
+	fakeCli := fake.NewClientBuilder().WithScheme(s).WithObjects(ic).Build()
 
 	h := &handler{
 		k8sClient: fakeCli,

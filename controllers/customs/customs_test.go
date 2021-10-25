@@ -117,7 +117,7 @@ func Test_compileTitleContent(t *testing.T) {
 				Spec: c.ijSpec,
 			}
 
-			cli := fake.NewFakeClientWithScheme(s, ij)
+			cli := fake.NewClientBuilder().WithScheme(s).WithObjects(ij).Build()
 			output, err := compileString("default", c.ijName, ij.Spec.Jobs[0].Name, c.title, cli)
 			if c.errorOccurs {
 				require.Error(t, err)

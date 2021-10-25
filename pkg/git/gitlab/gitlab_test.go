@@ -196,7 +196,7 @@ func testEnv() (*Client, error) {
 
 	c := &Client{
 		IntegrationConfig: ic,
-		K8sClient:         fake.NewFakeClientWithScheme(s, ic),
+		K8sClient:         fake.NewClientBuilder().WithScheme(s).WithObjects(ic).Build(),
 	}
 	if err := c.Init(); err != nil {
 		return nil, err
