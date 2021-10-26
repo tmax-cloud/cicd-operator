@@ -27,13 +27,12 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 type groupVersionResourceClientTestCase struct {
@@ -58,8 +57,8 @@ func TestNewGroupVersionResourceClient(t *testing.T) {
 		},
 		"ingresses": {
 			ns:              "test-ns2",
-			gvr:             networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			expectedApiPath: "/apis/networking.k8s.io/v1beta1",
+			gvr:             networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			expectedApiPath: "/apis/networking.k8s.io/v1",
 		},
 	}
 
@@ -101,8 +100,8 @@ func TestGvrClient_Get(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(pod)
 	})
-	router.Path("/apis/networking.k8s.io/v1beta1/namespaces/test-ns/ingresses/ing").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ing := &networkingv1beta1.Ingress{
+	router.Path("/apis/networking.k8s.io/v1/namespaces/test-ns/ingresses/ing").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		ing := &networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ing",
 				Namespace: "test-ns",
@@ -137,14 +136,14 @@ func TestGvrClient_Get(t *testing.T) {
 		"ingress": {
 			ns:   "test-ns",
 			name: "ing",
-			gvr:  networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			objs: []runtime.Object{&networkingv1beta1.Ingress{}},
+			gvr:  networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			objs: []runtime.Object{&networkingv1.Ingress{}},
 		},
 		"ingressNotExist": {
 			ns:           "test-ns",
 			name:         "ing-not-exist",
-			gvr:          networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			objs:         []runtime.Object{&networkingv1beta1.Ingress{}},
+			gvr:          networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			objs:         []runtime.Object{&networkingv1.Ingress{}},
 			errorOccurs:  true,
 			errorMessage: "the server could not find the requested resource (get ingresses.networking.k8s.io ing-not-exist)",
 		},
@@ -173,9 +172,9 @@ func TestGvrClient_List(t *testing.T) {
 		list := &corev1.PodList{}
 		_ = json.NewEncoder(w).Encode(list)
 	})
-	router.Path("/apis/networking.k8s.io/v1beta1/namespaces/test-ns/ingresses").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	router.Path("/apis/networking.k8s.io/v1/namespaces/test-ns/ingresses").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		list := &networkingv1beta1.IngressList{}
+		list := &networkingv1.IngressList{}
 		_ = json.NewEncoder(w).Encode(list)
 	})
 
@@ -196,8 +195,8 @@ func TestGvrClient_List(t *testing.T) {
 		"ingress": {
 			ns:   "test-ns",
 			name: "ing",
-			gvr:  networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			objs: []runtime.Object{&networkingv1beta1.IngressList{}},
+			gvr:  networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			objs: []runtime.Object{&networkingv1.IngressList{}},
 		},
 	}
 
@@ -244,21 +243,21 @@ func TestGvrClient_Watch(t *testing.T) {
 			flusher.Flush()
 		}
 	})
-	router.Path("/apis/networking.k8s.io/v1beta1/namespaces/test-ns/ingresses").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	router.Path("/apis/networking.k8s.io/v1/namespaces/test-ns/ingresses").Methods(http.MethodGet).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		flusher := w.(http.Flusher)
 		if req.URL.Query().Get("watch") != "true" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		objs := []networkingv1beta1.Ingress{
-			{TypeMeta: metav1.TypeMeta{APIVersion: "networking.k8s.io/v1beta1", Kind: "Ingress"}, ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns"}},
+		objs := []networkingv1.Ingress{
+			{TypeMeta: metav1.TypeMeta{APIVersion: "networking.k8s.io/v1", Kind: "Ingress"}, ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns"}},
 		}
 
 		fs := req.URL.Query().Get("fieldSelector")
 		if fs == "" || !strings.HasPrefix(fs, "metadata.name=") {
 			// All
-			objs = append(objs, networkingv1beta1.Ingress{TypeMeta: metav1.TypeMeta{APIVersion: "networking.k8s.io/v1beta1", Kind: "Ingress"}, ObjectMeta: metav1.ObjectMeta{Name: "ing2", Namespace: "test-ns"}})
+			objs = append(objs, networkingv1.Ingress{TypeMeta: metav1.TypeMeta{APIVersion: "networking.k8s.io/v1", Kind: "Ingress"}, ObjectMeta: metav1.ObjectMeta{Name: "ing2", Namespace: "test-ns"}})
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -295,15 +294,15 @@ func TestGvrClient_Watch(t *testing.T) {
 		"ingress": {
 			ns:   "test-ns",
 			name: "ing",
-			gvr:  networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			objs: []runtime.Object{&networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns"}}},
+			gvr:  networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			objs: []runtime.Object{&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns"}}},
 		},
 		"ingressAll": {
 			ns:  "test-ns",
-			gvr: networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
+			gvr: networkingv1.SchemeGroupVersion.WithResource("ingresses"),
 			objs: []runtime.Object{
-				&networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns"}},
-				&networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing2", Namespace: "test-ns"}},
+				&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns"}},
+				&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing2", Namespace: "test-ns"}},
 			},
 		},
 	}
@@ -315,7 +314,7 @@ func TestGvrClient_Watch(t *testing.T) {
 
 			selector := ""
 			if c.name != "" {
-				selector = fields.OneTermEqualSelector(core.ObjectNameField, c.name).String()
+				selector = fields.OneTermEqualSelector(metav1.ObjectNameField, c.name).String()
 			}
 			watcher, err := cli.Watch(&metav1.ListOptions{FieldSelector: selector})
 			if c.errorOccurs {
@@ -348,8 +347,8 @@ func TestGvrClient_Create(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(pod)
 	})
-	router.Path("/apis/networking.k8s.io/v1beta1/namespaces/test-ns/ingresses").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ing := &networkingv1beta1.Ingress{}
+	router.Path("/apis/networking.k8s.io/v1/namespaces/test-ns/ingresses").Methods(http.MethodPost).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		ing := &networkingv1.Ingress{}
 		if err := json.NewDecoder(req.Body).Decode(ing); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -379,8 +378,8 @@ func TestGvrClient_Create(t *testing.T) {
 		"ingress": {
 			ns:   "test-ns",
 			name: "ing",
-			gvr:  networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			objs: []runtime.Object{&networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns", ResourceVersion: "testversion"}}},
+			gvr:  networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			objs: []runtime.Object{&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns", ResourceVersion: "testversion"}}},
 		},
 	}
 
@@ -412,8 +411,8 @@ func TestGvrClient_Update(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(pod)
 	})
-	router.Path("/apis/networking.k8s.io/v1beta1/namespaces/test-ns/ingresses/ing").Methods(http.MethodPut).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ing := &networkingv1beta1.Ingress{}
+	router.Path("/apis/networking.k8s.io/v1/namespaces/test-ns/ingresses/ing").Methods(http.MethodPut).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		ing := &networkingv1.Ingress{}
 		_ = json.NewDecoder(req.Body).Decode(ing)
 		if ing.ResourceVersion == "" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -456,22 +455,22 @@ func TestGvrClient_Update(t *testing.T) {
 		"ingress": {
 			ns:   "test-ns",
 			name: "ing",
-			gvr:  networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			objs: []runtime.Object{&networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns", ResourceVersion: "testversion"}}},
+			gvr:  networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			objs: []runtime.Object{&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns", ResourceVersion: "testversion"}}},
 		},
 		"ingressNotExist": {
 			ns:           "test-ns",
 			name:         "ing-not-exist",
-			gvr:          networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			objs:         []runtime.Object{&networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing-not-exist", Namespace: "test-ns", ResourceVersion: "testversion"}}},
+			gvr:          networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			objs:         []runtime.Object{&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing-not-exist", Namespace: "test-ns", ResourceVersion: "testversion"}}},
 			errorOccurs:  true,
 			errorMessage: "the server could not find the requested resource (put ingresses.networking.k8s.io ing-not-exist)",
 		},
 		"ingressNoResourceVersion": {
 			ns:           "test-ns",
 			name:         "ing-not-exist",
-			gvr:          networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
-			objs:         []runtime.Object{&networkingv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns"}}},
+			gvr:          networkingv1.SchemeGroupVersion.WithResource("ingresses"),
+			objs:         []runtime.Object{&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "ing", Namespace: "test-ns"}}},
 			errorOccurs:  true,
 			errorMessage: "the server rejected our request for an unknown reason (put ingresses.networking.k8s.io ing)",
 		},
@@ -497,7 +496,7 @@ func TestGvrClient_Delete(t *testing.T) {
 	router := mux.NewRouter()
 	router.Path("/api/v1/namespaces/test-ns/pods/pod1").Methods(http.MethodDelete).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 	})
-	router.Path("/apis/networking.k8s.io/v1beta1/namespaces/test-ns/ingresses/ing").Methods(http.MethodDelete).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	router.Path("/apis/networking.k8s.io/v1/namespaces/test-ns/ingresses/ing").Methods(http.MethodDelete).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 	})
 
 	apiServer := testApiServer(router)
@@ -523,12 +522,12 @@ func TestGvrClient_Delete(t *testing.T) {
 		"ingress": {
 			ns:   "test-ns",
 			name: "ing",
-			gvr:  networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
+			gvr:  networkingv1.SchemeGroupVersion.WithResource("ingresses"),
 		},
 		"ingressNotExist": {
 			ns:           "test-ns",
 			name:         "ing-not-exist",
-			gvr:          networkingv1beta1.SchemeGroupVersion.WithResource("ingresses"),
+			gvr:          networkingv1.SchemeGroupVersion.WithResource("ingresses"),
 			errorOccurs:  true,
 			errorMessage: "the server could not find the requested resource (delete ingresses.networking.k8s.io ing-not-exist)",
 		},

@@ -28,7 +28,7 @@ spec:
   jobs:
     preSubmit:
     - name: test-code
-      image: golang:1.14
+      image: golang:1.17
       script: |
         make test-crd
         make test-gen
@@ -38,15 +38,16 @@ spec:
         branch:
         - master
     - name: test-lint
-      image: golangci/golangci-lint:v1.32
+      image: golang:1.17
       script: |
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.32
         golangci-lint run ./... -v -E gofmt -E golint -E gocyclo -E misspell --timeout 1h0m0s
       when:
         branch:
         - master
     postSubmit:
     - name: test-code
-      image: golang:1.14
+      image: golang:1.17
       script: |
         make test-crd
         make test-gen
@@ -56,8 +57,9 @@ spec:
         branch:
           - master
     - name: test-lint
-      image: golangci/golangci-lint:v1.32
+      image: golang:1.17
       script: |
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.32
         golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
       when:
         branch:

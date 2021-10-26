@@ -44,7 +44,7 @@ func TestNew(t *testing.T) {
 	if _, exist := os.LookupEnv("CI"); !exist {
 		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	}
-	fakeCli := fake.NewFakeClientWithScheme(scheme.Scheme)
+	fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	cfg := &rest.Config{Host: "https://test"}
 	c, err := cache.New(cfg, cache.Options{Mapper: &meta.DefaultRESTMapper{}})
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ rcFz1g2uGUgBe3mBBDID0wosv/64zWA1x4uuwuM=
 		},
 	}
 
-	fCli := fake.NewFakeClientWithScheme(scheme.Scheme, apiSvc, extAuth)
+	fCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(apiSvc, extAuth).Build()
 	fCache := &informertest.FakeInformers{}
 
 	srv := &server{

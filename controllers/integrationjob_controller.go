@@ -67,8 +67,7 @@ func NewIntegrationJobReconciler(cli client.Client, scheme *runtime.Scheme, log 
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/status,verbs=get
 
 // Reconcile reconciles IntegrationJob
-func (r *integrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *integrationJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("integrationjob", req.NamespacedName)
 
 	// Get IntegrationJob

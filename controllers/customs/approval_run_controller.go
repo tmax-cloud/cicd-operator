@@ -30,6 +30,7 @@ import (
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -135,13 +136,13 @@ func (a *ApprovalRunHandler) reflectApprovalEmailStatus(approval *cicdv1.Approva
 	// Result of sending email is not critical to the Approval itself, so it's only stated in the message
 	var mailStatuses []string
 
-	sentReqMail := approval.Status.Conditions.GetCondition(cicdv1.ApprovalConditionSentRequestMail)
-	if sentReqMail != nil && sentReqMail.IsFalse() {
+	sentReqMail := meta.FindStatusCondition(approval.Status.Conditions, cicdv1.ApprovalConditionSentRequestMail)
+	if sentReqMail != nil && sentReqMail.Status == metav1.ConditionFalse {
 		mailStatuses = append(mailStatuses, fmt.Sprintf("RequestMail : %s-%s", sentReqMail.Reason, sentReqMail.Message))
 	}
 
-	sentResMail := approval.Status.Conditions.GetCondition(cicdv1.ApprovalConditionSentResultMail)
-	if sentResMail != nil && sentResMail.IsFalse() {
+	sentResMail := meta.FindStatusCondition(approval.Status.Conditions, cicdv1.ApprovalConditionSentResultMail)
+	if sentResMail != nil && sentResMail.Status == metav1.ConditionFalse {
 		mailStatuses = append(mailStatuses, fmt.Sprintf("ResultMail : %s-%s", sentResMail.Reason, sentResMail.Message))
 	}
 

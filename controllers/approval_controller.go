@@ -26,14 +26,13 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/operator-framework/operator-lib/status"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
-	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -73,8 +72,7 @@ const (
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles Approval object
-func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *ApprovalReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("approval", req.NamespacedName)
 
 	// Get Approval
@@ -88,25 +86,25 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	original := instance.DeepCopy()
 
-	sentReqMailCond := instance.Status.Conditions.GetCondition(cicdv1.ApprovalConditionSentRequestMail)
+	sentReqMailCond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentRequestMail)
 	if sentReqMailCond == nil {
-		sentReqMailCond = &status.Condition{
+		sentReqMailCond = &metav1.Condition{
 			Type:   cicdv1.ApprovalConditionSentRequestMail,
-			Status: corev1.ConditionUnknown,
+			Status: metav1.ConditionUnknown,
 		}
 	}
 
-	sentResMailCond := instance.Status.Conditions.GetCondition(cicdv1.ApprovalConditionSentResultMail)
+	sentResMailCond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentResultMail)
 	if sentResMailCond == nil {
-		sentResMailCond = &status.Condition{
+		sentResMailCond = &metav1.Condition{
 			Type:   cicdv1.ApprovalConditionSentResultMail,
-			Status: corev1.ConditionUnknown,
+			Status: metav1.ConditionUnknown,
 		}
 	}
 
 	defer func() {
-		instance.Status.Conditions.SetCondition(*sentReqMailCond)
-		instance.Status.Conditions.SetCondition(*sentResMailCond)
+		meta.SetStatusCondition(&instance.Status.Conditions, *sentReqMailCond)
+		meta.SetStatusCondition(&instance.Status.Conditions, *sentResMailCond)
 		p := client.MergeFrom(original)
 		if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
 			log.Error(err, "")
@@ -136,16 +134,16 @@ func (r *ApprovalReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, resCond *status.Condition) {
+func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, resCond *metav1.Condition) {
 	if instance.Spec.SkipSendMail {
 		return
 	}
 
 	// Set SentRequestMail
-	if reqCond == nil || reqCond.Status == "" || reqCond.Status == corev1.ConditionUnknown {
+	if reqCond == nil || reqCond.Status == "" || reqCond.Status == metav1.ConditionUnknown {
 		title, content, err := r.generateMail(instance, configMapKeyRequestTitle, configMapKeyRequestContent)
 		if err != nil {
-			reqCond.Status = corev1.ConditionFalse
+			reqCond.Status = metav1.ConditionFalse
 			reqCond.Reason = "EmailGenerateError"
 			reqCond.Message = err.Error()
 		} else {
@@ -160,10 +158,10 @@ func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, res
 	if instance.Spec.Sender == nil {
 		return
 	}
-	if resCond == nil || resCond.Status == corev1.ConditionUnknown {
+	if resCond == nil || resCond.Status == metav1.ConditionUnknown {
 		title, content, err := r.generateMail(instance, configMapKeyResultTitle, configMapKeyResultContent)
 		if err != nil {
-			resCond.Status = corev1.ConditionFalse
+			resCond.Status = metav1.ConditionFalse
 			resCond.Reason = "EmailGenerateError"
 			resCond.Message = err.Error()
 		} else {
@@ -322,8 +320,8 @@ func (r *ApprovalReconciler) generateMail(instance *cicdv1.Approval, titleKey, c
 	return title.String(), content.String(), nil
 }
 
-func (r *ApprovalReconciler) sendMail(users []string, title, content string, cond *status.Condition) {
-	cond.Status = corev1.ConditionFalse
+func (r *ApprovalReconciler) sendMail(users []string, title, content string, cond *metav1.Condition) {
+	cond.Status = metav1.ConditionFalse
 
 	if !configs.EnableMail {
 		cond.Reason = "EmailDisabled"
@@ -338,7 +336,7 @@ func (r *ApprovalReconciler) sendMail(users []string, title, content string, con
 		return
 	}
 
-	cond.Status = corev1.ConditionTrue
+	cond.Status = metav1.ConditionTrue
 	cond.Reason = ""
 	cond.Message = ""
 }

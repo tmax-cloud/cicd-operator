@@ -37,7 +37,7 @@ import (
 
 func TestNewIntegrationJobReconciler(t *testing.T) {
 	s := runtime.NewScheme()
-	fakeCli := fake.NewFakeClientWithScheme(s)
+	fakeCli := fake.NewClientBuilder().WithScheme(s).Build()
 	logger := &fakeLogger{info: []string{"hi"}}
 	reconciler := NewIntegrationJobReconciler(fakeCli, s, logger)
 
@@ -108,7 +108,7 @@ func TestIntegrationJobReconciler_Reconcile(t *testing.T) {
 			key:          types.NamespacedName{Name: "test-ij", Namespace: "test-ns"},
 			scheme:       sNoCicd,
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.IntegrationJob in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.IntegrationJob in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 		"handleFinalizerError": {
 			ij: &cicdv1.IntegrationJob{
@@ -198,7 +198,7 @@ func TestIntegrationJobReconciler_Reconcile(t *testing.T) {
 			key:    types.NamespacedName{Name: "test-ij", Namespace: "test-ns"},
 			verifyFunc: func(t *testing.T, ij *cicdv1.IntegrationJob) {
 				require.Equal(t, cicdv1.IntegrationJobStateFailed, ij.Status.State)
-				require.Equal(t, "no kind is registered for the type v1beta1.PipelineRun in scheme \"pkg/runtime/scheme.go:101\"", ij.Status.Message)
+				require.Equal(t, "no kind is registered for the type v1beta1.PipelineRun in scheme \"pkg/runtime/scheme.go:100\"", ij.Status.Message)
 			},
 		},
 		"reflectStatusError": {
@@ -246,9 +246,9 @@ func TestIntegrationJobReconciler_Reconcile(t *testing.T) {
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
 			if c.ij == nil {
-				reconciler.Client = fake.NewFakeClientWithScheme(c.scheme)
+				reconciler.Client = fake.NewClientBuilder().WithScheme(c.scheme).Build()
 			} else {
-				reconciler.Client = fake.NewFakeClientWithScheme(c.scheme, c.ij)
+				reconciler.Client = fake.NewClientBuilder().WithScheme(c.scheme).WithObjects(c.ij).Build()
 			}
 			if c.ic != nil {
 				_ = reconciler.Client.Create(context.Background(), c.ic)
@@ -259,7 +259,7 @@ func TestIntegrationJobReconciler_Reconcile(t *testing.T) {
 
 			logger.Clear()
 
-			_, err := reconciler.Reconcile(ctrl.Request{NamespacedName: c.key})
+			_, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: c.key})
 			if c.errorOccurs {
 				require.Error(t, err)
 				require.Equal(t, c.errorMessage, err.Error())
@@ -305,6 +305,7 @@ func TestIntegrationJobReconciler_handleFinalizer(t *testing.T) {
 		errorMessage      string
 		doExit            bool
 		expectedFinalizer []string
+		deleted           bool
 	}{
 		"setNow": {
 			ijMetaModifier:    func(meta *metav1.ObjectMeta) {},
@@ -332,6 +333,7 @@ func TestIntegrationJobReconciler_handleFinalizer(t *testing.T) {
 			},
 			doExit:            true,
 			expectedFinalizer: nil,
+			deleted:           true,
 		},
 		"deletedMultipleFinalizers": {
 			ijMetaModifier: func(meta *metav1.ObjectMeta) {
@@ -352,14 +354,13 @@ func TestIntegrationJobReconciler_handleFinalizer(t *testing.T) {
 		},
 	}
 
-	reconciler := &integrationJobReconciler{}
-
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
+			reconciler := &integrationJobReconciler{}
 			original := &cicdv1.IntegrationJob{ObjectMeta: metav1.ObjectMeta{Name: "test-ij", Namespace: "test-ns"}}
 
 			logger := &fakeLogger{}
-			reconciler.Client = fake.NewFakeClientWithScheme(s, original)
+			reconciler.Client = fake.NewClientBuilder().WithScheme(s).WithObjects(original).Build()
 			reconciler.Log = logger
 			reconciler.scheduler = &fakeScheduler{}
 
@@ -375,10 +376,12 @@ func TestIntegrationJobReconciler_handleFinalizer(t *testing.T) {
 			} else {
 				require.Equal(t, c.doExit, doExit)
 
-				result := &cicdv1.IntegrationJob{}
-				require.NoError(t, reconciler.Client.Get(context.Background(), types.NamespacedName{Name: "test-ij", Namespace: "test-ns"}, result))
+				if !c.deleted {
+					result := &cicdv1.IntegrationJob{}
+					require.NoError(t, reconciler.Client.Get(context.Background(), types.NamespacedName{Name: "test-ij", Namespace: "test-ns"}, result))
 
-				require.Equal(t, c.expectedFinalizer, result.Finalizers)
+					require.Equal(t, c.expectedFinalizer, result.Finalizers)
+				}
 			}
 		})
 	}
@@ -429,7 +432,7 @@ func TestIntegrationJobReconciler_patchJobFailed(t *testing.T) {
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
 			logger := &fakeLogger{}
-			reconciler.Client = fake.NewFakeClientWithScheme(s, original)
+			reconciler.Client = fake.NewClientBuilder().WithScheme(s).WithObjects(original).Build()
 			reconciler.Log = logger
 
 			ij := original.DeepCopy()

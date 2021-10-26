@@ -17,6 +17,9 @@
 package blocker
 
 import (
+	"os"
+	"testing"
+
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -24,12 +27,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
 )
 
 func TestBlocker_syncMergePoolStatus(t *testing.T) {
@@ -141,5 +142,5 @@ func syncStatusTestEnv() (client.Client, *cicdv1.IntegrationConfig) {
 		},
 	}
 
-	return fake.NewFakeClientWithScheme(s, ic), ic
+	return fake.NewClientBuilder().WithScheme(s).WithObjects(ic).Build(), ic
 }

@@ -184,7 +184,7 @@ func TestSlackRunHandler_Handle(t *testing.T) {
 				run.Status.Conditions = append(run.Status.Conditions, *c.runCondition)
 			}
 
-			fakeCli := fake.NewFakeClientWithScheme(s, run, ij)
+			fakeCli := fake.NewClientBuilder().WithScheme(s).WithObjects(run, ij).Build()
 			slackRunHandler := SlackRunHandler{Scheme: s, Client: fakeCli, Log: ctrl.Log}
 			res, err := slackRunHandler.Handle(run)
 			require.NoError(t, err)

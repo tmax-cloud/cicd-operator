@@ -74,5 +74,5 @@ func statusServerTestConfig() client.Client {
 
 	s := runtime.NewScheme()
 	utilruntime.Must(cicdv1.AddToScheme(s))
-	return fake.NewFakeClientWithScheme(s)
+	return fake.NewClientBuilder().WithScheme(s).Build()
 }

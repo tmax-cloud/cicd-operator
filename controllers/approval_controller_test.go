@@ -23,13 +23,12 @@ import (
 	"path"
 	"testing"
 
-	"github.com/operator-framework/operator-lib/status"
 	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
-	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -66,8 +65,8 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 		errorMessage        string
 		expectedResult      cicdv1.ApprovalResult
 		expectedReason      string
-		expectedReqCond     status.Condition
-		expectedResCond     status.Condition
+		expectedReqCond     metav1.Condition
+		expectedResCond     metav1.Condition
 		expectedRole        *rbac.Role
 		expectedRoleBinding *rbac.RoleBinding
 		expectedMails       []mail.FakeMailEntity
@@ -92,8 +91,8 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			template:        []byte("HI - {{.Name}}"),
 			expectedResult:  cicdv1.ApprovalResultAwaiting,
 			expectedReason:  "",
-			expectedReqCond: status.Condition{Status: corev1.ConditionTrue, Reason: "", Message: ""},
-			expectedResCond: status.Condition{Status: corev1.ConditionUnknown, Reason: "", Message: ""},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue, Reason: "", Message: ""},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"admin@tmax.co.kr"}, Title: "HI - test-approval", Content: "HI - test-approval", IsHTML: true},
 			},
@@ -117,7 +116,7 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 		"getErr": {
 			scheme:       sNoCicd,
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.Approval in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.Approval in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 		"notFound": {
 			scheme: s,
@@ -139,8 +138,8 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			template:        []byte("HI - {{.Name}}"),
 			expectedResult:  cicdv1.ApprovalResultAwaiting,
 			expectedReason:  "",
-			expectedReqCond: status.Condition{Status: corev1.ConditionUnknown, Reason: "", Message: ""},
-			expectedResCond: status.Condition{Status: corev1.ConditionUnknown, Reason: "", Message: ""},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
 		},
 		"createRoleErr": {
 			approval: &cicdv1.Approval{
@@ -161,9 +160,9 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			scheme:          sNoRole,
 			template:        []byte("HI - {{.Name}}"),
 			expectedResult:  cicdv1.ApprovalResultError,
-			expectedReason:  "no kind is registered for the type v1.Role in scheme \"pkg/runtime/scheme.go:101\"",
-			expectedReqCond: status.Condition{Status: corev1.ConditionUnknown, Reason: "", Message: ""},
-			expectedResCond: status.Condition{Status: corev1.ConditionUnknown, Reason: "", Message: ""},
+			expectedReason:  "no kind is registered for the type v1.Role in scheme \"pkg/runtime/scheme.go:100\"",
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
 		},
 		"createRbErr": {
 			approval: &cicdv1.Approval{
@@ -184,9 +183,9 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			scheme:          sNoRoleBinding,
 			template:        []byte("HI - {{.Name}}"),
 			expectedResult:  cicdv1.ApprovalResultError,
-			expectedReason:  "no kind is registered for the type v1.RoleBinding in scheme \"pkg/runtime/scheme.go:101\"",
-			expectedReqCond: status.Condition{Status: corev1.ConditionUnknown, Reason: "", Message: ""},
-			expectedResCond: status.Condition{Status: corev1.ConditionUnknown, Reason: "", Message: ""},
+			expectedReason:  "no kind is registered for the type v1.RoleBinding in scheme \"pkg/runtime/scheme.go:100\"",
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
 			expectedRole: &rbac.Role{
 				Rules: []rbac.PolicyRule{
 					{
@@ -218,12 +217,12 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			require.NoError(t, ioutil.WriteFile(path.Join(templatePath, configMapKeyResultContent), c.template, os.ModePerm))
 
 			sender := mail.NewFakeSender()
-			fakeCli := fake.NewFakeClientWithScheme(c.scheme)
+			fakeCli := fake.NewClientBuilder().WithScheme(c.scheme).Build()
 			if c.approval != nil {
 				require.NoError(t, fakeCli.Create(context.Background(), c.approval))
 			}
 			reconciler := &ApprovalReconciler{Client: fakeCli, MailSender: sender, Log: &fakeLogger{}, Scheme: c.scheme}
-			_, err := reconciler.Reconcile(ctrl.Request{NamespacedName: types.NamespacedName{Name: "test-approval", Namespace: "test-ns"}})
+			_, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "test-approval", Namespace: "test-ns"}})
 			if c.errorOccurs {
 				require.Error(t, err)
 				require.Equal(t, c.errorMessage, err.Error())
@@ -238,12 +237,12 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 
 				require.Equal(t, c.expectedResult, result.Status.Result)
 				require.Equal(t, c.expectedReason, result.Status.Reason)
-				require.Equal(t, c.expectedReqCond.Status, result.Status.Conditions.GetCondition("SentRequestMail").Status)
-				require.Equal(t, c.expectedReqCond.Reason, result.Status.Conditions.GetCondition("SentRequestMail").Reason)
-				require.Equal(t, c.expectedReqCond.Message, result.Status.Conditions.GetCondition("SentRequestMail").Message)
-				require.Equal(t, c.expectedResCond.Status, result.Status.Conditions.GetCondition("SentResultMail").Status)
-				require.Equal(t, c.expectedResCond.Reason, result.Status.Conditions.GetCondition("SentResultMail").Reason)
-				require.Equal(t, c.expectedResCond.Message, result.Status.Conditions.GetCondition("SentResultMail").Message)
+				require.Equal(t, c.expectedReqCond.Status, meta.FindStatusCondition(result.Status.Conditions, "SentRequestMail").Status)
+				require.Equal(t, c.expectedReqCond.Reason, meta.FindStatusCondition(result.Status.Conditions, "SentRequestMail").Reason)
+				require.Equal(t, c.expectedReqCond.Message, meta.FindStatusCondition(result.Status.Conditions, "SentRequestMail").Message)
+				require.Equal(t, c.expectedResCond.Status, meta.FindStatusCondition(result.Status.Conditions, "SentResultMail").Status)
+				require.Equal(t, c.expectedResCond.Reason, meta.FindStatusCondition(result.Status.Conditions, "SentResultMail").Reason)
+				require.Equal(t, c.expectedResCond.Message, meta.FindStatusCondition(result.Status.Conditions, "SentResultMail").Message)
 				require.Equal(t, c.expectedReason, result.Status.Reason)
 				require.Equal(t, c.expectedMails, sender.Mails)
 				if c.expectedRole != nil {
@@ -265,13 +264,13 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 func TestApprovalReconciler_processMail(t *testing.T) {
 	tc := map[string]struct {
 		approval        *cicdv1.Approval
-		reqCond         *status.Condition
-		resCond         *status.Condition
+		reqCond         *metav1.Condition
+		resCond         *metav1.Condition
 		requestTemplate []byte
 		resultTemplate  []byte
 
-		expectedReqCond status.Condition
-		expectedResCond status.Condition
+		expectedReqCond metav1.Condition
+		expectedResCond metav1.Condition
 		expectedMails   []mail.FakeMailEntity
 	}{
 		"sendAll": {
@@ -282,13 +281,13 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 				},
 				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
 			},
-			reqCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Spec.Sender.Name}} - request"),
-			resCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Spec.Sender.Name}} - result"),
 
-			expectedReqCond: status.Condition{Status: corev1.ConditionTrue},
-			expectedResCond: status.Condition{Status: corev1.ConditionTrue},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionTrue},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"test@tmax.co.kr"}, Title: "admin - request", Content: "admin - request", IsHTML: true},
 				{Receivers: []string{"admin@tmax.co.kr"}, Title: "admin - result", Content: "admin - result", IsHTML: true},
@@ -303,13 +302,13 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 				},
 				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
 			},
-			reqCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Spec.Sender.Name}} - request"),
-			resCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Spec.Sender.Name}} - result"),
 
-			expectedReqCond: status.Condition{Status: corev1.ConditionUnknown},
-			expectedResCond: status.Condition{Status: corev1.ConditionUnknown},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown},
 		},
 		"reqGenErr": {
 			approval: &cicdv1.Approval{
@@ -319,13 +318,13 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 				},
 				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
 			},
-			reqCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{....Spec.Sender.Name}} - request"),
-			resCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Spec.Sender.Name}} - result"),
 
-			expectedReqCond: status.Condition{Status: corev1.ConditionFalse, Reason: "EmailGenerateError", Message: "template: request-title:1: unexpected <.> in operand"},
-			expectedResCond: status.Condition{Status: corev1.ConditionTrue},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionFalse, Reason: "EmailGenerateError", Message: "template: request-title:1: unexpected <.> in operand"},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionTrue},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"admin@tmax.co.kr"}, Title: "admin - result", Content: "admin - result", IsHTML: true},
 			},
@@ -337,13 +336,13 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 					Users:  []cicdv1.ApprovalUser{{Name: "test", Email: "test@tmax.co.kr"}},
 				},
 			},
-			reqCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Spec.Sender.Name}} - request"),
-			resCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Spec.Sender.Name}} - result"),
 
-			expectedReqCond: status.Condition{Status: corev1.ConditionTrue},
-			expectedResCond: status.Condition{Status: corev1.ConditionUnknown},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"test@tmax.co.kr"}, Title: "admin - request", Content: "admin - request", IsHTML: true},
 			},
@@ -355,13 +354,13 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 				},
 				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
 			},
-			reqCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Name}} - request"),
-			resCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Name}} - result"),
 
-			expectedReqCond: status.Condition{Status: corev1.ConditionTrue},
-			expectedResCond: status.Condition{Status: corev1.ConditionUnknown},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"test@tmax.co.kr"}, Title: " - request", Content: " - request", IsHTML: true},
 			},
@@ -374,13 +373,13 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 				},
 				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
 			},
-			reqCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Spec.Sender.Name}} - request"),
-			resCond:         &status.Condition{Status: corev1.ConditionUnknown},
+			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{....Spec.Sender.Name}} - result"),
 
-			expectedReqCond: status.Condition{Status: corev1.ConditionTrue},
-			expectedResCond: status.Condition{Status: corev1.ConditionFalse, Reason: "EmailGenerateError", Message: "template: result-title:1: unexpected <.> in operand"},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionFalse, Reason: "EmailGenerateError", Message: "template: result-title:1: unexpected <.> in operand"},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"test@tmax.co.kr"}, Title: "admin - request", Content: "admin - request", IsHTML: true},
 			},
@@ -492,13 +491,13 @@ func TestApprovalReconciler_createOrUpdateRole(t *testing.T) {
 				},
 			},
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.Role in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.Role in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 	}
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
-			fakeCli := fake.NewFakeClientWithScheme(c.scheme)
+			fakeCli := fake.NewClientBuilder().WithScheme(c.scheme).Build()
 
 			reconciler := &ApprovalReconciler{Client: fakeCli, Scheme: c.scheme}
 			err := reconciler.createOrUpdateRole(c.approval)
@@ -598,13 +597,13 @@ func TestApprovalReconciler_createOrUpdateRoleBinding(t *testing.T) {
 				},
 			},
 			errorOccurs:  true,
-			errorMessage: "no kind is registered for the type v1.RoleBinding in scheme \"pkg/runtime/scheme.go:101\"",
+			errorMessage: "no kind is registered for the type v1.RoleBinding in scheme \"pkg/runtime/scheme.go:100\"",
 		},
 	}
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
-			fakeCli := fake.NewFakeClientWithScheme(c.scheme)
+			fakeCli := fake.NewClientBuilder().WithScheme(c.scheme).Build()
 			if c.rb != nil {
 				require.NoError(t, fakeCli.Create(context.Background(), c.rb))
 			}
@@ -761,7 +760,7 @@ func TestApprovalReconciler_generateMail(t *testing.T) {
 			require.NoError(t, ioutil.WriteFile(path.Join(filePath, titleKey), c.titleTemplate, os.ModePerm))
 			require.NoError(t, ioutil.WriteFile(path.Join(filePath, contentKey), c.contentTemplate, os.ModePerm))
 
-			fakeCli := fake.NewFakeClientWithScheme(scheme.Scheme, approval)
+			fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(approval).Build()
 
 			reconciler := &ApprovalReconciler{Client: fakeCli}
 			title, content, err := reconciler.generateMail(approval, titleKey, contentKey)
@@ -784,7 +783,7 @@ func TestApprovalReconciler_sendMail(t *testing.T) {
 		content  string
 		disabled bool
 
-		condStatus  corev1.ConditionStatus
+		condStatus  metav1.ConditionStatus
 		condReason  string
 		condMessage string
 	}{
@@ -793,18 +792,18 @@ func TestApprovalReconciler_sendMail(t *testing.T) {
 			title:   "test-email",
 			content: "TEST@@@@",
 
-			condStatus:  corev1.ConditionTrue,
+			condStatus:  metav1.ConditionTrue,
 			condReason:  "",
 			condMessage: "",
 		},
 		"errMail": {
-			condStatus:  corev1.ConditionFalse,
+			condStatus:  metav1.ConditionFalse,
 			condReason:  "ErrorSendingMail",
 			condMessage: "receivers list is empty",
 		},
 		"disabled": {
 			disabled:    true,
-			condStatus:  corev1.ConditionFalse,
+			condStatus:  metav1.ConditionFalse,
 			condReason:  "EmailDisabled",
 			condMessage: "",
 		},
@@ -818,11 +817,11 @@ func TestApprovalReconciler_sendMail(t *testing.T) {
 			sender := mail.NewFakeSender()
 			reconciler := &ApprovalReconciler{Log: fakeLog, MailSender: sender}
 
-			cond := &status.Condition{}
+			cond := &metav1.Condition{}
 			reconciler.sendMail(c.users, c.title, c.content, cond)
 
 			require.Equal(t, c.condStatus, cond.Status)
-			require.Equal(t, c.condReason, string(cond.Reason))
+			require.Equal(t, c.condReason, cond.Reason)
 			require.Equal(t, c.condMessage, cond.Message)
 
 		})
@@ -839,7 +838,7 @@ func TestApprovalReconciler_setError(t *testing.T) {
 	}
 
 	fakeLog := &fakeLogger{}
-	fakeCli := fake.NewFakeClientWithScheme(scheme.Scheme, approval)
+	fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(approval).Build()
 
 	reconciler := &ApprovalReconciler{Log: fakeLog, Client: fakeCli}
 	reconciler.setError(approval, "just")

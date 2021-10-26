@@ -24,7 +24,6 @@ import (
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 
-	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,8 +37,8 @@ const (
 
 // Condition keys for IntegrationConfig
 const (
-	IntegrationConfigConditionWebhookRegistered = status.ConditionType("webhook-registered")
-	IntegrationConfigConditionReady             = status.ConditionType("ready")
+	IntegrationConfigConditionWebhookRegistered = "webhook-registered"
+	IntegrationConfigConditionReady             = "ready"
 )
 
 // IntegrationConfigConditionReasonNoGitToken is a Reason key
@@ -80,8 +79,8 @@ type IntegrationConfigJobs struct {
 // IntegrationConfigStatus defines the observed state of IntegrationConfig
 type IntegrationConfigStatus struct {
 	// Conditions of IntegrationConfig
-	Conditions status.Conditions `json:"conditions"`
-	Secrets    string            `json:"secrets,omitempty"`
+	Conditions []metav1.Condition `json:"conditions"`
+	Secrets    string             `json:"secrets,omitempty"`
 }
 
 // +kubebuilder:object:root=true

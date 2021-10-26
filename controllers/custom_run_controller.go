@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -39,11 +40,11 @@ type CustomRunReconciler struct {
 	Scheme *runtime.Scheme
 
 	KindHandlerMap  map[string]KindHandler
-	HandlerChildren map[string][]runtime.Object
+	HandlerChildren map[string][]client.Object
 }
 
 // AddKindHandler registers custom task handlers
-func (r *CustomRunReconciler) AddKindHandler(kind string, handler KindHandler, children ...runtime.Object) {
+func (r *CustomRunReconciler) AddKindHandler(kind string, handler KindHandler, children ...client.Object) {
 	r.KindHandlerMap[kind] = handler
 	r.HandlerChildren[kind] = append(r.HandlerChildren[kind], children...)
 }
@@ -52,8 +53,7 @@ func (r *CustomRunReconciler) AddKindHandler(kind string, handler KindHandler, c
 // +kubebuilder:rbac:groups=tekton.dev,resources=runs/status,verbs=get;update;patch
 
 // Reconcile reconciles Run object
-func (r *CustomRunReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *CustomRunReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("customRuns", req.NamespacedName)
 
 	// Get Run

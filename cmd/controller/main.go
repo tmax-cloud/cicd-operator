@@ -45,6 +45,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	apiregv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -170,7 +171,7 @@ func main() {
 		Log:             ctrl.Log.WithName("controllers").WithName("CustomRun"),
 		Scheme:          mgr.GetScheme(),
 		KindHandlerMap:  map[string]controllers.KindHandler{},
-		HandlerChildren: map[string][]runtime.Object{},
+		HandlerChildren: map[string][]client.Object{},
 	}
 	// Add custom Run handlers
 	customRunController.AddKindHandler(cicdv1.CustomTaskKindApproval, &customs.ApprovalRunHandler{
