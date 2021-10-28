@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"path"
 
 	"github.com/tmax-cloud/cicd-operator/internal/apiserver"
@@ -49,7 +48,7 @@ type Server interface {
 type server struct {
 	wrapper wrapper.RouterWrapper
 	client  client.Client
-	authCli *authorization.AuthorizationV1Client
+	authCli authorization.AuthorizationV1Interface
 	cache   cache.Cache
 
 	apisHandler apiserver.APIHandler
@@ -59,7 +58,7 @@ type server struct {
 // +kubebuilder:rbac:groups="",resources=configmaps,namespace=kube-system,resourceNames=extension-apiserver-authentication,verbs=get;list;watch
 
 // New is a constructor of server
-func New(cli client.Client, cfg *rest.Config, cache cache.Cache) *server {
+func New(cli client.Client, cfg *rest.Config, cache cache.Cache) (Server, error) {
 	var err error
 	srv := &server{}
 	srv.wrapper = wrapper.New("/", nil, srv.rootHandler)
@@ -69,33 +68,29 @@ func New(cli client.Client, cfg *rest.Config, cache cache.Cache) *server {
 	srv.cache = cache
 	srv.authCli, err = authorization.NewForConfig(cfg)
 	if err != nil {
-		log.Error(err, "cannot get authCli")
-		os.Exit(1)
+		return nil, err
 	}
 
 	// Set apisHandler
 	apisHandler, err := apis.NewHandler(srv.wrapper, srv.client, srv.authCli, log)
 	if err != nil {
-		log.Error(err, "cannot add apis")
-		os.Exit(1)
+		return nil, err
 	}
 	srv.apisHandler = apisHandler
 
-	return srv
+	return srv, nil
 }
 
 // Start starts the server
 func (s *server) Start() {
 	// Wait for the cache init
 	if cacheInit := s.cache.WaitForCacheSync(context.Background()); !cacheInit {
-		log.Error(fmt.Errorf("cannot wait for cache init"), "")
-		os.Exit(1)
+		panic(fmt.Errorf("cannot wait for cache init"))
 	}
 
 	// Create cert
 	if err := createCert(context.Background(), s.client); err != nil {
-		log.Error(err, "cannot create cert")
-		os.Exit(1)
+		panic(err)
 	}
 
 	addr := "0.0.0.0:34335"
@@ -103,14 +98,12 @@ func (s *server) Start() {
 
 	cfg, err := tlsConfig(context.Background(), s.client)
 	if err != nil {
-		log.Error(err, "cannot get tls config")
-		os.Exit(1)
+		panic(err)
 	}
 
 	httpServer := &http.Server{Addr: addr, Handler: s.wrapper.Router(), TLSConfig: cfg}
 	if err := httpServer.ListenAndServeTLS(path.Join(certDir, "tls.crt"), path.Join(certDir, "tls.key")); err != nil && err != http.ErrServerClosed {
-		log.Error(err, "cannot launch server")
-		os.Exit(1)
+		panic(err)
 	}
 }
 

@@ -19,12 +19,13 @@ package apiserver
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/go-logr/logr"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/http"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"strings"
 
 	authorizationv1 "k8s.io/api/authorization/v1"
 	authorization "k8s.io/client-go/kubernetes/typed/authorization/v1"
@@ -36,7 +37,7 @@ type Authorizer interface {
 }
 
 type authorizer struct {
-	AuthCli *authorization.AuthorizationV1Client
+	AuthCli authorization.AuthorizationV1Interface
 
 	APIGroup   string
 	APIVersion string
@@ -46,7 +47,7 @@ type authorizer struct {
 }
 
 // NewAuthorizer instantiates a new authorizer
-func NewAuthorizer(cli *authorization.AuthorizationV1Client, apiGroup, apiVersion, verb string) Authorizer {
+func NewAuthorizer(cli authorization.AuthorizationV1Interface, apiGroup, apiVersion, verb string) Authorizer {
 	return &authorizer{
 		AuthCli:    cli,
 		APIGroup:   apiGroup,
@@ -81,7 +82,7 @@ func (a *authorizer) reviewAccess(req *http.Request) error {
 		return err
 	}
 
-	userGroups, err := GetUserGroup(req.Header)
+	userGroups, err := GetUserGroups(req.Header)
 	if err != nil {
 		return err
 	}

@@ -93,27 +93,3 @@ func (f *fakeManager) GetLogger() logr.Logger {
 func (f *fakeManager) GetControllerOptions() v1alpha1.ControllerConfigurationSpec {
 	return v1alpha1.ControllerConfigurationSpec{}
 }
-
-type fakeLogger struct {
-	info     []string
-	error    []error
-	errorMsg []string
-}
-
-func (f *fakeLogger) Clear() {
-	f.info = nil
-	f.error = nil
-	f.errorMsg = nil
-}
-
-func (f *fakeLogger) Info(msg string, _ ...interface{}) {
-	f.info = append(f.info, msg)
-}
-func (f *fakeLogger) Enabled() bool { return true }
-func (f *fakeLogger) Error(err error, msg string, _ ...interface{}) {
-	f.error = append(f.error, err)
-	f.errorMsg = append(f.errorMsg, msg)
-}
-func (f *fakeLogger) V(_ int) logr.Logger                     { return f }
-func (f *fakeLogger) WithValues(_ ...interface{}) logr.Logger { return f }
-func (f *fakeLogger) WithName(_ string) logr.Logger           { return f }

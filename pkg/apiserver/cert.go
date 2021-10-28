@@ -42,11 +42,11 @@ const (
 	APIServiceName = "v1.cicdapi.tmax.io"
 	serviceName    = "cicd-webhook"
 
-	certDir = "/tmp/approval-api"
-
 	k8sConfigMapName = "extension-apiserver-authentication"
 	k8sConfigMapKey  = "requestheader-client-ca-file"
 )
+
+var certDir = path.Join(os.TempDir(), "approval-api")
 
 // Create and Store certificates for webhook server
 // server key / server cert is stored as file in certDir
@@ -57,25 +57,19 @@ func createCert(ctx context.Context, client client.Client) error {
 		return err
 	}
 
-	// Get service name and namespace
-	svc := serviceName
-	ns := utils.Namespace()
-
 	// Create certs
-	tlsKey, tlsCrt, caCrt, err := certResources.CreateCerts(ctx, svc, ns, time.Now().AddDate(1, 0, 0))
+	tlsKey, tlsCrt, caCrt, err := certResources.CreateCerts(ctx, serviceName, utils.Namespace(), time.Now().AddDate(1, 0, 0))
 	if err != nil {
 		return err
 	}
 
 	// Write certs to file
-	keyPath := path.Join(certDir, "tls.key")
-	err = ioutil.WriteFile(keyPath, tlsKey, 0644)
+	err = ioutil.WriteFile(path.Join(certDir, "tls.key"), tlsKey, 0644)
 	if err != nil {
 		return err
 	}
 
-	crtPath := path.Join(certDir, "tls.crt")
-	err = ioutil.WriteFile(crtPath, tlsCrt, 0644)
+	err = ioutil.WriteFile(path.Join(certDir, "tls.crt"), tlsCrt, 0644)
 	if err != nil {
 		return err
 	}

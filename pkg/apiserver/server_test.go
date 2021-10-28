@@ -17,11 +17,12 @@
 package apiserver
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -29,55 +30,81 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	apiregv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache/informertest"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func TestNew(t *testing.T) {
-	if _, exist := os.LookupEnv("CI"); !exist {
-		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-	}
-	fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-	cfg := &rest.Config{Host: "https://test"}
-	c, err := cache.New(cfg, cache.Options{Mapper: &meta.DefaultRESTMapper{}})
-	require.NoError(t, err)
+	tc := map[string]struct {
+		cfg *rest.Config
 
-	srv := New(fakeCli, cfg, c)
-	require.NotNil(t, srv.wrapper)
-	require.NotNil(t, srv.wrapper.Router())
-	require.Equal(t, fakeCli, srv.client)
-	require.Equal(t, c, srv.cache)
-	require.NotNil(t, srv.apisHandler)
+		errorOccurs  bool
+		errorMessage string
+	}{
+		"normal": {
+			cfg: &rest.Config{Host: "https://test"},
+		},
+		"authCliErr": {
+			cfg:          &rest.Config{Host: "https:/!/!test"},
+			errorOccurs:  true,
+			errorMessage: "host must be a URL or a host:port pair: \"https:/!/!test\"",
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+			cc, err := cache.New(c.cfg, cache.Options{Mapper: &meta.DefaultRESTMapper{}})
+			require.NoError(t, err)
+
+			srvServer, err := New(fakeCli, c.cfg, cc)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
+
+				srv, ok := srvServer.(*server)
+				require.True(t, ok)
+
+				require.NotNil(t, srv.wrapper)
+				require.NotNil(t, srv.wrapper.Router())
+				require.Equal(t, fakeCli, srv.client)
+				require.Equal(t, cc, srv.cache)
+				require.NotNil(t, srv.apisHandler)
+			}
+		})
+	}
 }
 
-func Test_serverStart(t *testing.T) {
-	if _, exist := os.LookupEnv("CI"); !exist {
-		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-	}
+func Test_server_Start(t *testing.T) {
+	tc := map[string]struct {
+		cacheSynced bool
+		apiSvc      *apiregv1.APIService
+		extAuth     *corev1.ConfigMap
+		preemptPort bool
 
-	utilruntime.Must(apiregv1.AddToScheme(scheme.Scheme))
-
-	apiSvc := &apiregv1.APIService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: APIServiceName,
-		},
-		Spec: apiregv1.APIServiceSpec{},
-	}
-
-	extAuth := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "extension-apiserver-authentication",
-			Namespace: "kube-system",
-		},
-		Data: map[string]string{
-			"requestheader-client-ca-file": `-----BEGIN CERTIFICATE-----
+		expectedMessage string
+	}{
+		"normal": {
+			cacheSynced: true,
+			apiSvc: &apiregv1.APIService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: APIServiceName,
+				},
+				Spec: apiregv1.APIServiceSpec{},
+			},
+			extAuth: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "extension-apiserver-authentication",
+					Namespace: "kube-system",
+				},
+				Data: map[string]string{
+					"requestheader-client-ca-file": `-----BEGIN CERTIFICATE-----
 MIIBaTCCAQ6gAwIBAgIBADAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCBrM3MtcmVx
 dWVzdC1oZWFkZXItY2FAMTU5NTU0OTQ0NjAeFw0yMDA3MjQwMDEwNDZaFw0zMDA3
 MjIwMDEwNDZaMCsxKTAnBgNVBAMMIGszcy1yZXF1ZXN0LWhlYWRlci1jYUAxNTk1
@@ -87,20 +114,124 @@ VKMjMCEwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0E
 AwIDSQAwRgIhALCUqk9KPgxhXs+ka5oBnMVgP/xDd33WooGChkXCdLXXAiEA9YQX
 rcFz1g2uGUgBe3mBBDID0wosv/64zWA1x4uuwuM=
 -----END CERTIFICATE-----`,
+				},
+			},
+		},
+		"cacheInitErr": {
+			expectedMessage: "cannot wait for cache init",
+		},
+		"createCertErr": {
+			cacheSynced: true,
+			extAuth: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "extension-apiserver-authentication",
+					Namespace: "kube-system",
+				},
+				Data: map[string]string{
+					"requestheader-client-ca-file": `-----BEGIN CERTIFICATE-----
+MIIBaTCCAQ6gAwIBAgIBADAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCBrM3MtcmVx
+dWVzdC1oZWFkZXItY2FAMTU5NTU0OTQ0NjAeFw0yMDA3MjQwMDEwNDZaFw0zMDA3
+MjIwMDEwNDZaMCsxKTAnBgNVBAMMIGszcy1yZXF1ZXN0LWhlYWRlci1jYUAxNTk1
+NTQ5NDQ2MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE85FjW9alEGKy8Jcavk2b
++hvgPV6XxgXnuz0G9RMxLsKu9SXVnaMRc2L9nXTnYOuz5b2FlnTdCWp7WTt35YVQ
+VKMjMCEwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0E
+AwIDSQAwRgIhALCUqk9KPgxhXs+ka5oBnMVgP/xDd33WooGChkXCdLXXAiEA9YQX
+rcFz1g2uGUgBe3mBBDID0wosv/64zWA1x4uuwuM=
+-----END CERTIFICATE-----`,
+				},
+			},
+			expectedMessage: "apiservices.apiregistration.k8s.io \"v1.cicdapi.tmax.io\" not found",
+		},
+		"tlsConfigErr": {
+			cacheSynced: true,
+			apiSvc: &apiregv1.APIService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: APIServiceName,
+				},
+				Spec: apiregv1.APIServiceSpec{},
+			},
+			expectedMessage: "configmaps \"extension-apiserver-authentication\" not found",
+		},
+		"serveErr": {
+			cacheSynced: true,
+			apiSvc: &apiregv1.APIService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: APIServiceName,
+				},
+				Spec: apiregv1.APIServiceSpec{},
+			},
+			extAuth: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "extension-apiserver-authentication",
+					Namespace: "kube-system",
+				},
+				Data: map[string]string{
+					"requestheader-client-ca-file": `-----BEGIN CERTIFICATE-----
+MIIBaTCCAQ6gAwIBAgIBADAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCBrM3MtcmVx
+dWVzdC1oZWFkZXItY2FAMTU5NTU0OTQ0NjAeFw0yMDA3MjQwMDEwNDZaFw0zMDA3
+MjIwMDEwNDZaMCsxKTAnBgNVBAMMIGszcy1yZXF1ZXN0LWhlYWRlci1jYUAxNTk1
+NTQ5NDQ2MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE85FjW9alEGKy8Jcavk2b
++hvgPV6XxgXnuz0G9RMxLsKu9SXVnaMRc2L9nXTnYOuz5b2FlnTdCWp7WTt35YVQ
+VKMjMCEwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0E
+AwIDSQAwRgIhALCUqk9KPgxhXs+ka5oBnMVgP/xDd33WooGChkXCdLXXAiEA9YQX
+rcFz1g2uGUgBe3mBBDID0wosv/64zWA1x4uuwuM=
+-----END CERTIFICATE-----`,
+				},
+			},
+			preemptPort:     true,
+			expectedMessage: "34335",
 		},
 	}
 
-	fCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(apiSvc, extAuth).Build()
-	fCache := &informertest.FakeInformers{}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			require.NoError(t, apiregv1.AddToScheme(scheme.Scheme))
 
-	srv := &server{
-		cache:   fCache,
-		client:  fCli,
-		wrapper: wrapper.New("/", nil, nil),
+			fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+			if c.apiSvc != nil {
+				require.NoError(t, fakeCli.Create(context.Background(), c.apiSvc))
+			}
+			if c.extAuth != nil {
+				require.NoError(t, fakeCli.Create(context.Background(), c.extAuth))
+			}
+
+			if c.preemptPort {
+				go func() {
+					_ = http.ListenAndServe("0.0.0.0:34335", mux.NewRouter())
+				}()
+				time.Sleep(100 * time.Millisecond)
+			}
+
+			fCache := &informertest.FakeInformers{Synced: &c.cacheSynced}
+
+			srv := &server{
+				cache:   fCache,
+				client:  fakeCli,
+				wrapper: wrapper.New("/", nil, nil),
+			}
+			srv.wrapper.SetRouter(mux.NewRouter())
+
+			ch := make(chan interface{}, 1)
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						ch <- r
+					} else {
+						ch <- ""
+					}
+				}()
+				srv.Start()
+			}()
+
+			time.Sleep(100 * time.Millisecond)
+			if c.expectedMessage != "" {
+				errRaw := <-ch
+				err, ok := errRaw.(error)
+				require.True(t, ok)
+				require.Contains(t, err.Error(), c.expectedMessage)
+			}
+		})
 	}
-	srv.wrapper.SetRouter(mux.NewRouter())
-
-	go srv.Start()
 }
 
 func Test_server_rootHandler(t *testing.T) {

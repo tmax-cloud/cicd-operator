@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -121,7 +122,7 @@ func TestCustomRunReconciler_Reconcile(t *testing.T) {
 
 			reconciler := &CustomRunReconciler{
 				Client:          fakeCli,
-				Log:             &fakeLogger{},
+				Log:             &test.FakeLogger{},
 				Scheme:          c.scheme,
 				KindHandlerMap:  map[string]KindHandler{},
 				HandlerChildren: map[string][]client.Object{},

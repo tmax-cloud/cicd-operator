@@ -105,7 +105,7 @@ func (w *wrapper) Methods() []string {
 
 // Add adds child as a child (child node of a tree) of w
 func (w *wrapper) Add(child RouterWrapper) error {
-	if child == nil {
+	if child == nil || child.(*wrapper) == nil {
 		return fmt.Errorf("child is nil")
 	}
 
@@ -115,6 +115,10 @@ func (w *wrapper) Add(child RouterWrapper) error {
 
 	if child.SubPath() == "" || child.SubPath() == "/" || child.SubPath()[0] != '/' {
 		return fmt.Errorf("child subpath is not valid")
+	}
+
+	if w.router == nil {
+		return fmt.Errorf("parent does not have a router")
 	}
 
 	child.SetParent(w)

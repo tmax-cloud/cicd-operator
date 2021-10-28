@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/internal/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -87,7 +88,7 @@ func TestConfigReconciler_Start(t *testing.T) {
 				fakeSet.WatchReactionChain = append([]clitesting.WatchReactor{&errWatchReactor{}}, fakeSet.WatchReactionChain...)
 			}
 			fakeCli := fakeSet.CoreV1().ConfigMaps(testConfigMapNamespace)
-			fakeLog := &fakeLogger{}
+			fakeLog := &test.FakeLogger{}
 			r := &configReconciler{
 				client:               fakeCli,
 				log:                  fakeLog,
@@ -106,10 +107,10 @@ func TestConfigReconciler_Start(t *testing.T) {
 			}
 
 			if c.errorOccurs {
-				require.NotEmpty(t, fakeLog.error)
-				require.Equal(t, c.errorMessage, fakeLog.error[0].Error())
+				require.NotEmpty(t, fakeLog.Errors)
+				require.Equal(t, c.errorMessage, fakeLog.Errors[0].Error())
 			} else {
-				require.Empty(t, fakeLog.error)
+				require.Empty(t, fakeLog.Errors)
 			}
 		})
 	}
@@ -183,7 +184,7 @@ func TestConfigReconciler_Reconcile(t *testing.T) {
 			fakeCli := fake.NewSimpleClientset().CoreV1().ConfigMaps(testConfigMapNamespace)
 			reconciler := &configReconciler{
 				client:               fakeCli,
-				log:                  &fakeLogger{},
+				log:                  &test.FakeLogger{},
 				lastResourceVersions: map[string]string{},
 				handlers:             map[string]configs.Handler{},
 			}
