@@ -19,7 +19,6 @@ package webhook
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -39,7 +38,7 @@ func New(c *cli.Configs) cli.Command {
 		Use:   "webhook [IntegrationConfig]",
 		Short: "Gets webhook information of an IntegrationConfig",
 		Args:  cobra.ExactArgs(1),
-		Run:   cmd.RunCommand,
+		RunE:  cmd.RunCommand,
 	}
 
 	return cmd
@@ -49,29 +48,30 @@ func (command *command) AddToCommand(cmd *cobra.Command) {
 	cmd.AddCommand(command.Command)
 }
 
-func (command *command) RunCommand(_ *cobra.Command, args []string) {
+func (command *command) RunCommand(_ *cobra.Command, args []string) error {
 	ic := args[0]
 
 	// Run!
 	client, ns, err := cli.GetClient(command.Config)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	cli.ExecAndHandleError(client.Get().
+	return cli.ExecAndHandleError(client.Get().
 		Resource(cicdv1.IntegrationConfigKind).
 		Namespace(ns).
 		Name(ic).
 		SubResource(cicdv1.IntegrationConfigAPIWebhookURL), printWebhookInfo)
 }
 
-func printWebhookInfo(raw []byte) {
+func printWebhookInfo(raw []byte) error {
 	obj := &cicdv1.IntegrationConfigAPIReqWebhookURL{}
 
 	if err := json.Unmarshal(raw, obj); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Printf("Webhook URL\t: %s\n", obj.URL)
 	fmt.Printf("Webhook Secret\t: %s\n", obj.Secret)
+	return nil
 }

@@ -20,10 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	"k8s.io/client-go/rest"
-	"os"
 )
 
 const (
@@ -57,21 +57,18 @@ func GetClient(cfg *Configs) (*rest.RESTClient, string, error) {
 }
 
 // ExecAndHandleError executes the request req and handles error
-func ExecAndHandleError(req *rest.Request, fn func([]byte)) {
+func ExecAndHandleError(req *rest.Request, fn func([]byte) error) error {
 	raw, err := req.DoRaw(context.Background())
 	if err != nil {
 		resp := &utils.ErrorResponse{}
-
 		if err2 := json.Unmarshal(raw, resp); err2 != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			return err2
 		}
-
-		fmt.Println(resp.Message)
-		os.Exit(1)
+		return fmt.Errorf(resp.Message)
 	}
 
 	if fn != nil {
-		fn(raw)
+		return fn(raw)
 	}
+	return nil
 }

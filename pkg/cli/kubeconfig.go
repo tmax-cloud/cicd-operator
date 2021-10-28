@@ -17,28 +17,19 @@
 package cli
 
 import (
-	"fmt"
+	"os"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"os"
-	"os/user"
-	"path"
 )
 
 // LoadKubeConfig parses kube config files
 func LoadKubeConfig(cfg *Configs) (*rest.Config, string, error) {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	loadingRules.ExplicitPath = cfg.KubeConfig
-	if _, ok := os.LookupEnv("HOME"); !ok {
-		u, err := user.Current()
-		if err != nil {
-			return nil, "", fmt.Errorf("could not get current user: %v", err)
-		}
-		loadingRules.Precedence = append(loadingRules.Precedence, path.Join(u.HomeDir, clientcmd.RecommendedHomeDir, clientcmd.RecommendedFileName))
-	}
 
 	// Override
 	override := &clientcmd.ConfigOverrides{

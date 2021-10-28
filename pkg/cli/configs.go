@@ -52,7 +52,7 @@ func (c *Configs) AddFlags(f *pflag.FlagSet) {
 
 	flags := clientcmd.RecommendedConfigOverrideFlags("")
 
-	f.StringVar(&c.ClusterName, flags.CurrentContext.LongName, c.ClusterName, flags.CurrentContext.Description)
+	f.StringVar(&c.Context, flags.CurrentContext.LongName, c.ClusterName, flags.CurrentContext.Description)
 
 	f.StringVar(&c.CAFile, flags.ClusterOverrideFlags.CertificateAuthority.LongName, c.CAFile, flags.ClusterOverrideFlags.CertificateAuthority.Description)
 	f.BoolVar(&c.Insecure, flags.ClusterOverrideFlags.InsecureSkipTLSVerify.LongName, c.Insecure, flags.ClusterOverrideFlags.InsecureSkipTLSVerify.Description)
@@ -64,7 +64,7 @@ func (c *Configs) AddFlags(f *pflag.FlagSet) {
 	f.StringVar(&c.CertFile, flags.AuthOverrideFlags.ClientCertificate.LongName, c.CertFile, flags.AuthOverrideFlags.ClientCertificate.Description)
 	f.StringVar(&c.KeyFile, flags.AuthOverrideFlags.ClientKey.LongName, c.KeyFile, flags.AuthOverrideFlags.ClientKey.Description)
 
-	f.StringVarP(&c.Namespace, flags.ContextOverrideFlags.Namespace.LongName, flags.ContextOverrideFlags.Namespace.ShortName, c.Namespace, flags.ContextOverrideFlags.Namespace.Description)
 	f.StringVar(&c.ClusterName, flags.ContextOverrideFlags.ClusterName.LongName, c.ClusterName, flags.ContextOverrideFlags.ClusterName.Description)
+	f.StringVarP(&c.Namespace, flags.ContextOverrideFlags.Namespace.LongName, flags.ContextOverrideFlags.Namespace.ShortName, c.Namespace, flags.ContextOverrideFlags.Namespace.Description)
 	f.StringVar(&c.AuthInfoName, flags.ContextOverrideFlags.AuthInfoName.LongName, c.AuthInfoName, flags.ContextOverrideFlags.AuthInfoName.Description)
 }
