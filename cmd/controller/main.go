@@ -126,7 +126,11 @@ func main() {
 
 	// Config Controller
 	// Initiate first, before any other components start
-	cfgCtrl := &controllers.ConfigReconciler{Config: mgr.GetConfig(), Log: ctrl.Log.WithName("controllers").WithName("ConfigController"), Handlers: map[string]configs.Handler{}}
+	cfgCtrl, err := controllers.NewConfigReconciler(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to initiate config reconciler")
+		os.Exit(1)
+	}
 	go cfgCtrl.Start()
 	cfgCtrl.Add(configs.ConfigMapNameCICDConfig, configs.ApplyControllerConfigChange)
 	cfgCtrl.Add(configs.ConfigMapNamePluginConfig, configs.ApplyPluginConfigChange)

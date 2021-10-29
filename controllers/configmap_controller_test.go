@@ -17,15 +17,19 @@
 package controllers
 
 import (
-	"github.com/bmizerany/assert"
+	"context"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
-	"os"
-	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
+	"k8s.io/client-go/rest"
+	clitesting "k8s.io/client-go/testing"
 )
 
 const (
@@ -33,59 +37,190 @@ const (
 	testConfigMapName      = "test-cm"
 )
 
+func TestNewConfigReconciler(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
+		_, err := NewConfigReconciler(&rest.Config{})
+		require.NoError(t, err)
+	})
+
+	t.Run("cliErr", func(t *testing.T) {
+		_, err := NewConfigReconciler(&rest.Config{QPS: 32, Burst: -1})
+		require.Error(t, err)
+		require.Equal(t, "burst is required to be greater than 0 when RateLimiter is not set and QPS is set to greater than 0", err.Error())
+	})
+}
+
+func TestConfigReconciler_Start(t *testing.T) {
+	tc := map[string]struct {
+		genErr  bool
+		cm      *corev1.ConfigMap
+		handler configs.Handler
+
+		errorOccurs  bool
+		errorMessage string
+	}{
+		"normal": {
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: testConfigMapName, ResourceVersion: "1111"},
+			},
+			handler: func(_ *corev1.ConfigMap) error { return nil },
+		},
+		"watchErr": {
+			genErr:       true,
+			errorOccurs:  true,
+			errorMessage: "error~~~",
+		},
+		"reconcileErr": {
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: testConfigMapName, ResourceVersion: "1111"},
+			},
+			handler:      func(cm *corev1.ConfigMap) error { return fmt.Errorf("reconcile err") },
+			errorOccurs:  true,
+			errorMessage: "reconcile err",
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			fakeSet := fake.NewSimpleClientset()
+			if c.genErr {
+				fakeSet.WatchReactionChain = append([]clitesting.WatchReactor{&errWatchReactor{}}, fakeSet.WatchReactionChain...)
+			}
+			fakeCli := fakeSet.CoreV1().ConfigMaps(testConfigMapNamespace)
+			fakeLog := &fakeLogger{}
+			r := &configReconciler{
+				client:               fakeCli,
+				log:                  fakeLog,
+				lastResourceVersions: map[string]string{},
+				handlers:             map[string]configs.Handler{},
+			}
+
+			go r.Start()
+			time.Sleep(100 * time.Millisecond)
+			if c.cm != nil {
+				r.handlers[c.cm.Name] = c.handler
+
+				_, err := fakeCli.Create(context.Background(), c.cm, metav1.CreateOptions{})
+				require.NoError(t, err)
+				time.Sleep(100 * time.Millisecond)
+			}
+
+			if c.errorOccurs {
+				require.NotEmpty(t, fakeLog.error)
+				require.Equal(t, c.errorMessage, fakeLog.error[0].Error())
+			} else {
+				require.Empty(t, fakeLog.error)
+			}
+		})
+	}
+}
+
+type errWatchReactor struct{}
+
+func (e *errWatchReactor) Handles(_ clitesting.Action) bool {
+	return true
+}
+
+func (e *errWatchReactor) React(_ clitesting.Action) (bool, watch.Interface, error) {
+	return true, nil, fmt.Errorf("error~~~")
+}
+
+func TestConfigReconciler_Add(t *testing.T) {
+	reconciler := &configReconciler{handlers: map[string]configs.Handler{}}
+	reconciler.Add("test", func(cm *corev1.ConfigMap) error { return nil })
+
+	handler, exist := reconciler.handlers["test"]
+	require.True(t, exist)
+	require.NotNil(t, handler)
+}
+
 func TestConfigReconciler_Reconcile(t *testing.T) {
-	if _, exist := os.LookupEnv("CI"); !exist {
-		ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	var handled bool
+	tc := map[string]struct {
+		cm                  *corev1.ConfigMap
+		lastResourceVersion string
+		handler             func(cm *corev1.ConfigMap) error
+
+		errorOccurs  bool
+		errorMessage string
+	}{
+		"newCM": {
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: testConfigMapName, Namespace: testConfigMapNamespace, ResourceVersion: "11111"},
+			},
+			handler: func(cm *corev1.ConfigMap) error {
+				handled = true
+				return nil
+			},
+		},
+		"cmNil": {},
+		"sameResourceVersion": {
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: testConfigMapName, Namespace: testConfigMapNamespace, ResourceVersion: "11111"},
+			},
+			lastResourceVersion: "11111",
+		},
+		"noHandler": {
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: testConfigMapName, Namespace: testConfigMapNamespace, ResourceVersion: "11111"},
+			},
+		},
+		"handlerErr": {
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: testConfigMapName, Namespace: testConfigMapNamespace, ResourceVersion: "11111"},
+			},
+			handler: func(cm *corev1.ConfigMap) error {
+				return fmt.Errorf("sample error")
+			},
+			errorOccurs:  true,
+			errorMessage: "sample error",
+		},
 	}
 
-	reconciler := ConfigReconciler{
-		client:               fake.NewSimpleClientset().CoreV1().ConfigMaps(testConfigMapNamespace),
-		Log:                  logf.Log.WithName("test-logger"),
-		lastResourceVersions: map[string]string{},
-		Handlers:             map[string]configs.Handler{},
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			handled = false
+			fakeCli := fake.NewSimpleClientset().CoreV1().ConfigMaps(testConfigMapNamespace)
+			reconciler := &configReconciler{
+				client:               fakeCli,
+				log:                  &fakeLogger{},
+				lastResourceVersions: map[string]string{},
+				handlers:             map[string]configs.Handler{},
+			}
+			if c.cm != nil {
+				_, err := fakeCli.Create(context.Background(), c.cm, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			if c.handler != nil {
+				reconciler.handlers[testConfigMapName] = c.handler
+			}
+			if c.lastResourceVersion != "" {
+				reconciler.lastResourceVersions[testConfigMapName] = c.lastResourceVersion
+			}
+
+			err := reconciler.Reconcile(c.cm)
+			if c.errorOccurs {
+				require.Error(t, err)
+				require.Equal(t, c.errorMessage, err.Error())
+			} else {
+				require.NoError(t, err)
+				if c.handler != nil {
+					require.True(t, handled)
+				}
+			}
+		})
 	}
+}
 
-	t.Run("new-resource", func(t *testing.T) {
-		handled := false
-		reconciler.Handlers[testConfigMapName] = func(cm *corev1.ConfigMap) error {
-			handled = true
-			return nil
-		}
-		cm := &corev1.ConfigMap{}
-		cm.Namespace = testConfigMapNamespace
-		cm.Name = testConfigMapName
-		cm.ResourceVersion = "11111"
-		_ = reconciler.Reconcile(cm)
-		assert.Equal(t, true, handled)
+func Test_newConfigMapClient(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
+		_, err := newConfigMapClient(&rest.Config{})
+		require.NoError(t, err)
 	})
 
-	t.Run("updated-resource", func(t *testing.T) {
-		handled := false
-		reconciler.Handlers[testConfigMapName] = func(cm *corev1.ConfigMap) error {
-			handled = true
-			return nil
-		}
-		reconciler.lastResourceVersions[testConfigMapName] = "11111"
-		cm := &corev1.ConfigMap{}
-		cm.Namespace = testConfigMapNamespace
-		cm.Name = testConfigMapName
-		cm.ResourceVersion = "11112"
-		_ = reconciler.Reconcile(cm)
-		assert.Equal(t, true, handled)
-	})
-
-	t.Run("same-resource-version", func(t *testing.T) {
-		handled := false
-		reconciler.Handlers[testConfigMapName] = func(cm *corev1.ConfigMap) error {
-			handled = true
-			return nil
-		}
-		reconciler.lastResourceVersions[testConfigMapName] = "11111"
-		cm := &corev1.ConfigMap{}
-		cm.Namespace = testConfigMapNamespace
-		cm.Name = testConfigMapName
-		cm.ResourceVersion = "11111"
-		_ = reconciler.Reconcile(cm)
-		assert.Equal(t, false, handled)
+	t.Run("clientErr", func(t *testing.T) {
+		_, err := newConfigMapClient(&rest.Config{QPS: 32, Burst: -1})
+		require.Error(t, err)
+		require.Equal(t, "burst is required to be greater than 0 when RateLimiter is not set and QPS is set to greater than 0", err.Error())
 	})
 }
