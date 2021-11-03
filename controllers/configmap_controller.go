@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -29,60 +28,70 @@ import (
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // ConfigReconciler reconciles a Approval object
-type ConfigReconciler struct {
+type ConfigReconciler interface {
+	Start()
+	Add(name string, handler configs.Handler)
+}
+
+type configReconciler struct {
 	client typedcorev1.ConfigMapInterface
-	Log    logr.Logger
-	Config *rest.Config
+	log    logr.Logger
+	config *rest.Config
 
 	lastResourceVersions map[string]string
-	Handlers             map[string]configs.Handler
+	handlers             map[string]configs.Handler
+}
+
+// NewConfigReconciler creates a new configReconciler
+func NewConfigReconciler(config *rest.Config) (ConfigReconciler, error) {
+	r := &configReconciler{
+		log:                  ctrl.Log.WithName("controllers").WithName("ConfigController"),
+		config:               config,
+		lastResourceVersions: map[string]string{},
+		handlers:             map[string]configs.Handler{},
+	}
+
+	var err error
+	r.client, err = newConfigMapClient(r.config)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 // Start starts the config map reconciler
-func (r *ConfigReconciler) Start() {
-	var err error
-	r.client, err = newConfigMapClient(r.Config)
-	if err != nil {
-		r.Log.Error(err, "")
-		os.Exit(1)
-	}
-
-	//Set last resource versions for each config map
-	r.lastResourceVersions = map[string]string{}
+func (r *configReconciler) Start() {
 	for {
-		r.watch()
-	}
-}
+		// Watch & reconcile ConfigMaps
+		watcher, err := r.client.Watch(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			r.log.Error(err, "")
+			continue
+		}
 
-// Add adds config map handler
-func (r *ConfigReconciler) Add(name string, handler configs.Handler) {
-	r.Handlers[name] = handler
-}
-
-func (r *ConfigReconciler) watch() {
-	log := r.Log.WithName("config-controller")
-
-	watcher, err := r.client.Watch(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		log.Error(err, "")
-		return
-	}
-
-	for ev := range watcher.ResultChan() {
-		cm, ok := ev.Object.(*corev1.ConfigMap)
-		if ok {
-			if err := r.Reconcile(cm); err != nil {
-				log.Error(err, "")
+		for ev := range watcher.ResultChan() {
+			cm, ok := ev.Object.(*corev1.ConfigMap)
+			if ok {
+				if err := r.Reconcile(cm); err != nil {
+					r.log.Error(err, "")
+				}
 			}
 		}
 	}
 }
 
+// Add adds config map handler
+func (r *configReconciler) Add(name string, handler configs.Handler) {
+	r.handlers[name] = handler
+}
+
 // Reconcile reconciles ConfigMap
-func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
+func (r *configReconciler) Reconcile(cm *corev1.ConfigMap) error {
 	if cm == nil {
 		return nil
 	}
@@ -93,11 +102,11 @@ func (r *ConfigReconciler) Reconcile(cm *corev1.ConfigMap) error {
 	}
 	r.lastResourceVersions[cm.Name] = cm.ResourceVersion
 
-	handler, exist := r.Handlers[cm.Name]
+	handler, exist := r.handlers[cm.Name]
 	if !exist {
 		return nil
 	}
-	r.Log.Info(fmt.Sprintf("Configmap (%s) is changed", cm.Name))
+	r.log.Info(fmt.Sprintf("Configmap (%s) is changed", cm.Name))
 	if err := handler(cm); err != nil {
 		return err
 	}
