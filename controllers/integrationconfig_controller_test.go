@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/internal/test"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	gitfake "github.com/tmax-cloud/cicd-operator/pkg/git/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -247,7 +248,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				gitfake.Repos["test-repo"].Webhooks[i] = &git.WebhookEntry{ID: i, URL: w}
 			}
 
-			reconciler := &IntegrationConfigReconciler{Log: &fakeLogger{}, Scheme: c.scheme, Client: fakeCli}
+			reconciler := &IntegrationConfigReconciler{Log: &test.FakeLogger{}, Scheme: c.scheme, Client: fakeCli}
 
 			_, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: c.ic.Name, Namespace: c.ic.Namespace}})
 			if c.errorOccurs {
@@ -436,7 +437,7 @@ func TestIntegrationConfigReconciler_handleFinalizer(t *testing.T) {
 			if !c.notApplied {
 				require.NoError(t, fakeCli.Create(context.Background(), c.ic))
 			}
-			reconciler := &IntegrationConfigReconciler{Log: &fakeLogger{}, Scheme: s, Client: fakeCli}
+			reconciler := &IntegrationConfigReconciler{Log: &test.FakeLogger{}, Scheme: s, Client: fakeCli}
 
 			gitfake.Repos = map[string]*gitfake.Repo{
 				"test-repo": {
@@ -617,7 +618,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 				gitfake.Repos["test-repo"].Webhooks[32] = &git.WebhookEntry{ID: 32, URL: c.preRegisteredWebhookURL}
 			}
 
-			reconciler := &IntegrationConfigReconciler{Log: &fakeLogger{}}
+			reconciler := &IntegrationConfigReconciler{Log: &test.FakeLogger{}}
 			reconciler.setWebhookRegisteredCond(c.ic)
 
 			if c.expectedWebhookURL != "" {

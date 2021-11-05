@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/internal/test"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -78,7 +79,7 @@ func TestExposeController_Start(t *testing.T) {
 		resourceName: "test",
 		refObj:       &corev1.Pod{},
 	}
-	logger := &fakeLogger{}
+	logger := &test.FakeLogger{}
 	controller := &exposeController{
 		reconcilers:         []exposeReconciler{reconciler},
 		log:                 logger,
@@ -119,7 +120,7 @@ func TestExposeController_updateExternalURL(t *testing.T) {
 			configs.ExternalHostName = c.externalHostName
 			configs.CurrentExternalHostName = ""
 
-			logger := &fakeLogger{}
+			logger := &test.FakeLogger{}
 			controller := &exposeController{
 				log: logger,
 			}
@@ -134,7 +135,7 @@ func TestExposeController_updateExternalURL(t *testing.T) {
 func TestExposeController_startResourceWatcher(t *testing.T) {
 	exitCh := make(chan struct{})
 
-	logger := &fakeLogger{}
+	logger := &test.FakeLogger{}
 	controller := &exposeController{
 		log: logger,
 	}
@@ -193,7 +194,7 @@ func TestExposeController_loopWatch(t *testing.T) {
 			exitCh := make(chan struct{})
 			rscUpdateCh := make(chan runtime.Object)
 
-			logger := &fakeLogger{}
+			logger := &test.FakeLogger{}
 			controller := &exposeController{
 				log: logger,
 			}
@@ -298,24 +299,24 @@ func TestExposeController_watchResource(t *testing.T) {
 				done <- struct{}{}
 			}()
 
-			logger := &fakeLogger{}
+			logger := &test.FakeLogger{}
 			controller := &exposeController{
 				log: logger,
 			}
 			reconciler := &fakeExposeReconciler{}
 			controller.watchResource(rscUpdateCh, cfgUpdateCh, done, reconciler)
 
-			require.Len(t, logger.info, 0)
-			require.Len(t, logger.error, len(logger.errorMsg))
+			require.Len(t, logger.Infos, 0)
+			require.Len(t, logger.Errors, len(logger.ErrorMsgs))
 
-			require.Equal(t, c.errors, logger.error)
+			require.Equal(t, c.errors, logger.Errors)
 			require.Equal(t, c.objects, reconciler.savedObjects)
 		})
 	}
 }
 
 func TestExposeController_validateExposeMode(t *testing.T) {
-	logger := &fakeLogger{}
+	logger := &test.FakeLogger{}
 	controller := &exposeController{
 		log: logger,
 	}

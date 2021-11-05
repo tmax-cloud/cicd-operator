@@ -43,7 +43,7 @@ type handler struct {
 }
 
 // NewHandler instantiates a new v1 api handler
-func NewHandler(parent wrapper.RouterWrapper, cli client.Client, authCli *authorization.AuthorizationV1Client, logger logr.Logger) (apiserver.APIHandler, error) {
+func NewHandler(parent wrapper.RouterWrapper, cli client.Client, authCli authorization.AuthorizationV1Interface, logger logr.Logger) (apiserver.APIHandler, error) {
 	handler := &handler{}
 
 	// /v1

@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
+	"github.com/tmax-cloud/cicd-operator/internal/test"
 	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -221,7 +222,7 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			if c.approval != nil {
 				require.NoError(t, fakeCli.Create(context.Background(), c.approval))
 			}
-			reconciler := &ApprovalReconciler{Client: fakeCli, MailSender: sender, Log: &fakeLogger{}, Scheme: c.scheme}
+			reconciler := &ApprovalReconciler{Client: fakeCli, MailSender: sender, Log: &test.FakeLogger{}, Scheme: c.scheme}
 			_, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "test-approval", Namespace: "test-ns"}})
 			if c.errorOccurs {
 				require.Error(t, err)
@@ -404,7 +405,7 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 			require.NoError(t, ioutil.WriteFile(path.Join(templatePath, configMapKeyResultContent), c.resultTemplate, os.ModePerm))
 
 			sender := mail.NewFakeSender()
-			reconciler := &ApprovalReconciler{MailSender: sender, Log: &fakeLogger{}}
+			reconciler := &ApprovalReconciler{MailSender: sender, Log: &test.FakeLogger{}}
 
 			reconciler.processMail(c.approval, c.reqCond, c.resCond)
 			require.Equal(t, c.expectedReqCond, *c.reqCond)
@@ -813,7 +814,7 @@ func TestApprovalReconciler_sendMail(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			configs.EnableMail = !c.disabled
 
-			fakeLog := &fakeLogger{}
+			fakeLog := &test.FakeLogger{}
 			sender := mail.NewFakeSender()
 			reconciler := &ApprovalReconciler{Log: fakeLog, MailSender: sender}
 
@@ -837,13 +838,13 @@ func TestApprovalReconciler_setError(t *testing.T) {
 		},
 	}
 
-	fakeLog := &fakeLogger{}
+	fakeLog := &test.FakeLogger{}
 	fakeCli := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(approval).Build()
 
 	reconciler := &ApprovalReconciler{Log: fakeLog, Client: fakeCli}
 	reconciler.setError(approval, "just")
 
-	require.Empty(t, fakeLog.error)
+	require.Empty(t, fakeLog.Errors)
 
 	require.Equal(t, cicdv1.ApprovalResultError, approval.Status.Result)
 	require.Equal(t, "just", approval.Status.Reason)

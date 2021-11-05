@@ -125,7 +125,7 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 	_ = utils.RespondJSON(w, struct{}{})
 }
 
-func buildPullRequestWebhook(body io.ReadCloser, user string) (*git.PullRequest, error) {
+func buildPullRequestWebhook(body io.Reader, user string) (*git.PullRequest, error) {
 	userReq := &cicdv1.IntegrationConfigAPIReqRunPreBody{}
 	decoder := json.NewDecoder(body)
 	if err := decoder.Decode(userReq); err != nil {
@@ -158,7 +158,7 @@ func buildPullRequestWebhook(body io.ReadCloser, user string) (*git.PullRequest,
 	}, nil
 }
 
-func buildPushWebhook(body io.ReadCloser) (*git.Push, error) {
+func buildPushWebhook(body io.Reader) (*git.Push, error) {
 	userReq := &cicdv1.IntegrationConfigAPIReqRunPostBody{}
 	decoder := json.NewDecoder(body)
 	if err := decoder.Decode(userReq); err != nil {

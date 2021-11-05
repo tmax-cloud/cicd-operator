@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/internal/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +39,7 @@ import (
 func TestNewIntegrationJobReconciler(t *testing.T) {
 	s := runtime.NewScheme()
 	fakeCli := fake.NewClientBuilder().WithScheme(s).Build()
-	logger := &fakeLogger{info: []string{"hi"}}
+	logger := &test.FakeLogger{Infos: []string{"hi"}}
 	reconciler := NewIntegrationJobReconciler(fakeCli, s, logger)
 
 	require.Equal(t, s, reconciler.Scheme)
@@ -65,7 +66,7 @@ func TestIntegrationJobReconciler_Reconcile(t *testing.T) {
 
 	tt := metav1.Now()
 
-	logger := &fakeLogger{}
+	logger := &test.FakeLogger{}
 
 	tc := map[string]struct {
 		ij         *cicdv1.IntegrationJob
@@ -120,9 +121,9 @@ func TestIntegrationJobReconciler_Reconcile(t *testing.T) {
 			scheme: s,
 			key:    types.NamespacedName{Name: "test-ij", Namespace: "test-ns"},
 			verifyFunc: func(t *testing.T, job *cicdv1.IntegrationJob) {
-				require.Len(t, logger.error, 2)
-				require.Equal(t, "can not convert resourceVersion \"asd\" to int: strconv.ParseUint: parsing \"asd\": invalid syntax", logger.error[0].Error())
-				require.Equal(t, "can not convert resourceVersion \"asd\" to int: strconv.ParseUint: parsing \"asd\": invalid syntax", logger.error[1].Error())
+				require.Len(t, logger.Errors, 2)
+				require.Equal(t, "can not convert resourceVersion \"asd\" to int: strconv.ParseUint: parsing \"asd\": invalid syntax", logger.Errors[0].Error())
+				require.Equal(t, "can not convert resourceVersion \"asd\" to int: strconv.ParseUint: parsing \"asd\": invalid syntax", logger.Errors[1].Error())
 			},
 		},
 		"handleFinalizerExit": {
@@ -359,7 +360,7 @@ func TestIntegrationJobReconciler_handleFinalizer(t *testing.T) {
 			reconciler := &integrationJobReconciler{}
 			original := &cicdv1.IntegrationJob{ObjectMeta: metav1.ObjectMeta{Name: "test-ij", Namespace: "test-ns"}}
 
-			logger := &fakeLogger{}
+			logger := &test.FakeLogger{}
 			reconciler.Client = fake.NewClientBuilder().WithScheme(s).WithObjects(original).Build()
 			reconciler.Log = logger
 			reconciler.scheduler = &fakeScheduler{}
@@ -431,7 +432,7 @@ func TestIntegrationJobReconciler_patchJobFailed(t *testing.T) {
 
 	for name, c := range tc {
 		t.Run(name, func(t *testing.T) {
-			logger := &fakeLogger{}
+			logger := &test.FakeLogger{}
 			reconciler.Client = fake.NewClientBuilder().WithScheme(s).WithObjects(original).Build()
 			reconciler.Log = logger
 
@@ -440,8 +441,8 @@ func TestIntegrationJobReconciler_patchJobFailed(t *testing.T) {
 
 			reconciler.patchJobFailed(ij, original, c.message)
 			if c.errorOccurs {
-				require.Len(t, logger.error, 1)
-				require.Equal(t, c.errorMessage, logger.error[0].Error())
+				require.Len(t, logger.Errors, 1)
+				require.Equal(t, c.errorMessage, logger.Errors[0].Error())
 			} else {
 				result := &cicdv1.IntegrationJob{}
 				require.NoError(t, reconciler.Client.Get(context.Background(), types.NamespacedName{Name: "test-ij", Namespace: "test-ns"}, result))

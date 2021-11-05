@@ -18,9 +18,10 @@ package apiserver
 
 import (
 	"fmt"
-	authorization "k8s.io/api/authorization/v1"
 	"net/http"
 	"strings"
+
+	authorization "k8s.io/api/authorization/v1"
 )
 
 const (
@@ -49,8 +50,8 @@ func GetUserName(header http.Header) (string, error) {
 	return "", fmt.Errorf("no header %s", userHeader)
 }
 
-// GetUserGroup extracts user group from the header
-func GetUserGroup(header http.Header) ([]string, error) {
+// GetUserGroups extracts user group from the header
+func GetUserGroups(header http.Header) ([]string, error) {
 	for k, v := range header {
 		if k == groupHeader {
 			return v, nil

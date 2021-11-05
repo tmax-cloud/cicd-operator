@@ -232,7 +232,11 @@ func main() {
 	go srv.Start()
 
 	// Start API aggregation server
-	apiServer := apiserver.New(mgr.GetClient(), mgr.GetConfig(), mgr.GetCache())
+	apiServer, err := apiserver.New(mgr.GetClient(), mgr.GetConfig(), mgr.GetCache())
+	if err != nil {
+		setupLog.Error(err, "unable to create api server")
+		os.Exit(1)
+	}
 	go apiServer.Start()
 
 	setupLog.Info("starting manager")
