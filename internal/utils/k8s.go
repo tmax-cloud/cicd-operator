@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -54,24 +53,14 @@ func CreateOrPatchObject(obj, original, parent client.Object, cli client.Client,
 		return fmt.Errorf("obj cannot be nil")
 	}
 
-	objMeta, objOk := obj.(metav1.Object)
-	if !objOk {
-		return fmt.Errorf("obj cannot be casted to metav1.Object")
-	}
-
 	if parent != nil {
-		parentMeta, parentOk := parent.(metav1.Object)
-		if !parentOk {
-			return fmt.Errorf("parent cannot be casted to metav1.Object")
-		}
-
-		if err := controllerutil.SetControllerReference(parentMeta, objMeta, scheme); err != nil {
+		if err := controllerutil.SetControllerReference(parent, obj, scheme); err != nil {
 			return err
 		}
 	}
 
 	// Update if resourceVersion exists, but create if not
-	if objMeta.GetResourceVersion() != "" {
+	if obj.GetResourceVersion() != "" {
 		if original == nil {
 			return fmt.Errorf("original object exists but not passed")
 		}

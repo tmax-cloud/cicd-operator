@@ -17,19 +17,14 @@
 package utils
 
 import (
-	"math/rand"
-	"time"
+	"regexp"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-// RandomString generate random string with lower case alphabets and digits
-func RandomString(length int) string {
-	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
-	charset := "abcdefghijklmnopqrstuvwxyz1234567890"
-	str := make([]byte, length)
-
-	for i := range str {
-		str[i] = charset[seededRand.Intn(len(charset))]
-	}
-
-	return string(str)
+func TestRandomString(t *testing.T) {
+	l := 12
+	r := RandomString(l)
+	require.Regexp(t, regexp.MustCompile("[a-z0-9]{12}"), r)
 }

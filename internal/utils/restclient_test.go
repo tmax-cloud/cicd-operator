@@ -474,6 +474,14 @@ func TestGvrClient_Update(t *testing.T) {
 			errorOccurs:  true,
 			errorMessage: "the server rejected our request for an unknown reason (put ingresses.networking.k8s.io ing)",
 		},
+		"notMetaAccessor": {
+			ns:           "test-ns",
+			name:         "pod1",
+			gvr:          corev1.SchemeGroupVersion.WithResource("pods"),
+			objs:         []runtime.Object{&testObject{}},
+			errorOccurs:  true,
+			errorMessage: "object does not implement the Object interfaces",
+		},
 	}
 
 	for name, c := range tc {
@@ -491,6 +499,11 @@ func TestGvrClient_Update(t *testing.T) {
 		})
 	}
 }
+
+type testObject struct{}
+
+func (t *testObject) GetObjectKind() schema.ObjectKind { return &metav1.APIGroup{} }
+func (t *testObject) DeepCopyObject() runtime.Object   { return t }
 
 func TestGvrClient_Delete(t *testing.T) {
 	router := mux.NewRouter()
