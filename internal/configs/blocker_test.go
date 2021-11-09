@@ -17,9 +17,10 @@
 package configs
 
 import (
-	"github.com/bmizerany/assert"
-	corev1 "k8s.io/api/core/v1"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestApplyBlockerConfigChange(t *testing.T) {
@@ -27,12 +28,12 @@ func TestApplyBlockerConfigChange(t *testing.T) {
 		"default": {ConfigMap: &corev1.ConfigMap{
 			Data: map[string]string{},
 		}, AssertFunc: func(t *testing.T, err error) {
-			assert.Equal(t, true, err == nil)
+			require.NoError(t, err)
 
-			assert.Equal(t, 1, MergeSyncPeriod)
-			assert.Equal(t, "ci/hold", MergeBlockLabel)
-			assert.Equal(t, "ci/merge-squash", MergeKindSquashLabel)
-			assert.Equal(t, "ci/merge-merge", MergeKindMergeLabel)
+			require.Equal(t, 1, MergeSyncPeriod)
+			require.Equal(t, "ci/hold", MergeBlockLabel)
+			require.Equal(t, "ci/merge-squash", MergeKindSquashLabel)
+			require.Equal(t, "ci/merge-merge", MergeKindMergeLabel)
 		}},
 		"normal": {ConfigMap: &corev1.ConfigMap{
 			Data: map[string]string{
@@ -42,12 +43,12 @@ func TestApplyBlockerConfigChange(t *testing.T) {
 				"mergeKindMergeLabel":  "test-merge",
 			},
 		}, AssertFunc: func(t *testing.T, err error) {
-			assert.Equal(t, true, err == nil)
+			require.NoError(t, err)
 
-			assert.Equal(t, 1, MergeSyncPeriod)
-			assert.Equal(t, "test-block", MergeBlockLabel)
-			assert.Equal(t, "test-squash", MergeKindSquashLabel)
-			assert.Equal(t, "test-merge", MergeKindMergeLabel)
+			require.Equal(t, 1, MergeSyncPeriod)
+			require.Equal(t, "test-block", MergeBlockLabel)
+			require.Equal(t, "test-squash", MergeKindSquashLabel)
+			require.Equal(t, "test-merge", MergeKindMergeLabel)
 		}},
 	}
 

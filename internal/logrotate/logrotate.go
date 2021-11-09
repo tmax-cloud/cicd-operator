@@ -18,22 +18,24 @@ package logrotate
 
 import (
 	"fmt"
-	"gopkg.in/robfig/cron.v2"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"time"
+
+	"gopkg.in/robfig/cron.v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
-	logFileDir    = "/logs"
-	logFilePrefix = "operator"
+	defaultLogFileDir = "/logs"
+	logFilePrefix     = "operator"
 )
 
-var logFilePath = path.Join(logFileDir, fmt.Sprintf("%s.log", logFilePrefix))
+var logDir = defaultLogFileDir
+var logFilePath = path.Join(logDir, fmt.Sprintf("%s.log", logFilePrefix))
 var logger = ctrl.Log.WithName("logrotate")
 var logFile *os.File
 
@@ -52,9 +54,9 @@ func LogFile() (*os.File, error) {
 }
 
 // StartRotate starts a cronjob to rotate the log
-func StartRotate() error {
+func StartRotate(spec string) error {
 	rotator := cron.New()
-	if _, err := rotator.AddFunc("0 0 1 * * ?", rotateLog); err != nil {
+	if _, err := rotator.AddFunc(spec, rotateLog); err != nil {
 		return err
 	}
 	rotator.Start()
@@ -64,25 +66,25 @@ func StartRotate() error {
 func rotateLog() {
 	in, err := ioutil.ReadFile(logFilePath)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error(err, "read log error")
 		return
 	}
 
-	filePath := path.Join(logFileDir, fmt.Sprintf("%s.%s.log", logFilePrefix, time.Now().AddDate(0, 0, -1).Format("2006-01-02")))
+	filePath := path.Join(logDir, fmt.Sprintf("%s.%s.log", logFilePrefix, time.Now().AddDate(0, 0, -1).Format("2006-01-02")))
 	if err := ioutil.WriteFile(filePath, in, 0644); err != nil {
-		fmt.Println(err)
+		logger.Error(err, "write log error")
 		return
 	}
 
 	logger.Info(fmt.Sprintf("Log backup succeeded (%s)", filePath))
 	if err := os.Truncate(logFilePath, 0); err != nil {
-		fmt.Println(err)
+		logger.Error(err, "truncate log error")
 		return
 	}
 
 	if logFile != nil {
 		if _, err := logFile.Seek(0, io.SeekStart); err != nil {
-			fmt.Println(err)
+			logger.Error(err, "seek log error")
 			return
 		}
 	}

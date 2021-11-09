@@ -95,7 +95,7 @@ func main() {
 	}()
 	logWriter := io.MultiWriter(logFile, os.Stdout)
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(logWriter)))
-	if err := logrotate.StartRotate(); err != nil {
+	if err := logrotate.StartRotate("0 0 1 * * ?"); err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
 	}

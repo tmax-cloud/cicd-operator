@@ -18,7 +18,6 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -30,15 +29,6 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
 	"github.com/tmax-cloud/cicd-operator/pkg/git/gitlab"
 )
-
-// FileExists checks if the file exists in path
-func FileExists(path string) bool {
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
 
 // GetGitCli generates git client, depending on the git type in the cfg
 func GetGitCli(cfg *cicdv1.IntegrationConfig, cli client.Client) (git.Client, error) {
