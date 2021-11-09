@@ -55,6 +55,10 @@ type Client struct {
 
 // Init initiates the Client
 func (c *Client) Init() error {
+	_, err := c.IntegrationConfig.GetToken(c.K8sClient)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -92,8 +92,8 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			template:        []byte("HI - {{.Name}}"),
 			expectedResult:  cicdv1.ApprovalResultAwaiting,
 			expectedReason:  "",
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue, Reason: "", Message: ""},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue, Reason: "EmailSent", Message: "Email is sent"},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "NotProcessed", Message: "Result email is not processed yet"},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"admin@tmax.co.kr"}, Title: "HI - test-approval", Content: "HI - test-approval", IsHTML: true},
 			},
@@ -139,8 +139,34 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			template:        []byte("HI - {{.Name}}"),
 			expectedResult:  cicdv1.ApprovalResultAwaiting,
 			expectedReason:  "",
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "NotProcessed", Message: "Request email is not processed yet"},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "NotProcessed", Message: "Result email is not processed yet"},
+		},
+		"bumpV0.5.0": {
+			approval: &cicdv1.Approval{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-approval",
+					Namespace: "test-ns",
+				},
+				Spec: cicdv1.ApprovalSpec{
+					Sender: &cicdv1.ApprovalUser{Name: "user", Email: "user@tmax.co.kr"},
+					Users: []cicdv1.ApprovalUser{
+						{Name: "admin", Email: "admin@tmax.co.kr"},
+					},
+				},
+				Status: cicdv1.ApprovalStatus{
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionUnknown},
+						{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionUnknown},
+					},
+				},
+			},
+			scheme:          s,
+			template:        []byte("HI - {{.Name}}"),
+			expectedResult:  cicdv1.ApprovalResultAwaiting,
+			expectedReason:  "",
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "Unknown", Message: "Unknown"},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "Unknown", Message: "Unknown"},
 		},
 		"createRoleErr": {
 			approval: &cicdv1.Approval{
@@ -162,8 +188,8 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			template:        []byte("HI - {{.Name}}"),
 			expectedResult:  cicdv1.ApprovalResultError,
 			expectedReason:  "no kind is registered for the type v1.Role in scheme \"pkg/runtime/scheme.go:100\"",
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "NotProcessed", Message: "Request email is not processed yet"},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "NotProcessed", Message: "Result email is not processed yet"},
 		},
 		"createRbErr": {
 			approval: &cicdv1.Approval{
@@ -185,8 +211,8 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 			template:        []byte("HI - {{.Name}}"),
 			expectedResult:  cicdv1.ApprovalResultError,
 			expectedReason:  "no kind is registered for the type v1.RoleBinding in scheme \"pkg/runtime/scheme.go:100\"",
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "", Message: ""},
+			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "NotProcessed", Message: "Request email is not processed yet"},
+			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown, Reason: "NotProcessed", Message: "Result email is not processed yet"},
 			expectedRole: &rbac.Role{
 				Rules: []rbac.PolicyRule{
 					{
@@ -262,11 +288,29 @@ func TestApprovalReconciler_Reconcile(t *testing.T) {
 	}
 }
 
+func TestApprovalReconciler_bumpV050(t *testing.T) {
+	reconciler := &ApprovalReconciler{}
+
+	ic := &cicdv1.Approval{
+		Status: cicdv1.ApprovalStatus{
+			Conditions: []metav1.Condition{
+				{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionTrue},
+				{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionTrue},
+			},
+		},
+	}
+	reconciler.bumpV050(ic)
+
+	require.Equal(t, "Sent", ic.Status.Conditions[0].Reason)
+	require.Equal(t, "Sent", ic.Status.Conditions[0].Message)
+
+	require.Equal(t, "Sent", ic.Status.Conditions[1].Reason)
+	require.Equal(t, "Sent", ic.Status.Conditions[1].Message)
+}
+
 func TestApprovalReconciler_processMail(t *testing.T) {
 	tc := map[string]struct {
 		approval        *cicdv1.Approval
-		reqCond         *metav1.Condition
-		resCond         *metav1.Condition
 		requestTemplate []byte
 		resultTemplate  []byte
 
@@ -280,15 +324,19 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 					Sender: &cicdv1.ApprovalUser{Name: "admin", Email: "admin@tmax.co.kr"},
 					Users:  []cicdv1.ApprovalUser{{Name: "test", Email: "test@tmax.co.kr"}},
 				},
-				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
+				Status: cicdv1.ApprovalStatus{
+					Result: cicdv1.ApprovalResultApproved,
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionUnknown},
+						{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionUnknown},
+					},
+				},
 			},
-			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Spec.Sender.Name}} - request"),
-			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Spec.Sender.Name}} - result"),
 
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionTrue},
+			expectedReqCond: metav1.Condition{Type: "SentRequestMail", Status: metav1.ConditionTrue, Reason: "EmailSent", Message: "Email is sent"},
+			expectedResCond: metav1.Condition{Type: "SentResultMail", Status: metav1.ConditionTrue, Reason: "EmailSent", Message: "Email is sent"},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"test@tmax.co.kr"}, Title: "admin - request", Content: "admin - request", IsHTML: true},
 				{Receivers: []string{"admin@tmax.co.kr"}, Title: "admin - result", Content: "admin - result", IsHTML: true},
@@ -301,15 +349,19 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 					Sender:       &cicdv1.ApprovalUser{Name: "admin", Email: "admin@tmax.co.kr"},
 					Users:        []cicdv1.ApprovalUser{{Name: "test", Email: "test@tmax.co.kr"}},
 				},
-				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
+				Status: cicdv1.ApprovalStatus{
+					Result: cicdv1.ApprovalResultApproved,
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionUnknown},
+						{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionUnknown},
+					},
+				},
 			},
-			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Spec.Sender.Name}} - request"),
-			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Spec.Sender.Name}} - result"),
 
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionUnknown},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown},
+			expectedReqCond: metav1.Condition{Type: "SentRequestMail", Status: metav1.ConditionUnknown},
+			expectedResCond: metav1.Condition{Type: "SentResultMail", Status: metav1.ConditionUnknown},
 		},
 		"reqGenErr": {
 			approval: &cicdv1.Approval{
@@ -317,15 +369,19 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 					Sender: &cicdv1.ApprovalUser{Name: "admin", Email: "admin@tmax.co.kr"},
 					Users:  []cicdv1.ApprovalUser{{Name: "test", Email: "test@tmax.co.kr"}},
 				},
-				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
+				Status: cicdv1.ApprovalStatus{
+					Result: cicdv1.ApprovalResultApproved,
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionUnknown},
+						{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionUnknown},
+					},
+				},
 			},
-			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{....Spec.Sender.Name}} - request"),
-			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Spec.Sender.Name}} - result"),
 
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionFalse, Reason: "EmailGenerateError", Message: "template: request-title:1: unexpected <.> in operand"},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionTrue},
+			expectedReqCond: metav1.Condition{Type: "SentRequestMail", Status: metav1.ConditionFalse, Reason: "EmailGenerateError", Message: "template: request-title:1: unexpected <.> in operand"},
+			expectedResCond: metav1.Condition{Type: "SentResultMail", Status: metav1.ConditionTrue, Reason: "EmailSent", Message: "Email is sent"},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"admin@tmax.co.kr"}, Title: "admin - result", Content: "admin - result", IsHTML: true},
 			},
@@ -336,14 +392,18 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 					Sender: &cicdv1.ApprovalUser{Name: "admin", Email: "admin@tmax.co.kr"},
 					Users:  []cicdv1.ApprovalUser{{Name: "test", Email: "test@tmax.co.kr"}},
 				},
+				Status: cicdv1.ApprovalStatus{
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionUnknown},
+						{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionUnknown},
+					},
+				},
 			},
-			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Spec.Sender.Name}} - request"),
-			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Spec.Sender.Name}} - result"),
 
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown},
+			expectedReqCond: metav1.Condition{Type: "SentRequestMail", Status: metav1.ConditionTrue, Reason: "EmailSent", Message: "Email is sent"},
+			expectedResCond: metav1.Condition{Type: "SentResultMail", Status: metav1.ConditionUnknown},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"test@tmax.co.kr"}, Title: "admin - request", Content: "admin - request", IsHTML: true},
 			},
@@ -353,15 +413,19 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 				Spec: cicdv1.ApprovalSpec{
 					Users: []cicdv1.ApprovalUser{{Name: "test", Email: "test@tmax.co.kr"}},
 				},
-				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
+				Status: cicdv1.ApprovalStatus{
+					Result: cicdv1.ApprovalResultApproved,
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionUnknown},
+						{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionUnknown},
+					},
+				},
 			},
-			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Name}} - request"),
-			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{.Name}} - result"),
 
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionUnknown},
+			expectedReqCond: metav1.Condition{Type: "SentRequestMail", Status: metav1.ConditionTrue, Reason: "EmailSent", Message: "Email is sent"},
+			expectedResCond: metav1.Condition{Type: "SentResultMail", Status: metav1.ConditionUnknown},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"test@tmax.co.kr"}, Title: " - request", Content: " - request", IsHTML: true},
 			},
@@ -372,15 +436,19 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 					Sender: &cicdv1.ApprovalUser{Name: "admin", Email: "admin@tmax.co.kr"},
 					Users:  []cicdv1.ApprovalUser{{Name: "test", Email: "test@tmax.co.kr"}},
 				},
-				Status: cicdv1.ApprovalStatus{Result: cicdv1.ApprovalResultApproved},
+				Status: cicdv1.ApprovalStatus{
+					Result: cicdv1.ApprovalResultApproved,
+					Conditions: []metav1.Condition{
+						{Type: cicdv1.ApprovalConditionSentRequestMail, Status: metav1.ConditionUnknown},
+						{Type: cicdv1.ApprovalConditionSentResultMail, Status: metav1.ConditionUnknown},
+					},
+				},
 			},
-			reqCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			requestTemplate: []byte("{{.Spec.Sender.Name}} - request"),
-			resCond:         &metav1.Condition{Status: metav1.ConditionUnknown},
 			resultTemplate:  []byte("{{....Spec.Sender.Name}} - result"),
 
-			expectedReqCond: metav1.Condition{Status: metav1.ConditionTrue},
-			expectedResCond: metav1.Condition{Status: metav1.ConditionFalse, Reason: "EmailGenerateError", Message: "template: result-title:1: unexpected <.> in operand"},
+			expectedReqCond: metav1.Condition{Type: "SentRequestMail", Status: metav1.ConditionTrue, Reason: "EmailSent", Message: "Email is sent"},
+			expectedResCond: metav1.Condition{Type: "SentResultMail", Status: metav1.ConditionFalse, Reason: "EmailGenerateError", Message: "template: result-title:1: unexpected <.> in operand"},
 			expectedMails: []mail.FakeMailEntity{
 				{Receivers: []string{"test@tmax.co.kr"}, Title: "admin - request", Content: "admin - request", IsHTML: true},
 			},
@@ -407,9 +475,9 @@ func TestApprovalReconciler_processMail(t *testing.T) {
 			sender := mail.NewFakeSender()
 			reconciler := &ApprovalReconciler{MailSender: sender, Log: &test.FakeLogger{}}
 
-			reconciler.processMail(c.approval, c.reqCond, c.resCond)
-			require.Equal(t, c.expectedReqCond, *c.reqCond)
-			require.Equal(t, c.expectedResCond, *c.resCond)
+			reconciler.processMail(c.approval)
+			require.Equal(t, c.expectedReqCond, *meta.FindStatusCondition(c.approval.Status.Conditions, cicdv1.ApprovalConditionSentRequestMail))
+			require.Equal(t, c.expectedResCond, *meta.FindStatusCondition(c.approval.Status.Conditions, cicdv1.ApprovalConditionSentResultMail))
 			require.Equal(t, c.expectedMails, sender.Mails)
 		})
 	}
@@ -794,8 +862,8 @@ func TestApprovalReconciler_sendMail(t *testing.T) {
 			content: "TEST@@@@",
 
 			condStatus:  metav1.ConditionTrue,
-			condReason:  "",
-			condMessage: "",
+			condReason:  "EmailSent",
+			condMessage: "Email is sent",
 		},
 		"errMail": {
 			condStatus:  metav1.ConditionFalse,
@@ -806,7 +874,7 @@ func TestApprovalReconciler_sendMail(t *testing.T) {
 			disabled:    true,
 			condStatus:  metav1.ConditionFalse,
 			condReason:  "EmailDisabled",
-			condMessage: "",
+			condMessage: "Email feature is disabled",
 		},
 	}
 

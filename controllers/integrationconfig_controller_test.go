@@ -74,8 +74,8 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			scheme:               s,
 			expectedFinalizers:   []string{finalizer},
 			expectedReadyStatus:  metav1.ConditionFalse,
-			expectedReadyReason:  "",
-			expectedReadyMessage: "",
+			expectedReadyReason:  "NotReady",
+			expectedReadyMessage: "Not ready",
 		},
 		"hasFinalizer": {
 			ic: &cicdv1.IntegrationConfig{
@@ -96,11 +96,11 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
 			expectedFinalizers:     []string{finalizer},
 			expectedWebhookStatus:  metav1.ConditionTrue,
-			expectedWebhookReason:  "",
-			expectedWebhookMessage: "",
+			expectedWebhookReason:  "Registered",
+			expectedWebhookMessage: "Webhook is registered",
 			expectedReadyStatus:    metav1.ConditionTrue,
-			expectedReadyReason:    "",
-			expectedReadyMessage:   "",
+			expectedReadyReason:    "Ready",
+			expectedReadyMessage:   "Ready",
 		},
 		"notFound": {
 			ic: &cicdv1.IntegrationConfig{
@@ -165,11 +165,11 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			scheme:                 s,
 			expectedFinalizers:     []string{finalizer},
 			expectedWebhookStatus:  metav1.ConditionTrue,
-			expectedWebhookReason:  "",
-			expectedWebhookMessage: "",
+			expectedWebhookReason:  "Registered",
+			expectedWebhookMessage: "Registered",
 			expectedReadyStatus:    metav1.ConditionTrue,
-			expectedReadyReason:    "",
-			expectedReadyMessage:   "",
+			expectedReadyReason:    "Ready",
+			expectedReadyMessage:   "Ready",
 		},
 		"createGitSecretErr": {
 			ic: &cicdv1.IntegrationConfig{
@@ -181,28 +181,21 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				Spec: cicdv1.IntegrationConfigSpec{
 					Git: cicdv1.GitConfig{
 						Type:       cicdv1.GitTypeFake,
+						APIUrl:     "https://192.168.0.%31/",
 						Repository: "test-repo",
-						Token: &cicdv1.GitToken{ValueFrom: &cicdv1.GitTokenFrom{
-							SecretKeyRef: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "no-exist"}, Key: "no-key"}},
-						},
-					},
-				},
-				Status: cicdv1.IntegrationConfigStatus{
-					Secrets: "test-secret",
-					Conditions: []metav1.Condition{
-						{Type: cicdv1.IntegrationConfigConditionReady, Status: metav1.ConditionTrue, Reason: "", Message: ""},
-						{Type: cicdv1.IntegrationConfigConditionWebhookRegistered, Status: metav1.ConditionTrue, Reason: "", Message: ""},
+						Token:      &cicdv1.GitToken{Value: "test-tkn"},
 					},
 				},
 			},
 			scheme:                 s,
 			expectedFinalizers:     []string{finalizer},
+			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
 			expectedWebhookStatus:  metav1.ConditionTrue,
-			expectedWebhookReason:  "",
-			expectedWebhookMessage: "",
+			expectedWebhookReason:  "Registered",
+			expectedWebhookMessage: "Webhook is registered",
 			expectedReadyStatus:    metav1.ConditionFalse,
 			expectedReadyReason:    "CannotCreateSecret",
-			expectedReadyMessage:   "secrets \"no-exist\" not found",
+			expectedReadyMessage:   "parse \"https://192.168.0.%31/\": invalid URL escape \"%31\"",
 		},
 		"createServiceAccountErr": {
 			ic: &cicdv1.IntegrationConfig{
@@ -223,8 +216,8 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
 			expectedFinalizers:     []string{finalizer},
 			expectedWebhookStatus:  metav1.ConditionTrue,
-			expectedWebhookReason:  "",
-			expectedWebhookMessage: "",
+			expectedWebhookReason:  "Registered",
+			expectedWebhookMessage: "Webhook is registered",
 			expectedReadyStatus:    metav1.ConditionFalse,
 			expectedReadyReason:    "CannotCreateAccount",
 			expectedReadyMessage:   "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:100\"",
@@ -312,6 +305,26 @@ func TestIntegrationConfigReconciler_SetupWithManager(t *testing.T) {
 	require.NoError(t, reconciler.SetupWithManager(mgr))
 }
 
+func TestIntegrationConfigReconciler_bumpV050(t *testing.T) {
+	reconciler := &IntegrationConfigReconciler{}
+
+	ic := &cicdv1.IntegrationConfig{
+		Status: cicdv1.IntegrationConfigStatus{
+			Conditions: []metav1.Condition{
+				{Type: cicdv1.IntegrationConfigConditionReady, Status: metav1.ConditionTrue},
+				{Type: cicdv1.IntegrationConfigConditionWebhookRegistered, Status: metav1.ConditionTrue},
+			},
+		},
+	}
+	reconciler.bumpV050(ic)
+
+	require.Equal(t, "Ready", ic.Status.Conditions[0].Reason)
+	require.Equal(t, "Ready", ic.Status.Conditions[0].Message)
+
+	require.Equal(t, "Registered", ic.Status.Conditions[1].Reason)
+	require.Equal(t, "Registered", ic.Status.Conditions[1].Message)
+}
+
 func TestIntegrationConfigReconciler_handleFinalizer(t *testing.T) {
 	s := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(s))
@@ -325,8 +338,6 @@ func TestIntegrationConfigReconciler_handleFinalizer(t *testing.T) {
 		preRegisteredWebhooks []string
 
 		doExit             bool
-		errorOccurs        bool
-		errorMessage       string
 		expectedWebhooks   []string
 		expectedFinalizers []string
 	}{
@@ -448,29 +459,23 @@ func TestIntegrationConfigReconciler_handleFinalizer(t *testing.T) {
 				gitfake.Repos["test-repo"].Webhooks[i] = &git.WebhookEntry{ID: i, URL: w}
 			}
 
-			exit, err := reconciler.handleFinalizer(c.ic)
-			if c.errorOccurs {
-				require.Error(t, err)
-				require.Equal(t, c.errorMessage, err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, c.doExit, exit)
+			exit := reconciler.handleFinalizer(c.ic)
+			require.Equal(t, c.doExit, exit)
 
-				// Check Finalizer
-				require.Equal(t, c.expectedFinalizers, c.ic.Finalizers)
+			// Check Finalizer
+			require.Equal(t, c.expectedFinalizers, c.ic.Finalizers)
 
-				// Check webhooks
-				require.Len(t, gitfake.Repos["test-repo"].Webhooks, len(c.expectedWebhooks))
-				for _, w := range c.expectedWebhooks {
-					found := false
-					for _, ww := range gitfake.Repos["test-repo"].Webhooks {
-						if w == ww.URL {
-							found = true
-							break
-						}
+			// Check webhooks
+			require.Len(t, gitfake.Repos["test-repo"].Webhooks, len(c.expectedWebhooks))
+			for _, w := range c.expectedWebhooks {
+				found := false
+				for _, ww := range gitfake.Repos["test-repo"].Webhooks {
+					if w == ww.URL {
+						found = true
+						break
 					}
-					require.True(t, found)
 				}
+				require.True(t, found)
 			}
 		})
 	}
@@ -525,8 +530,8 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 			},
 			expectedWebhookURL: "http://cicd-webhook.com/webhook/test-ns/test-ic",
 			expectedStatus:     metav1.ConditionTrue,
-			expectedReason:     "",
-			expectedMessage:    "",
+			expectedReason:     "Registered",
+			expectedMessage:    "Webhook is registered",
 		},
 		"noToken": {
 			ic: &cicdv1.IntegrationConfig{
@@ -732,12 +737,13 @@ func TestIntegrationConfigReconciler_setReadyCond(t *testing.T) {
 			reconciler := &IntegrationConfigReconciler{}
 			cond := meta.FindStatusCondition(c.ic.Status.Conditions, "ready")
 			if cond == nil {
-				cond = &metav1.Condition{
+				meta.SetStatusCondition(&c.ic.Status.Conditions, metav1.Condition{
 					Type:   cicdv1.IntegrationConfigConditionReady,
 					Status: metav1.ConditionFalse,
-				}
+				})
 			}
-			reconciler.setReadyCond(c.ic, cond)
+			reconciler.setReadyCond(c.ic)
+			cond = meta.FindStatusCondition(c.ic.Status.Conditions, "ready")
 			require.Equal(t, c.expectedReadyCondStatus, cond.Status)
 		})
 	}
@@ -1184,4 +1190,33 @@ func TestIntegrationConfigReconciler_createServiceAccount(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_upgradeV050Condition(t *testing.T) {
+	t.Run("bumpReady", func(t *testing.T) {
+		cond := &metav1.Condition{
+			Status: metav1.ConditionTrue,
+		}
+		upgradeV050Condition(cond, "Ready", "NotReady")
+		require.Equal(t, "Ready", cond.Reason)
+		require.Equal(t, "Ready", cond.Message)
+	})
+
+	t.Run("bumpNotReady", func(t *testing.T) {
+		cond := &metav1.Condition{
+			Status: metav1.ConditionFalse,
+		}
+		upgradeV050Condition(cond, "Ready", "NotReady")
+		require.Equal(t, "NotReady", cond.Reason)
+		require.Equal(t, "NotReady", cond.Message)
+	})
+
+	t.Run("bumpUnknown", func(t *testing.T) {
+		cond := &metav1.Condition{
+			Status: metav1.ConditionUnknown,
+		}
+		upgradeV050Condition(cond, "Ready", "NotReady")
+		require.Equal(t, "Unknown", cond.Reason)
+		require.Equal(t, "Unknown", cond.Message)
+	})
 }
