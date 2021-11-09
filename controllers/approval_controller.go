@@ -86,25 +86,28 @@ func (r *ApprovalReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 	original := instance.DeepCopy()
 
-	sentReqMailCond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentRequestMail)
-	if sentReqMailCond == nil {
-		sentReqMailCond = &metav1.Condition{
-			Type:   cicdv1.ApprovalConditionSentRequestMail,
-			Status: metav1.ConditionUnknown,
-		}
+	// Default conditions
+	if sentReqMailCond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentRequestMail); sentReqMailCond == nil {
+		meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
+			Type:    cicdv1.ApprovalConditionSentRequestMail,
+			Status:  metav1.ConditionUnknown,
+			Reason:  "NotProcessed",
+			Message: "Request email is not processed yet",
+		})
 	}
 
-	sentResMailCond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentResultMail)
-	if sentResMailCond == nil {
-		sentResMailCond = &metav1.Condition{
-			Type:   cicdv1.ApprovalConditionSentResultMail,
-			Status: metav1.ConditionUnknown,
-		}
+	if sentResMailCond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentResultMail); sentResMailCond == nil {
+		meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
+			Type:    cicdv1.ApprovalConditionSentResultMail,
+			Status:  metav1.ConditionUnknown,
+			Reason:  "NotProcessed",
+			Message: "Result email is not processed yet",
+		})
 	}
+
+	r.bumpV050(instance)
 
 	defer func() {
-		meta.SetStatusCondition(&instance.Status.Conditions, *sentReqMailCond)
-		meta.SetStatusCondition(&instance.Status.Conditions, *sentResMailCond)
 		p := client.MergeFrom(original)
 		if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
 			log.Error(err, "")
@@ -130,17 +133,30 @@ func (r *ApprovalReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Process mails
-	r.processMail(instance, sentReqMailCond, sentResMailCond)
+	r.processMail(instance)
 	return ctrl.Result{}, nil
 }
 
-func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, resCond *metav1.Condition) {
+// Update to v0.5.0 - reason, message became required
+func (r *ApprovalReconciler) bumpV050(instance *cicdv1.Approval) {
+	// Bump req cond
+	if cond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentRequestMail); cond != nil {
+		upgradeV050Condition(cond, "Sent", "NotSent")
+	}
+
+	// Bump res cond
+	if cond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentResultMail); cond != nil {
+		upgradeV050Condition(cond, "Sent", "NotSent")
+	}
+}
+
+func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval) {
 	if instance.Spec.SkipSendMail {
 		return
 	}
 
 	// Set SentRequestMail
-	if reqCond == nil || reqCond.Status == "" || reqCond.Status == metav1.ConditionUnknown {
+	if reqCond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentRequestMail); reqCond == nil || reqCond.Status == "" || reqCond.Status == metav1.ConditionUnknown {
 		title, content, err := r.generateMail(instance, configMapKeyRequestTitle, configMapKeyRequestContent)
 		if err != nil {
 			reqCond.Status = metav1.ConditionFalse
@@ -158,7 +174,7 @@ func (r *ApprovalReconciler) processMail(instance *cicdv1.Approval, reqCond, res
 	if instance.Spec.Sender == nil {
 		return
 	}
-	if resCond == nil || resCond.Status == metav1.ConditionUnknown {
+	if resCond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.ApprovalConditionSentResultMail); resCond == nil || resCond.Status == metav1.ConditionUnknown {
 		title, content, err := r.generateMail(instance, configMapKeyResultTitle, configMapKeyResultContent)
 		if err != nil {
 			resCond.Status = metav1.ConditionFalse
@@ -325,6 +341,7 @@ func (r *ApprovalReconciler) sendMail(users []string, title, content string, con
 
 	if !configs.EnableMail {
 		cond.Reason = "EmailDisabled"
+		cond.Message = "Email feature is disabled"
 		return
 	}
 
@@ -337,8 +354,8 @@ func (r *ApprovalReconciler) sendMail(users []string, title, content string, con
 	}
 
 	cond.Status = metav1.ConditionTrue
-	cond.Reason = ""
-	cond.Message = ""
+	cond.Reason = "EmailSent"
+	cond.Message = "Email is sent"
 }
 
 func (r *ApprovalReconciler) setError(instance *cicdv1.Approval, message string) {

@@ -67,40 +67,33 @@ func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	original := instance.DeepCopy()
 
 	// New Condition default
-	cond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionReady)
-	if cond == nil {
-		cond = &metav1.Condition{
-			Type:   cicdv1.IntegrationConfigConditionReady,
-			Status: metav1.ConditionFalse,
-		}
+	if cond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionReady); cond == nil {
+		meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
+			Type:    cicdv1.IntegrationConfigConditionReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  "NotReady",
+			Message: "Not ready",
+		})
 	}
 
-	var err error
-	specChanged := false
+	r.bumpV050(instance)
 
-	defer func(ic *cicdv1.IntegrationConfig, specChanged *bool) {
-		meta.SetStatusCondition(&ic.Status.Conditions, *cond)
+	specChanged := false
+	defer func(specChanged *bool) {
 		p := client.MergeFrom(original)
 
 		if *specChanged {
-			if err := r.Client.Patch(ctx, ic, p); err != nil {
+			if err := r.Client.Patch(ctx, instance, p); err != nil {
 				log.Error(err, "")
 			}
 		} else {
-			if err := r.Client.Status().Patch(ctx, ic, p); err != nil {
+			if err := r.Client.Status().Patch(ctx, instance, p); err != nil {
 				log.Error(err, "")
 			}
 		}
-	}(instance, &specChanged)
+	}(&specChanged)
 
-	specChanged, err = r.handleFinalizer(instance)
-	if err != nil {
-		log.Error(err, "")
-		cond.Reason = "CannotHandleFinalizer"
-		cond.Message = err.Error()
-		return ctrl.Result{}, nil
-	}
-	if specChanged {
+	if specChanged = r.handleFinalizer(instance); specChanged {
 		return ctrl.Result{}, nil
 	}
 
@@ -111,11 +104,12 @@ func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	r.setWebhookRegisteredCond(instance)
 
 	// Set ready
-	r.setReadyCond(instance, cond)
+	r.setReadyCond(instance)
 
 	// Service account for running PipelineRuns
 	if err := r.createServiceAccount(instance); err != nil {
 		log.Error(err, "")
+		cond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionReady)
 		cond.Status = metav1.ConditionFalse
 		cond.Reason = "CannotCreateAccount"
 		cond.Message = err.Error()
@@ -125,6 +119,7 @@ func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// Git credential secret - referred by tekton
 	if err := r.createGitSecret(instance); err != nil {
 		log.Error(err, "")
+		cond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionReady)
 		cond.Status = metav1.ConditionFalse
 		cond.Reason = "CannotCreateSecret"
 		cond.Message = err.Error()
@@ -141,7 +136,21 @@ func (r *IntegrationConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *IntegrationConfigReconciler) handleFinalizer(instance *cicdv1.IntegrationConfig) (bool, error) {
+// Update to v0.5.0 - reason, message became required
+func (r *IntegrationConfigReconciler) bumpV050(instance *cicdv1.IntegrationConfig) {
+	// Bump ready cond
+	if condReady := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionReady); condReady != nil {
+		upgradeV050Condition(condReady, "Ready", "NotReady")
+	}
+
+	// Bump webhook-registered cond
+	if condReg := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered); condReg != nil {
+		upgradeV050Condition(condReg, "Registered", "NotRegistered")
+	}
+}
+
+// handleFinalizer handles finalizer (add or remove) and returns whether to exit or not (for spec update)
+func (r *IntegrationConfigReconciler) handleFinalizer(instance *cicdv1.IntegrationConfig) bool {
 	// Check first if finalizer is already set
 	found := false
 	idx := -1
@@ -154,7 +163,7 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance *cicdv1.Integrati
 	}
 	if !found {
 		instance.Finalizers = append(instance.Finalizers, finalizer)
-		return true, nil
+		return true
 	}
 
 	// Deletion check-up
@@ -189,10 +198,10 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance *cicdv1.Integrati
 			instance.Finalizers[last] = ""
 			instance.Finalizers = instance.Finalizers[:last]
 		}
-		return true, nil
+		return true
 	}
 
-	return false, nil
+	return false
 }
 
 // Set status.secrets, return if it's changed or not
@@ -206,25 +215,26 @@ func (r *IntegrationConfigReconciler) setSecretString(instance *cicdv1.Integrati
 func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.IntegrationConfig) {
 	webhookRegistered := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
 	if webhookRegistered == nil {
-		webhookRegistered = &metav1.Condition{
+		meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
 			Type:   cicdv1.IntegrationConfigConditionWebhookRegistered,
 			Status: metav1.ConditionFalse,
-		}
+			Reason: "NotRegistered",
+		})
+		webhookRegistered = meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
 	}
 
 	// If token is empty, skip to register
 	if instance.Spec.Git.Token == nil {
 		webhookRegistered.Reason = cicdv1.IntegrationConfigConditionReasonNoGitToken
 		webhookRegistered.Message = "Skipped to register webhook"
-		meta.SetStatusCondition(&instance.Status.Conditions, *webhookRegistered)
 		return
 	}
 
 	// Register only if the condition is false
 	if webhookRegistered.Status == metav1.ConditionFalse {
 		webhookRegistered.Status = metav1.ConditionFalse
-		webhookRegistered.Reason = ""
-		webhookRegistered.Message = ""
+		webhookRegistered.Reason = "NotRegistered"
+		webhookRegistered.Message = "Webhook is not registered"
 
 		gitCli, err := utils.GetGitCli(instance, r.Client)
 		if err != nil {
@@ -253,21 +263,23 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 					webhookRegistered.Message = err.Error()
 				} else {
 					webhookRegistered.Status = metav1.ConditionTrue
-					webhookRegistered.Reason = ""
-					webhookRegistered.Message = ""
+					webhookRegistered.Reason = "Registered"
+					webhookRegistered.Message = "Webhook is registered"
 				}
 			}
 		}
-		meta.SetStatusCondition(&instance.Status.Conditions, *webhookRegistered)
 	}
 }
 
 // Set ready condition, return if it's changed or not
-func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationConfig, cond *metav1.Condition) {
+func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationConfig) {
+	cond := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionReady)
 	// For now, only checked is if webhook-registered is true & secrets are set
 	webhookRegistered := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
 	if instance.Status.Secrets != "" && webhookRegistered != nil && (webhookRegistered.Status == metav1.ConditionTrue || webhookRegistered.Reason == cicdv1.IntegrationConfigConditionReasonNoGitToken) {
 		cond.Status = metav1.ConditionTrue
+		cond.Reason = "Ready"
+		cond.Message = "Ready"
 	}
 }
 
@@ -397,4 +409,23 @@ func (r *IntegrationConfigReconciler) createServiceAccount(instance *cicdv1.Inte
 	}
 
 	return r.Client.Create(context.Background(), sa)
+}
+
+func upgradeV050Condition(cond *metav1.Condition, trueMsg, falseMsg string) {
+	var msg string
+	switch cond.Status {
+	case metav1.ConditionTrue:
+		msg = trueMsg
+	case metav1.ConditionFalse:
+		msg = falseMsg
+	default:
+		msg = "Unknown"
+	}
+
+	if cond.Reason == "" {
+		cond.Reason = msg
+	}
+	if cond.Message == "" {
+		cond.Message = msg
+	}
 }
