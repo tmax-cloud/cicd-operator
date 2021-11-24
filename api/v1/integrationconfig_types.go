@@ -67,13 +67,16 @@ type IntegrationConfigSpec struct {
 	PodTemplate *pod.Template `json:"podTemplate,omitempty"`
 }
 
-// IntegrationConfigJobs categorizes jobs into two types (pre-submit and post-submit)
+// IntegrationConfigJobs categorizes jobs into three types (pre-submit, post-submit and periodic jobs)
 type IntegrationConfigJobs struct {
 	// PreSubmit jobs are for pull-request events
 	PreSubmit Jobs `json:"preSubmit,omitempty"`
 
 	// PostSubmit jobs are for push events (including tag events)
 	PostSubmit Jobs `json:"postSubmit,omitempty"`
+
+	// Periodic are Periodicjobs can be run periodically
+	Periodic Periodics `json:"periodic,omitempty"`
 }
 
 // IntegrationConfigStatus defines the observed state of IntegrationConfig

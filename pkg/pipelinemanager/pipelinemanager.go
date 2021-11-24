@@ -297,9 +297,11 @@ func (p *pipelineManager) ReflectStatus(pr *tektonv1beta1.PipelineRun, job *cicd
 		}
 	}
 
-	// Set remote git's commit status for each job
-	if err := p.updateGitCommitStatus(cfg, job, stateChanged); err != nil {
-		return err
+	if job.Spec.ConfigRef.Type != cicdv1.JobTypePeriodic {
+		// Set remote git's commit status for each job
+		if err := p.updateGitCommitStatus(cfg, job, stateChanged); err != nil {
+			return err
+		}
 	}
 
 	// Emit events
