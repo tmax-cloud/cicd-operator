@@ -33,6 +33,8 @@ const (
 	JobTypePreSubmit = JobType("preSubmit")
 	// JobTypePostSubmit is a post-submit type (push or tag-push)
 	JobTypePostSubmit = JobType("postSubmit")
+	// JobTypePeriodic is a periodic type
+	JobTypePeriodic = JobType("periodic")
 )
 
 // CommitStatusState is a state of git commit status
@@ -74,6 +76,14 @@ type Job struct {
 
 	// Notification sends notification when success/fail
 	Notification *Notification `json:"notification,omitempty"`
+}
+
+// Periodic runs on a time-basis, unrelated to git changes.
+type Periodic struct {
+	Job `json:",inline"`
+
+	// Cron representation of job trigger time
+	Cron string `json:"cron,omitempty"`
 }
 
 // TektonTask refers to an existing tekton task, rather than using job's script or command
@@ -185,3 +195,6 @@ func (j *Jobs) GetGraph() (structs.Graph, error) {
 
 	return graph, nil
 }
+
+// Periodics is an array of PeriodicJob
+type Periodics []Periodic

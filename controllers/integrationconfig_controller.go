@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/pkg/periodictrigger"
 )
 
 const (
@@ -47,6 +49,8 @@ type IntegrationConfigReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
+
+var periodicTriggers = map[string]*periodictrigger.PeriodicTrigger{}
 
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationconfigs/status,verbs=get;update;patch
@@ -105,6 +109,10 @@ func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// Set ready
 	r.setReadyCond(instance)
+
+	if instance.Spec.Jobs.Periodic != nil {
+		r.setPeriodicTrigger(instance)
+	}
 
 	// Service account for running PipelineRuns
 	if err := r.createServiceAccount(instance); err != nil {
@@ -187,6 +195,15 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance *cicdv1.Integrati
 					}
 				}
 			}
+		}
+
+		// Stop periodic trigger and reomve the periodic trigger.
+		// Check if periodicTrigger exists
+		nameAndNamespace := instance.Name + instance.Namespace
+		pt, exists := periodicTriggers[nameAndNamespace]
+		if exists && pt != nil {
+			periodicTriggers[nameAndNamespace].Stop()
+			periodicTriggers[nameAndNamespace] = nil
 		}
 
 		// Delete finalizer
@@ -280,6 +297,22 @@ func (r *IntegrationConfigReconciler) setReadyCond(instance *cicdv1.IntegrationC
 		cond.Status = metav1.ConditionTrue
 		cond.Reason = "Ready"
 		cond.Message = "Ready"
+	}
+}
+
+func (r *IntegrationConfigReconciler) setPeriodicTrigger(instance *cicdv1.IntegrationConfig) {
+	// Check if periodicTrigger exists
+	nameAndNamespace := instance.Name + instance.Namespace
+	_, exists := periodicTriggers[nameAndNamespace]
+	fmt.Println(exists)
+	if !exists {
+		// create periodic trigger
+		periodicTriggers[nameAndNamespace] = periodictrigger.New(r.Client, instance, context.Background())
+		err := periodicTriggers[nameAndNamespace].Start()
+
+		if err != nil {
+			r.Log.Error(err, "Starting periodicTrigger failed")
+		}
 	}
 }
 

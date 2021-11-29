@@ -169,3 +169,8 @@ func (s *IntegrationJobStatus) SetDefaults() {
 func (i *IntegrationJob) GetReportServerAddress(jobName string) string {
 	return fmt.Sprintf("http://%s/report/%s/%s/%s", configs.CurrentExternalHostName, i.Namespace, i.Name, jobName)
 }
+
+// IsCompleted returns whether or not a job have been completed
+func (i *IntegrationJob) IsCompleted() bool {
+	return i.Status.CompletionTime != nil
+}
