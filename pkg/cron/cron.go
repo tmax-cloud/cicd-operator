@@ -134,7 +134,7 @@ func (c *Cron) addJob(name, cron string) error {
 		defer c.lock.Unlock()
 
 		c.jobs[name].triggered = true
-		c.logger.Info("Triggering cron job %s.", name)
+		c.logger.Info("Triggering cron job", "name", name)
 	})
 
 	if err != nil {
@@ -148,7 +148,7 @@ func (c *Cron) addJob(name, cron string) error {
 		triggered: strings.HasPrefix(cron, "@every"),
 	}
 
-	c.logger.Info("Added new cron job %s with trigger %s.", name, cron)
+	c.logger.Info("Added new cron job", "name", name, "cron", cron)
 	return nil
 }
 
@@ -160,6 +160,6 @@ func (c *Cron) removeJob(name string) error {
 	}
 	c.cronAgent.Remove(job.entryID)
 	delete(c.jobs, name)
-	c.logger.Info("Removed previous cron job %s.", name)
+	c.logger.Info("Removed previous cron job", "name", name)
 	return nil
 }
