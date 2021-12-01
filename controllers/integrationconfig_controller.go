@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -200,10 +199,10 @@ func (r *IntegrationConfigReconciler) handleFinalizer(instance *cicdv1.Integrati
 		// Stop periodic trigger and reomve the periodic trigger.
 		// Check if periodicTrigger exists
 		nameAndNamespace := instance.Name + instance.Namespace
-		pt, exists := periodicTriggers[nameAndNamespace]
-		if exists && pt != nil {
+		_, exists := periodicTriggers[nameAndNamespace]
+		if exists {
 			periodicTriggers[nameAndNamespace].Stop()
-			periodicTriggers[nameAndNamespace] = nil
+			delete(periodicTriggers, nameAndNamespace)
 		}
 
 		// Delete finalizer
@@ -304,7 +303,6 @@ func (r *IntegrationConfigReconciler) setPeriodicTrigger(instance *cicdv1.Integr
 	// Check if periodicTrigger exists
 	nameAndNamespace := instance.Name + instance.Namespace
 	_, exists := periodicTriggers[nameAndNamespace]
-	fmt.Println(exists)
 	if !exists {
 		// create periodic trigger
 		periodicTriggers[nameAndNamespace] = periodictrigger.New(r.Client, instance, context.Background())
