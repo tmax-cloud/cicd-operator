@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: echo-hello-world
+spec:
+  steps:
+    - name: echo
+      image: ubuntu
+      command:
+        - echo
+      args:
+        - "Hello World"
+---
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: config
+spec:
+  git:
+    type: github
+    apiUrl: 
+    repository: tmax-cloud/cicd-sample-repo
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: git-token
+          key: token
+  jobs:
+    presubmit:
+    postsubmit:
+    periodic:
+      - name: cron-echo-1
+        cron: "@every 1m" # You can schedule a job to execute at fixed intervals. Use "@every <duration>" format.
+        tektonTask: 
+          taskRef:
+            local: 
+              name: echo-hello-world
+              kind: Task
+      - name: cron-echo-2
+        cron: "@every 2m"
+        tektonTask:
+          taskRef:
+            local:
+              name: echo-hello-world
+              kind: Task
