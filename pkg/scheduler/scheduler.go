@@ -99,6 +99,9 @@ func (s scheduler) run() {
 	// Check if running jobs are actually running (has pipelineRun, pipelineRun is running)
 	s.jobPool.Running().ForEach(s.filterOutRunning(&availableCnt))
 
+	// Check if pending jobs are timeouted
+	s.jobPool.Pending().ForEach(s.filterOutPending())
+
 	// If the number of running jobs is greater or equals to the max pipeline run, no scheduling is allowed
 	if availableCnt <= 0 {
 		log.Info("Max number of PipelineRuns already exist")
@@ -120,6 +123,22 @@ func (s *scheduler) filterOutRunning(availableCnt *int) func(structs.Item) {
 		// If PipelineRun is not found or is already completed, is not actually running
 		if (err != nil && errors.IsNotFound(err)) || (err == nil && pr.Status.CompletionTime != nil) {
 			*availableCnt = *availableCnt + 1
+		}
+	}
+}
+
+func (s *scheduler) filterOutPending() func(structs.Item) {
+	return func(item structs.Item) {
+		j, ok := item.(*pool.JobNode)
+		if !ok {
+			return
+		}
+		now := time.Now()
+		if j.CreationTimestamp.Time.Add(j.Spec.Timeout.Duration).Before(now) {
+			msg := fmt.Errorf("integration job %s_%s is failed due to timeout", j.Namespace, j.Name)
+			if err := s.patchJobScheduleFailed(j.IntegrationJob, msg.Error()); err != nil {
+				log.Error(err, "")
+			}
 		}
 	}
 }

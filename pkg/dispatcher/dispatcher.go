@@ -109,6 +109,7 @@ func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.
 				Pulls: generatePulls(prs),
 			},
 			PodTemplate: config.Spec.PodTemplate,
+			Timeout:     config.GetDuration(),
 		},
 	}
 }
@@ -144,6 +145,7 @@ func GeneratePostSubmit(push *git.Push, repo *git.Repository, sender *git.User, 
 				},
 			},
 			PodTemplate: config.Spec.PodTemplate,
+			Timeout:     config.GetDuration(),
 		},
 	}
 }

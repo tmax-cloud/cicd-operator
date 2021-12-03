@@ -109,6 +109,14 @@ spec:
                 - repository
                 - type
                 type: object
+              ijManageSpec:
+                description: IJManageSpec defines variables to manage created integration
+                  jobs
+                properties:
+                  timeout:
+                    description: Timeout for pending integration job gc
+                    type: string
+                type: object
               jobs:
                 description: Jobs specify the tasks to be executed
                 properties:

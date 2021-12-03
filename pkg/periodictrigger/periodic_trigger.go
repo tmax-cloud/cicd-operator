@@ -133,6 +133,7 @@ func generatePeriodic(config *cicdv1.IntegrationConfig, job cicdv1.Job) *cicdv1.
 				},
 			},
 			PodTemplate: config.Spec.PodTemplate,
+			Timeout:     config.GetDuration(),
 		},
 	}
 }

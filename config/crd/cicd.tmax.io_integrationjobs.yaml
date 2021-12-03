@@ -4476,6 +4476,9 @@ spec:
                 - repository
                 - sender
                 type: object
+              timeout:
+                description: Timeout for pending status garbage collection
+                type: string
               workspaces:
                 description: Workspaces list
                 items:
