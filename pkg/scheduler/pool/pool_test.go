@@ -18,12 +18,13 @@ package pool
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/bmizerany/assert"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/structs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
-	"time"
 )
 
 func TestJobPool_SyncJob(t *testing.T) {
@@ -83,6 +84,11 @@ func jobForTest(name, namespace string, created time.Time) *cicdv1.IntegrationJo
 			Name:              name,
 			Namespace:         namespace,
 			CreationTimestamp: metav1.Time{Time: created},
+		},
+		Spec: cicdv1.IntegrationJobSpec{
+			Timeout: &metav1.Duration{
+				Duration: 1,
+			},
 		},
 		Status: cicdv1.IntegrationJobStatus{
 			State: cicdv1.IntegrationJobStatePending,

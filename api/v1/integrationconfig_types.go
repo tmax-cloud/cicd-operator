@@ -19,6 +19,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -65,6 +66,15 @@ type IntegrationConfigSpec struct {
 
 	// PodTemplate for the TaskRun pods. Same as tekton's pod template. Refer to https://github.com/tektoncd/pipeline/blob/master/docs/podtemplates.md
 	PodTemplate *pod.Template `json:"podTemplate,omitempty"`
+
+	// IJManageSpec defines variables to manage created integration jobs
+	IJManageSpec IntegrationJobManageSpec `json:"ijManageSpec,omitempty"`
+}
+
+// IntegrationJobManageSpec contains spec for ij managing
+type IntegrationJobManageSpec struct {
+	// Timeout for pending integration job gc
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // IntegrationConfigJobs categorizes jobs into three types (pre-submit, post-submit and periodic jobs)
@@ -159,6 +169,16 @@ func GetSecretName(configName string) string {
 // GetWebhookServerAddress returns Server address which webhook events will be received
 func (i *IntegrationConfig) GetWebhookServerAddress() string {
 	return fmt.Sprintf("http://%s/webhook/%s/%s", configs.CurrentExternalHostName, i.Namespace, i.Name)
+}
+
+// GetDuration returns timeout duration. Default is TTL value
+func (i *IntegrationConfig) GetDuration() *metav1.Duration {
+	if i.Spec.IJManageSpec.Timeout != nil {
+		return i.Spec.IJManageSpec.Timeout
+	}
+	return &metav1.Duration{
+		Duration: time.Duration(configs.IntegrationJobTTL) * time.Hour,
+	}
 }
 
 // IntegrationConfig's API kinds

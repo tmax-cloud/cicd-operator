@@ -130,7 +130,9 @@ func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 			},
 			PodTemplate: job.Spec.PodTemplate,
 			Workspaces:  job.Spec.Workspaces,
-			Timeout:     &metav1.Duration{Duration: 120 * time.Hour},
+			Timeout: &metav1.Duration{
+				Duration: job.Spec.Timeout.Duration,
+			},
 		},
 	}, nil
 }

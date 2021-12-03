@@ -18,9 +18,11 @@ package pool
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	v1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/structs"
-	"sync"
 )
 
 // jobPool stores current status of v1.IntegrationJobs, who are in pending status or running status
@@ -118,6 +120,8 @@ func (j *jobPool) SyncJob(job *v1.IntegrationJob) {
 		switch newStatus {
 		case v1.IntegrationJobStatePending:
 			j.pending.Add(node)
+			timeout := job.Spec.Timeout.Duration - time.Since(job.CreationTimestamp.Time)
+			go j.manageTimeout(timeout, job)
 		case v1.IntegrationJobStateRunning:
 			j.running.Add(node)
 		}
@@ -146,6 +150,11 @@ func (j *jobPool) SyncJob(job *v1.IntegrationJob) {
 		j.sendSchedule()
 		return
 	}
+}
+
+func (j *jobPool) manageTimeout(timeout time.Duration, job *v1.IntegrationJob) {
+	time.Sleep(timeout)
+	j.sendSchedule()
 }
 
 func (j *jobPool) sendSchedule() {

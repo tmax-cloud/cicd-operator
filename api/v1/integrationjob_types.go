@@ -55,6 +55,9 @@ type IntegrationJobSpec struct {
 
 	// PodTemplate for the TaskRun pods. Same as tekton's pod template
 	PodTemplate *pod.Template `json:"podTemplate,omitempty"`
+
+	// Timeout for pending status garbage collection
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // IntegrationJobConfigRef refers to the IntegrationConfig
