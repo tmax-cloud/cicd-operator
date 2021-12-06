@@ -20,8 +20,176 @@ import (
 	"testing"
 
 	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/require"
+	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 )
+
+func TestGeneratePreSubmit(t *testing.T) {
+	tc := map[string]struct {
+		prs    []git.PullRequest
+		repo   *git.Repository
+		sender *git.User
+		config *cicdv1.IntegrationConfig
+
+		expectedNil  bool
+		expectedName string
+	}{
+		"noPreSubmitJobs": {
+			prs: []git.PullRequest{
+				{
+					Base: git.Base{
+						Ref: "test",
+					},
+				},
+			},
+			repo:   &git.Repository{},
+			sender: &git.User{},
+			config: &cicdv1.IntegrationConfig{
+				Spec: cicdv1.IntegrationConfigSpec{
+					Jobs: cicdv1.IntegrationConfigJobs{
+						PreSubmit: cicdv1.Jobs{},
+					},
+				},
+			},
+
+			expectedNil: true,
+		},
+		"batchJobs": {
+			prs: []git.PullRequest{
+				{
+					Base: git.Base{
+						Ref: "test",
+					},
+				},
+				{},
+			},
+			repo:   &git.Repository{},
+			sender: &git.User{},
+			config: &cicdv1.IntegrationConfig{
+				Spec: cicdv1.IntegrationConfigSpec{
+					Jobs: cicdv1.IntegrationConfigJobs{
+						PreSubmit: cicdv1.Jobs{
+							cicdv1.Job{
+								When: &cicdv1.JobWhen{
+									Branch: []string{"test"},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			expectedName: "batch",
+			expectedNil:  false,
+		},
+		"existPreSubmitJobs": {
+			prs: []git.PullRequest{
+				{
+					Head: git.Head{
+						Sha: "0kokpenadiugpowkqe0qlemaogor",
+					},
+					Base: git.Base{
+						Ref: "test",
+					},
+				},
+			},
+			repo:   &git.Repository{},
+			sender: &git.User{},
+			config: &cicdv1.IntegrationConfig{
+				Spec: cicdv1.IntegrationConfigSpec{
+					Jobs: cicdv1.IntegrationConfigJobs{
+						PreSubmit: cicdv1.Jobs{
+							cicdv1.Job{
+								When: &cicdv1.JobWhen{
+									Branch: []string{"test"},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			expectedName: "0kokp",
+			expectedNil:  false,
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			ij := GeneratePreSubmit(c.prs, c.repo, c.sender, c.config)
+			if c.expectedNil {
+				require.Nil(t, ij)
+			} else {
+				require.Contains(t, ij.Name, c.expectedName)
+			}
+		})
+	}
+}
+
+func TestGeneratePostSubmit(t *testing.T) {
+	tc := map[string]struct {
+		push   *git.Push
+		repo   *git.Repository
+		sender *git.User
+		config *cicdv1.IntegrationConfig
+
+		expectedNil  bool
+		expectedName string
+	}{
+		"noPostSubmitJobs": {
+			push: &git.Push{
+				Ref: "test",
+			},
+			repo:   &git.Repository{},
+			sender: &git.User{},
+			config: &cicdv1.IntegrationConfig{
+				Spec: cicdv1.IntegrationConfigSpec{
+					Jobs: cicdv1.IntegrationConfigJobs{
+						PostSubmit: cicdv1.Jobs{},
+					},
+				},
+			},
+
+			expectedNil: true,
+		},
+		"existPostSubmitJobs": {
+			push: &git.Push{
+				Sha: "0kokpenadiugpowkqe0qlemaogor",
+				Ref: "test",
+			},
+			repo:   &git.Repository{},
+			sender: &git.User{},
+			config: &cicdv1.IntegrationConfig{
+				Spec: cicdv1.IntegrationConfigSpec{
+					Jobs: cicdv1.IntegrationConfigJobs{
+						PostSubmit: cicdv1.Jobs{
+							cicdv1.Job{
+								When: &cicdv1.JobWhen{
+									Branch: []string{"test"},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			expectedName: "0kokp",
+			expectedNil:  false,
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			ij := GeneratePostSubmit(c.push, c.repo, c.sender, c.config)
+			if c.expectedNil {
+				require.Nil(t, ij)
+			} else {
+				require.Contains(t, ij.Name, c.expectedName)
+			}
+		})
+	}
+}
 
 func TestGeneratePull(t *testing.T) {
 	pr := git.PullRequest{
