@@ -26,6 +26,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
     - [`method`](#method)
     - [`commitTemplate`](#committemplate)
     - [`query`](#query)
+- [Configuring `IJManageSpec`](#configuring-ijmanagespec)
 - [Triggering jobs](#triggering-jobs)
   - [Option.1 Using `cicdctl`](#option1-using-cicdctl)
   - [Option.2 Using `curl`](#option2-using-curl)
@@ -309,6 +310,19 @@ The template is compiled using a structure [`blocker.PullRequest`](../pkg/blocke
 PRs are searched using the query and merged if all the CI checks are completed.
 There are 9 kinds of queries. `labels`, `blockLabels`, `authors`, `skipAuthors`, `branches`, `skipBranches`, `checks`, `optionalChecks`, and `approveRequired`.
 
+## Configuring `IJManageSpec`
+IJManageSpec is used to define parameters to manage integration jobs. 
+Currently provide timeout spec for garbage collection.
+Timeout should be formed as [duration string](https://golang.org/pkg/time/#ParseDuration).
+
+```yaml
+spec:
+  jobs:
+    - name: test
+      ...
+  ijManageSpec:
+    timeout: "2h"
+```
 
 ## Triggering jobs
 Although the jobs are triggered via git event, you can manually trigger them by calling API request.

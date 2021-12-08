@@ -18,6 +18,7 @@ package v1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -145,4 +146,57 @@ func TestGetServiceAccountName(t *testing.T) {
 
 func TestGetSecretName(t *testing.T) {
 	require.Equal(t, "test-cfg", GetSecretName("test-cfg"))
+}
+
+func TestGetDuration(t *testing.T) {
+	configs.IntegrationJobTTL = 120
+	tc := map[string]struct {
+		timeout string
+
+		expectedErrOccur bool
+		expectedDuration time.Duration
+	}{
+		"validTimeout": {
+			timeout: "1h",
+
+			expectedErrOccur: false,
+			expectedDuration: 1 * time.Hour,
+		},
+		"invalidTimeout": {
+			timeout: "1",
+
+			expectedErrOccur: true,
+			expectedDuration: 1 * time.Hour,
+		},
+		"default": {
+			expectedDuration: 120 * time.Hour,
+		},
+	}
+
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			var ic *IntegrationConfig = &IntegrationConfig{
+				Spec: IntegrationConfigSpec{},
+			}
+			if c.timeout != "" {
+				duration, err := time.ParseDuration(c.timeout)
+				if c.expectedErrOccur {
+					require.Error(t, err)
+					return
+				}
+				require.NoError(t, err)
+				ic = &IntegrationConfig{
+					Spec: IntegrationConfigSpec{
+						IJManageSpec: IntegrationJobManageSpec{
+							Timeout: &metav1.Duration{
+								Duration: duration,
+							},
+						},
+					},
+				}
+
+			}
+			require.Equal(t, c.expectedDuration, ic.GetDuration().Duration)
+		})
+	}
 }
