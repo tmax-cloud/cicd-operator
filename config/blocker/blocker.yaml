@@ -42,6 +42,7 @@ spec:
       labels:
         cicd.tmax.io/part-of: blocker
     spec:
+      serviceAccount: cicd-service-account
       containers:
         - command:
             - /blocker

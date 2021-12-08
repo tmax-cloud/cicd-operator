@@ -96,6 +96,7 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      serviceAccount: cicd-service-account
       containers:
       - command:
         - /controller
