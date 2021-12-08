@@ -19,12 +19,13 @@ package pipelinemanager
 import (
 	"encoding/json"
 	"fmt"
-	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -55,23 +56,7 @@ func generateTektonTaskRunTask(j *cicdv1.Job, target *tektonv1beta1.PipelineTask
 		return nil, fmt.Errorf("both local task and catalog are nil")
 	}
 
-	// Params
-	for _, p := range taskSpec.Params {
-		v := tektonv1beta1.ArrayOrString{}
-
-		if p.ArrayVal != nil {
-			v.Type = tektonv1beta1.ParamTypeArray
-			v.ArrayVal = append(v.ArrayVal, p.ArrayVal...)
-		} else {
-			v.Type = tektonv1beta1.ParamTypeString
-			v.StringVal = p.StringVal
-		}
-
-		target.Params = append(target.Params, tektonv1beta1.Param{
-			Name:  p.Name,
-			Value: v,
-		})
-	}
+	target.Params = append(target.Params, cicdv1.ConvertToTektonParams(taskSpec.Params)...)
 
 	// Resources
 	var resources []tektonv1beta1.TaskResourceBinding

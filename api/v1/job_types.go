@@ -76,6 +76,12 @@ type Job struct {
 
 	// Notification sends notification when success/fail
 	Notification *Notification `json:"notification,omitempty"`
+
+	// TektonWhen is for conditional execution. Input can be parameters or results
+	TektonWhen tektonv1beta1.WhenExpressions `json:"tektonWhen,omitempty"`
+
+	// Results emitted by task, which also can be used as TektonWhen input value.
+	Results []tektonv1beta1.TaskResult `json:"results,omitempty"`
 }
 
 // Periodic runs on a time-basis, unrelated to git changes.
@@ -92,20 +98,13 @@ type TektonTask struct {
 	TaskRef JobTaskRef `json:"taskRef"`
 
 	// Params are input params for the task
-	Params []TektonTaskParam `json:"params,omitempty"`
+	Params []ParameterValue `json:"params,omitempty"`
 
 	// Resources are input/output resources for the task
 	Resources *tektonv1beta1.TaskRunResources `json:"resources,omitempty"`
 
 	// Workspaces are workspaces for the task
 	Workspaces []tektonv1beta1.WorkspacePipelineTaskBinding `json:"workspaces,omitempty"`
-}
-
-// TektonTaskParam replicates tekton's parameter
-type TektonTaskParam struct {
-	Name      string   `json:"name"`
-	StringVal string   `json:"stringVal,omitempty"`
-	ArrayVal  []string `json:"arrayVal,omitempty"`
 }
 
 // JobTaskRef refers to the tekton task, both local and in catalog

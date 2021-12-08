@@ -962,6 +962,24 @@ spec:
                             https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                       type: object
+                    results:
+                      description: Results emitted by task, which also can be used
+                        as TektonWhen input value.
+                      items:
+                        description: TaskResult used to describe the results of a
+                          task
+                        properties:
+                          description:
+                            description: Description is a human-readable description
+                              of the result
+                            type: string
+                          name:
+                            description: Name the given name
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
                     script:
                       description: Script will override command of container
                       type: string
@@ -1314,7 +1332,7 @@ spec:
                         params:
                           description: Params are input params for the task
                           items:
-                            description: TektonTaskParam replicates tekton's parameter
+                            description: ParameterValue defines values of parameter
                             properties:
                               arrayVal:
                                 items:
@@ -1567,6 +1585,34 @@ spec:
                       required:
                       - taskRef
                       type: object
+                    tektonWhen:
+                      description: TektonWhen is for conditional execution. Input
+                        can be parameters or results
+                      items:
+                        description: WhenExpression allows a PipelineTask to declare
+                          expressions to be evaluated before the Task is run to determine
+                          whether the Task should be executed or skipped
+                        properties:
+                          input:
+                            description: Input is the string for guard checking which
+                              can be a static input or an output from a parent Task
+                            type: string
+                          operator:
+                            description: Operator that represents an Input's relationship
+                              to the values
+                            type: string
+                          values:
+                            description: Values is an array of strings, which is compared
+                              against the input, for guard checking It must be non-empty
+                            items:
+                              type: string
+                            type: array
+                        required:
+                        - input
+                        - operator
+                        - values
+                        type: object
+                      type: array
                     terminationMessagePath:
                       description: 'Optional: Path at which the file to which the
                         container''s termination message will be written is mounted
@@ -1680,6 +1726,47 @@ spec:
                   - name
                   type: object
                 type: array
+              paramConfig:
+                description: ParamConfig specifies parameter
+                properties:
+                  paramDefine:
+                    description: ParamDefine is used to define parameter's spec
+                    items:
+                      description: ParameterDefine defines a parameter's name, description
+                        & default values
+                      properties:
+                        defaultArray:
+                          items:
+                            type: string
+                          type: array
+                        defaultStr:
+                          type: string
+                        description:
+                          type: string
+                        name:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  paramValue:
+                    description: ParamValue can specify values of parameters
+                    items:
+                      description: ParameterValue defines values of parameter
+                      properties:
+                        arrayVal:
+                          items:
+                            type: string
+                          type: array
+                        name:
+                          type: string
+                        stringVal:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                type: object
               podTemplate:
                 description: PodTemplate for the TaskRun pods. Same as tekton's pod
                   template
