@@ -16,6 +16,8 @@ This guide shows how to configure `IntegrationConfig` in detail.
   - [`when`](#when)
   - [`after`](#after)
   - [`notification`](#notification)
+  - [`tektonWhen`](#tektonwhen)
+  - [`results`](#results)
   - [Configuring `approval` jobs](#configuring-approval-jobs)
   - [Configuring Notification jobs](#configuring-notification-jobs)
   - [Using Tekton Tasks](#using-tekton-tasks)
@@ -26,7 +28,10 @@ This guide shows how to configure `IntegrationConfig` in detail.
     - [`method`](#method)
     - [`commitTemplate`](#committemplate)
     - [`query`](#query)
-- [Configuring `IJManageSpec`](#configuring-ijmanagespec)
+- [Configuring `ijManageSpec`](#configuring-ijmanagespec)
+- [Configuring `paramConfig`](#configuring-paramconfig)
+    - [`paramDefine`](#paramdefine)
+    - [`paramValue`](#paramvalue)
 - [Triggering jobs](#triggering-jobs)
   - [Option.1 Using `cicdctl`](#option1-using-cicdctl)
   - [Option.2 Using `curl`](#option2-using-curl)
@@ -177,6 +182,58 @@ spec:
               message: IntegrationJob($INTEGRATION_JOB_NAME)'s job($JOB_NAME) failed
 ```
 
+### `tektonWhen`
+You can use TektonWhen field to execute jobs conditionally.
+The components of `when` expressions are `input`, `operator` and `values`:
+- `input` is the input for the `when` expression which can be static inputs or variables ([`Parameters`](#configuring-paramconfig) or [`Results`](#results)).
+- `operator` represents an `input`'s relationship to a set of `values`. A valid `operator` must be provided, which can be either `in` or `notin`.
+- `values` is an array of string values. The `values` array must be provided and be non-empty. It can contain static values or variables ([`Parameters`](#configuring-paramconfig), [`Results`](#results) ).
+
+> Optional  
+```yaml
+# Conditional execution using task results
+spec:
+  jobs:
+    preSubmit:
+      - name: test
+        ...
+        tektonWhen:
+        - input: "$(tasks.task-name.results.result-name)"
+          operator: in
+          values: ["true"]
+
+# Conditional execution using parameters
+spec:
+  jobs:
+    preSubmit:
+      - name: test
+        ...
+        tektonWhen:
+        - input: "$(params.param-name)"
+          operator: in
+          values: ["true"]
+```
+
+### `results`
+You can use results to pass task's results to [`Parameters`](#configuring-paramconfig) or [`TektonWhen`](#tektonWhen)
+Define results and use `$(results.<task-name>.path)` form to emit task's results.
+To get emitted results, use `$(tasks.<task-name>.results.<result-name>)` form.
+> Optional  
+```yaml
+spec:
+  jobs:
+    preSubmit:
+      - name: test-result
+        image: bash:latest
+        script: |
+          #!/usr/bin/env bash
+          echo -n "true"  | tee -a $(results.test-result.path)
+        results:
+        - name: test-result
+          description: test result
+```
+
+
 ### Configuring `approval` jobs
 Refer to the [`Approval` guide](./approval.md)
 
@@ -184,7 +241,7 @@ Refer to the [`Approval` guide](./approval.md)
 Refer to the [`Notifications` guide](./notification-jobs.md)
 
 ### Using Tekton Tasks
-You can use (or reuse) tekton tasks, rather than writing scripts in `IntegrationCOnfig`.
+You can use (or reuse) tekton tasks, rather than writing scripts in `IntegrationConfig`.
 * `params` are slightly different from the Tekton's spec. You should specify `name` field and one of `stringVal` field or `arrayVal` field, depending on the parameter's type.
 * You can use `resources` just like using in `PipelineRun` or `TaskRun`, either using `resourceRef` or `resourceSpec`.
 * You can use `workspaces`, just like using in `Pipeline`. Be sure you specified the workspace in `workspaces` field of `IntegrationConfig` (refer to [the link](#configuring-workspaces))
@@ -310,7 +367,7 @@ The template is compiled using a structure [`blocker.PullRequest`](../pkg/blocke
 PRs are searched using the query and merged if all the CI checks are completed.
 There are 9 kinds of queries. `labels`, `blockLabels`, `authors`, `skipAuthors`, `branches`, `skipBranches`, `checks`, `optionalChecks`, and `approveRequired`.
 
-## Configuring `IJManageSpec`
+## Configuring `ijManageSpec`
 IJManageSpec is used to define parameters to manage integration jobs. 
 Currently provide timeout spec for garbage collection.
 Timeout should be formed as [duration string](https://golang.org/pkg/time/#ParseDuration).
@@ -323,6 +380,29 @@ spec:
   ijManageSpec:
     timeout: "2h"
 ```
+
+## Configuring `paramConfig`
+Parameters can be configured by `paramConfig`. 
+Defined parameters are converted to tekton param when PipelineRun is created.
+You can use parameter values in form of `$(params.<param-name>)`
+### `paramDefine`
+`paramDefine` field can define parameter's name, description & default values.
+default values can be defined in form of string array or string
+### `paramValue`
+`paramValue` field can specify values of parameters in string or string array
+```yaml
+spec:
+  jobs:
+    - name: test
+      ...
+  paramConfig: 
+    paramDefine:
+    - name: "test-param"
+    paramValue:
+    - name: "test-param"
+      stringVal: "true"
+```
+
 
 ## Triggering jobs
 Although the jobs are triggered via git event, you can manually trigger them by calling API request.
