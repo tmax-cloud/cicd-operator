@@ -127,12 +127,14 @@ func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 				Resources:  specResources,
 				Tasks:      tasks,
 				Workspaces: workspaceDefs,
+				Params:     cicdv1.ConvertToTektonParamSpecs(job.Spec.ParamConfig.ParamDefine),
 			},
 			PodTemplate: job.Spec.PodTemplate,
 			Workspaces:  job.Spec.Workspaces,
 			Timeout: &metav1.Duration{
 				Duration: job.Spec.Timeout.Duration,
 			},
+			Params: cicdv1.ConvertToTektonParams(job.Spec.ParamConfig.ParamValue),
 		},
 	}, nil
 }
@@ -204,6 +206,15 @@ func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.Pip
 
 	// After
 	task.RunAfter = append(task.RunAfter, j.After...)
+
+	// TektonWhen
+	task.WhenExpressions = append(task.WhenExpressions, j.TektonWhen...)
+
+	// Results
+	if task.TaskSpec == nil {
+		task.TaskSpec = &tektonv1beta1.EmbeddedTask{}
+	}
+	task.TaskSpec.Results = append(task.TaskSpec.Results, j.Results...)
 
 	return task, resources, nil
 }

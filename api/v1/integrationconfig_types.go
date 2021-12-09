@@ -69,6 +69,78 @@ type IntegrationConfigSpec struct {
 
 	// IJManageSpec defines variables to manage created integration jobs
 	IJManageSpec IntegrationJobManageSpec `json:"ijManageSpec,omitempty"`
+
+	// ParamConfig specifies parameter
+	ParamConfig *ParameterConfig `json:"paramConfig,omitempty"`
+}
+
+// ParameterConfig for parameters
+type ParameterConfig struct {
+	// ParamDefine is used to define parameter's spec
+	ParamDefine []ParameterDefine `json:"paramDefine,omitempty"`
+	// ParamValue can specify values of parameters
+	ParamValue []ParameterValue `json:"paramValue,omitempty"`
+}
+
+// ParameterDefine defines a parameter's name, description & default values
+type ParameterDefine struct {
+	Name         string   `json:"name"`
+	DefaultStr   string   `json:"defaultStr,omitempty"`
+	DefaultArray []string `json:"defaultArray,omitempty"`
+	Description  string   `json:"description,omitempty"`
+}
+
+// ConvertToTektonParamSpecs converts ParameterDefine array to tekton ParamSpec array
+func ConvertToTektonParamSpecs(params []ParameterDefine) []tektonv1beta1.ParamSpec {
+	var tektonParamSpecs []tektonv1beta1.ParamSpec
+	for _, p := range params {
+		if p.DefaultArray != nil {
+			tektonParamSpecs = append(tektonParamSpecs, tektonv1beta1.ParamSpec{
+				Name:        p.Name,
+				Type:        tektonv1beta1.ParamTypeArray,
+				Description: p.Description,
+				Default:     tektonv1beta1.NewArrayOrString(p.DefaultArray[0], p.DefaultArray[1:]...),
+			})
+		} else {
+			tektonParamSpecs = append(tektonParamSpecs, tektonv1beta1.ParamSpec{
+				Name:        p.Name,
+				Type:        tektonv1beta1.ParamTypeString,
+				Description: p.Description,
+				Default:     tektonv1beta1.NewArrayOrString(p.DefaultStr),
+			})
+		}
+
+	}
+	return tektonParamSpecs
+}
+
+// ParameterValue defines values of parameter
+type ParameterValue struct {
+	Name      string   `json:"name"`
+	StringVal string   `json:"stringVal,omitempty"`
+	ArrayVal  []string `json:"arrayVal,omitempty"`
+}
+
+// ConvertToTektonParams convert ParameterValue array to tekton Param array
+func ConvertToTektonParams(params []ParameterValue) []tektonv1beta1.Param {
+	var tektonParams []tektonv1beta1.Param
+	for _, p := range params {
+		v := tektonv1beta1.ArrayOrString{}
+
+		if p.ArrayVal != nil {
+			v.Type = tektonv1beta1.ParamTypeArray
+			v.ArrayVal = append(v.ArrayVal, p.ArrayVal...)
+		} else {
+			v.Type = tektonv1beta1.ParamTypeString
+			v.StringVal = p.StringVal
+		}
+
+		tektonParams = append(tektonParams, tektonv1beta1.Param{
+			Name:  p.Name,
+			Value: v,
+		})
+	}
+	return tektonParams
 }
 
 // IntegrationJobManageSpec contains spec for ij managing

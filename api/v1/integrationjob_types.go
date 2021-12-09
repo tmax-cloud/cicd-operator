@@ -58,6 +58,9 @@ type IntegrationJobSpec struct {
 
 	// Timeout for pending status garbage collection
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
+
+	// ParamConfig specifies parameter
+	ParamConfig *ParameterConfig `json:"paramConfig,omitempty"`
 }
 
 // IntegrationJobConfigRef refers to the IntegrationConfig
