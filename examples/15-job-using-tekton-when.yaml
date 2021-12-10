@@ -1,0 +1,55 @@
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: tekton-when-config
+spec:
+  git:
+    type: github
+    apiUrl: ""
+    repository: tmax-cloud/cd-example-apps
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: git-token
+          key: token
+  ijManageSpec:
+    timeout: "10m"
+  paramConfig: 
+    paramDefine:
+    - name: "test-param"
+    paramValue:
+    - name: "test-param"
+      stringVal: "true"
+  jobs:
+    preSubmit:
+      - name: test-result
+        image: bash:latest
+        script: |
+          #!/usr/bin/env bash
+          echo -n "true"  | tee -a $(results.test-result.path)
+        results:
+        - name: test-result
+          description: test result
+        tektonWhen:
+        - input: "$(params.test-param)"
+          operator: in
+          values: ["true"]
+      - name: test-ok-when
+        image: bash:latest
+        script: |
+          #!/usr/bin/env bash
+          echo "This line is executed"
+        tektonWhen:
+        - input: "$(tasks.test-result.results.test-result)"
+          operator: in
+          values: ["true"]
+      - name: test-not-ok-when
+        image: bash:latest
+        script: |
+          #!/usr/bin/env bash
+          echo "This line is not executed"
+        tektonWhen:
+        - input: "$(tasks.test-result.results.test-result)"
+          operator: in
+          values: ["false"]
+
