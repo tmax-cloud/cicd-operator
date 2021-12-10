@@ -3,7 +3,7 @@ apiVersion: "apiextensions.k8s.io/v1"
 kind: "CustomResourceDefinition"
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: "v0.4.1"
+    controller-gen.kubebuilder.io/version: "v0.7.0"
   creationTimestamp: null
   name: "integrationconfigs.cicd.tmax.io"
 spec:
@@ -92,9 +92,1178 @@ spec:
                 - "repository"
                 - "type"
                 type: "object"
+              ijManageSpec:
+                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.ijManageSpec"
+                properties:
+                  timeout:
+                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.ijManageSpec.properties.timeout"
+                    type: "string"
+                type: "object"
               jobs:
                 description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs"
                 properties:
+                  periodic:
+                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic"
+                    items:
+                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items"
+                      properties:
+                        after:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.after"
+                          items:
+                            type: "string"
+                          type: "array"
+                        approval:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.approval"
+                          properties:
+                            approvers:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.approval.properties.approvers"
+                              items:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.approval.properties.approvers.items"
+                                properties:
+                                  email:
+                                    type: "string"
+                                  name:
+                                    type: "string"
+                                required:
+                                - "name"
+                                type: "object"
+                              type: "array"
+                            approversConfigMap:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.approval.properties.approversConfigMap"
+                              properties:
+                                name:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.approval.properties.approversConfigMap.properties.name"
+                                  type: "string"
+                              type: "object"
+                            requestMessage:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.approval.properties.requestMessage"
+                              type: "string"
+                          required:
+                          - "requestMessage"
+                          type: "object"
+                        args:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.args"
+                          items:
+                            type: "string"
+                          type: "array"
+                        command:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.command"
+                          items:
+                            type: "string"
+                          type: "array"
+                        cron:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.cron"
+                          type: "string"
+                        email:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.email"
+                          properties:
+                            content:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.email.properties.content"
+                              type: "string"
+                            isHtml:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.email.properties.isHtml"
+                              type: "boolean"
+                            receivers:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.email.properties.receivers"
+                              items:
+                                type: "string"
+                              type: "array"
+                            title:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.email.properties.title"
+                              type: "string"
+                          required:
+                          - "content"
+                          - "title"
+                          type: "object"
+                        env:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items"
+                            properties:
+                              name:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.name"
+                                type: "string"
+                              value:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.value"
+                                type: "string"
+                              valueFrom:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom"
+                                properties:
+                                  configMapKeyRef:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.configMapKeyRef"
+                                    properties:
+                                      key:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.configMapKeyRef.properties.key"
+                                        type: "string"
+                                      name:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.configMapKeyRef.properties.name"
+                                        type: "string"
+                                      optional:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.configMapKeyRef.properties.optional"
+                                        type: "boolean"
+                                    required:
+                                    - "key"
+                                    type: "object"
+                                  fieldRef:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.fieldRef"
+                                    properties:
+                                      apiVersion:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.fieldRef.properties.apiVersion"
+                                        type: "string"
+                                      fieldPath:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.fieldRef.properties.fieldPath"
+                                        type: "string"
+                                    required:
+                                    - "fieldPath"
+                                    type: "object"
+                                  resourceFieldRef:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.resourceFieldRef"
+                                    properties:
+                                      containerName:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.resourceFieldRef.properties.containerName"
+                                        type: "string"
+                                      divisor:
+                                        anyOf:
+                                        - type: "integer"
+                                        - type: "string"
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.resourceFieldRef.properties.divisor"
+                                        pattern: "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\\
+                                          .[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\\
+                                          +|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$"
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.resourceFieldRef.properties.resource"
+                                        type: "string"
+                                    required:
+                                    - "resource"
+                                    type: "object"
+                                  secretKeyRef:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.secretKeyRef"
+                                    properties:
+                                      key:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.secretKeyRef.properties.key"
+                                        type: "string"
+                                      name:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.secretKeyRef.properties.name"
+                                        type: "string"
+                                      optional:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.env.items.properties.valueFrom.properties.secretKeyRef.properties.optional"
+                                        type: "boolean"
+                                    required:
+                                    - "key"
+                                    type: "object"
+                                type: "object"
+                            required:
+                            - "name"
+                            type: "object"
+                          type: "array"
+                        envFrom:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom.items"
+                            properties:
+                              configMapRef:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom.items.properties.configMapRef"
+                                properties:
+                                  name:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom.items.properties.configMapRef.properties.name"
+                                    type: "string"
+                                  optional:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom.items.properties.configMapRef.properties.optional"
+                                    type: "boolean"
+                                type: "object"
+                              prefix:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom.items.properties.prefix"
+                                type: "string"
+                              secretRef:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom.items.properties.secretRef"
+                                properties:
+                                  name:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom.items.properties.secretRef.properties.name"
+                                    type: "string"
+                                  optional:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.envFrom.items.properties.secretRef.properties.optional"
+                                    type: "boolean"
+                                type: "object"
+                            type: "object"
+                          type: "array"
+                        image:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.image"
+                          type: "string"
+                        imagePullPolicy:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.imagePullPolicy"
+                          type: "string"
+                        lifecycle:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle"
+                          properties:
+                            postStart:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart"
+                              properties:
+                                exec:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.exec"
+                                  properties:
+                                    command:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.exec.properties.command"
+                                      items:
+                                        type: "string"
+                                      type: "array"
+                                  type: "object"
+                                httpGet:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet"
+                                  properties:
+                                    host:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet.properties.host"
+                                      type: "string"
+                                    httpHeaders:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet.properties.httpHeaders"
+                                      items:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet.properties.httpHeaders.items"
+                                        properties:
+                                          name:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet.properties.httpHeaders.items.properties.name"
+                                            type: "string"
+                                          value:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet.properties.httpHeaders.items.properties.value"
+                                            type: "string"
+                                        required:
+                                        - "name"
+                                        - "value"
+                                        type: "object"
+                                      type: "array"
+                                    path:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet.properties.path"
+                                      type: "string"
+                                    port:
+                                      anyOf:
+                                      - type: "integer"
+                                      - type: "string"
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet.properties.port"
+                                      x-kubernetes-int-or-string: true
+                                    scheme:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.httpGet.properties.scheme"
+                                      type: "string"
+                                  required:
+                                  - "port"
+                                  type: "object"
+                                tcpSocket:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.tcpSocket"
+                                  properties:
+                                    host:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.tcpSocket.properties.host"
+                                      type: "string"
+                                    port:
+                                      anyOf:
+                                      - type: "integer"
+                                      - type: "string"
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.postStart.properties.tcpSocket.properties.port"
+                                      x-kubernetes-int-or-string: true
+                                  required:
+                                  - "port"
+                                  type: "object"
+                              type: "object"
+                            preStop:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop"
+                              properties:
+                                exec:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.exec"
+                                  properties:
+                                    command:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.exec.properties.command"
+                                      items:
+                                        type: "string"
+                                      type: "array"
+                                  type: "object"
+                                httpGet:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet"
+                                  properties:
+                                    host:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet.properties.host"
+                                      type: "string"
+                                    httpHeaders:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet.properties.httpHeaders"
+                                      items:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet.properties.httpHeaders.items"
+                                        properties:
+                                          name:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet.properties.httpHeaders.items.properties.name"
+                                            type: "string"
+                                          value:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet.properties.httpHeaders.items.properties.value"
+                                            type: "string"
+                                        required:
+                                        - "name"
+                                        - "value"
+                                        type: "object"
+                                      type: "array"
+                                    path:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet.properties.path"
+                                      type: "string"
+                                    port:
+                                      anyOf:
+                                      - type: "integer"
+                                      - type: "string"
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet.properties.port"
+                                      x-kubernetes-int-or-string: true
+                                    scheme:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.httpGet.properties.scheme"
+                                      type: "string"
+                                  required:
+                                  - "port"
+                                  type: "object"
+                                tcpSocket:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.tcpSocket"
+                                  properties:
+                                    host:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.tcpSocket.properties.host"
+                                      type: "string"
+                                    port:
+                                      anyOf:
+                                      - type: "integer"
+                                      - type: "string"
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.lifecycle.properties.preStop.properties.tcpSocket.properties.port"
+                                      x-kubernetes-int-or-string: true
+                                  required:
+                                  - "port"
+                                  type: "object"
+                              type: "object"
+                          type: "object"
+                        livenessProbe:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe"
+                          properties:
+                            exec:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.exec"
+                              properties:
+                                command:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.exec.properties.command"
+                                  items:
+                                    type: "string"
+                                  type: "array"
+                              type: "object"
+                            failureThreshold:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.failureThreshold"
+                              format: "int32"
+                              type: "integer"
+                            httpGet:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet"
+                              properties:
+                                host:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet.properties.host"
+                                  type: "string"
+                                httpHeaders:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet.properties.httpHeaders"
+                                  items:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet.properties.httpHeaders.items"
+                                    properties:
+                                      name:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet.properties.httpHeaders.items.properties.name"
+                                        type: "string"
+                                      value:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet.properties.httpHeaders.items.properties.value"
+                                        type: "string"
+                                    required:
+                                    - "name"
+                                    - "value"
+                                    type: "object"
+                                  type: "array"
+                                path:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet.properties.path"
+                                  type: "string"
+                                port:
+                                  anyOf:
+                                  - type: "integer"
+                                  - type: "string"
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet.properties.port"
+                                  x-kubernetes-int-or-string: true
+                                scheme:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.httpGet.properties.scheme"
+                                  type: "string"
+                              required:
+                              - "port"
+                              type: "object"
+                            initialDelaySeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.initialDelaySeconds"
+                              format: "int32"
+                              type: "integer"
+                            periodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.periodSeconds"
+                              format: "int32"
+                              type: "integer"
+                            successThreshold:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.successThreshold"
+                              format: "int32"
+                              type: "integer"
+                            tcpSocket:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.tcpSocket"
+                              properties:
+                                host:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.tcpSocket.properties.host"
+                                  type: "string"
+                                port:
+                                  anyOf:
+                                  - type: "integer"
+                                  - type: "string"
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.tcpSocket.properties.port"
+                                  x-kubernetes-int-or-string: true
+                              required:
+                              - "port"
+                              type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
+                            timeoutSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.livenessProbe.properties.timeoutSeconds"
+                              format: "int32"
+                              type: "integer"
+                          type: "object"
+                        name:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.name"
+                          type: "string"
+                        notification:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification"
+                          properties:
+                            onFailure:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure"
+                              properties:
+                                email:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure.properties.email"
+                                  properties:
+                                    content:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure.properties.email.properties.content"
+                                      type: "string"
+                                    isHtml:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure.properties.email.properties.isHtml"
+                                      type: "boolean"
+                                    receivers:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure.properties.email.properties.receivers"
+                                      items:
+                                        type: "string"
+                                      type: "array"
+                                    title:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure.properties.email.properties.title"
+                                      type: "string"
+                                  required:
+                                  - "content"
+                                  - "title"
+                                  type: "object"
+                                slack:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure.properties.slack"
+                                  properties:
+                                    message:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure.properties.slack.properties.message"
+                                      type: "string"
+                                    url:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onFailure.properties.slack.properties.url"
+                                      type: "string"
+                                  required:
+                                  - "message"
+                                  - "url"
+                                  type: "object"
+                              type: "object"
+                            onSuccess:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess"
+                              properties:
+                                email:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess.properties.email"
+                                  properties:
+                                    content:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess.properties.email.properties.content"
+                                      type: "string"
+                                    isHtml:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess.properties.email.properties.isHtml"
+                                      type: "boolean"
+                                    receivers:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess.properties.email.properties.receivers"
+                                      items:
+                                        type: "string"
+                                      type: "array"
+                                    title:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess.properties.email.properties.title"
+                                      type: "string"
+                                  required:
+                                  - "content"
+                                  - "title"
+                                  type: "object"
+                                slack:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess.properties.slack"
+                                  properties:
+                                    message:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess.properties.slack.properties.message"
+                                      type: "string"
+                                    url:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.notification.properties.onSuccess.properties.slack.properties.url"
+                                      type: "string"
+                                  required:
+                                  - "message"
+                                  - "url"
+                                  type: "object"
+                              type: "object"
+                          type: "object"
+                        ports:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.ports"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.ports.items"
+                            properties:
+                              containerPort:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.ports.items.properties.containerPort"
+                                format: "int32"
+                                type: "integer"
+                              hostIP:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.ports.items.properties.hostIP"
+                                type: "string"
+                              hostPort:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.ports.items.properties.hostPort"
+                                format: "int32"
+                                type: "integer"
+                              name:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.ports.items.properties.name"
+                                type: "string"
+                              protocol:
+                                default: "TCP"
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.ports.items.properties.protocol"
+                                type: "string"
+                            required:
+                            - "containerPort"
+                            type: "object"
+                          type: "array"
+                          x-kubernetes-list-map-keys:
+                          - "containerPort"
+                          - "protocol"
+                          x-kubernetes-list-type: "map"
+                        readinessProbe:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe"
+                          properties:
+                            exec:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.exec"
+                              properties:
+                                command:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.exec.properties.command"
+                                  items:
+                                    type: "string"
+                                  type: "array"
+                              type: "object"
+                            failureThreshold:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.failureThreshold"
+                              format: "int32"
+                              type: "integer"
+                            httpGet:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet"
+                              properties:
+                                host:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet.properties.host"
+                                  type: "string"
+                                httpHeaders:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet.properties.httpHeaders"
+                                  items:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet.properties.httpHeaders.items"
+                                    properties:
+                                      name:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet.properties.httpHeaders.items.properties.name"
+                                        type: "string"
+                                      value:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet.properties.httpHeaders.items.properties.value"
+                                        type: "string"
+                                    required:
+                                    - "name"
+                                    - "value"
+                                    type: "object"
+                                  type: "array"
+                                path:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet.properties.path"
+                                  type: "string"
+                                port:
+                                  anyOf:
+                                  - type: "integer"
+                                  - type: "string"
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet.properties.port"
+                                  x-kubernetes-int-or-string: true
+                                scheme:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.httpGet.properties.scheme"
+                                  type: "string"
+                              required:
+                              - "port"
+                              type: "object"
+                            initialDelaySeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.initialDelaySeconds"
+                              format: "int32"
+                              type: "integer"
+                            periodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.periodSeconds"
+                              format: "int32"
+                              type: "integer"
+                            successThreshold:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.successThreshold"
+                              format: "int32"
+                              type: "integer"
+                            tcpSocket:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.tcpSocket"
+                              properties:
+                                host:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.tcpSocket.properties.host"
+                                  type: "string"
+                                port:
+                                  anyOf:
+                                  - type: "integer"
+                                  - type: "string"
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.tcpSocket.properties.port"
+                                  x-kubernetes-int-or-string: true
+                              required:
+                              - "port"
+                              type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
+                            timeoutSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.readinessProbe.properties.timeoutSeconds"
+                              format: "int32"
+                              type: "integer"
+                          type: "object"
+                        resources:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.resources"
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: "integer"
+                                - type: "string"
+                                pattern: "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\\
+                                  +|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$"
+                                x-kubernetes-int-or-string: true
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.resources.properties.limits"
+                              type: "object"
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: "integer"
+                                - type: "string"
+                                pattern: "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\\
+                                  +|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$"
+                                x-kubernetes-int-or-string: true
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.resources.properties.requests"
+                              type: "object"
+                          type: "object"
+                        results:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.results"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.results.items"
+                            properties:
+                              description:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.results.items.properties.description"
+                                type: "string"
+                              name:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.results.items.properties.name"
+                                type: "string"
+                            required:
+                            - "name"
+                            type: "object"
+                          type: "array"
+                        script:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.script"
+                          type: "string"
+                        securityContext:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext"
+                          properties:
+                            allowPrivilegeEscalation:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.allowPrivilegeEscalation"
+                              type: "boolean"
+                            capabilities:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.capabilities"
+                              properties:
+                                add:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.capabilities.properties.add"
+                                  items:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.capabilities.properties.add.items"
+                                    type: "string"
+                                  type: "array"
+                                drop:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.capabilities.properties.drop"
+                                  items:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.capabilities.properties.drop.items"
+                                    type: "string"
+                                  type: "array"
+                              type: "object"
+                            privileged:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.privileged"
+                              type: "boolean"
+                            procMount:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.procMount"
+                              type: "string"
+                            readOnlyRootFilesystem:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.readOnlyRootFilesystem"
+                              type: "boolean"
+                            runAsGroup:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.runAsGroup"
+                              format: "int64"
+                              type: "integer"
+                            runAsNonRoot:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.runAsNonRoot"
+                              type: "boolean"
+                            runAsUser:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.runAsUser"
+                              format: "int64"
+                              type: "integer"
+                            seLinuxOptions:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.seLinuxOptions"
+                              properties:
+                                level:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.seLinuxOptions.properties.level"
+                                  type: "string"
+                                role:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.seLinuxOptions.properties.role"
+                                  type: "string"
+                                type:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.seLinuxOptions.properties.type"
+                                  type: "string"
+                                user:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.seLinuxOptions.properties.user"
+                                  type: "string"
+                              type: "object"
+                            seccompProfile:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.seccompProfile"
+                              properties:
+                                localhostProfile:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.seccompProfile.properties.localhostProfile"
+                                  type: "string"
+                                type:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.seccompProfile.properties.type"
+                                  type: "string"
+                              required:
+                              - "type"
+                              type: "object"
+                            windowsOptions:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.windowsOptions"
+                              properties:
+                                gmsaCredentialSpec:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.windowsOptions.properties.gmsaCredentialSpec"
+                                  type: "string"
+                                gmsaCredentialSpecName:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.windowsOptions.properties.gmsaCredentialSpecName"
+                                  type: "string"
+                                hostProcess:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.windowsOptions.properties.hostProcess"
+                                  type: "boolean"
+                                runAsUserName:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.securityContext.properties.windowsOptions.properties.runAsUserName"
+                                  type: "string"
+                              type: "object"
+                          type: "object"
+                        skipCheckout:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.skipCheckout"
+                          type: "boolean"
+                        slack:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.slack"
+                          properties:
+                            message:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.slack.properties.message"
+                              type: "string"
+                            url:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.slack.properties.url"
+                              type: "string"
+                          required:
+                          - "message"
+                          - "url"
+                          type: "object"
+                        startupProbe:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe"
+                          properties:
+                            exec:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.exec"
+                              properties:
+                                command:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.exec.properties.command"
+                                  items:
+                                    type: "string"
+                                  type: "array"
+                              type: "object"
+                            failureThreshold:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.failureThreshold"
+                              format: "int32"
+                              type: "integer"
+                            httpGet:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet"
+                              properties:
+                                host:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet.properties.host"
+                                  type: "string"
+                                httpHeaders:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet.properties.httpHeaders"
+                                  items:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet.properties.httpHeaders.items"
+                                    properties:
+                                      name:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet.properties.httpHeaders.items.properties.name"
+                                        type: "string"
+                                      value:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet.properties.httpHeaders.items.properties.value"
+                                        type: "string"
+                                    required:
+                                    - "name"
+                                    - "value"
+                                    type: "object"
+                                  type: "array"
+                                path:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet.properties.path"
+                                  type: "string"
+                                port:
+                                  anyOf:
+                                  - type: "integer"
+                                  - type: "string"
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet.properties.port"
+                                  x-kubernetes-int-or-string: true
+                                scheme:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.httpGet.properties.scheme"
+                                  type: "string"
+                              required:
+                              - "port"
+                              type: "object"
+                            initialDelaySeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.initialDelaySeconds"
+                              format: "int32"
+                              type: "integer"
+                            periodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.periodSeconds"
+                              format: "int32"
+                              type: "integer"
+                            successThreshold:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.successThreshold"
+                              format: "int32"
+                              type: "integer"
+                            tcpSocket:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.tcpSocket"
+                              properties:
+                                host:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.tcpSocket.properties.host"
+                                  type: "string"
+                                port:
+                                  anyOf:
+                                  - type: "integer"
+                                  - type: "string"
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.tcpSocket.properties.port"
+                                  x-kubernetes-int-or-string: true
+                              required:
+                              - "port"
+                              type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
+                            timeoutSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.startupProbe.properties.timeoutSeconds"
+                              format: "int32"
+                              type: "integer"
+                          type: "object"
+                        stdin:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.stdin"
+                          type: "boolean"
+                        stdinOnce:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.stdinOnce"
+                          type: "boolean"
+                        tektonTask:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask"
+                          properties:
+                            params:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.params"
+                              items:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.params.items"
+                                properties:
+                                  arrayVal:
+                                    items:
+                                      type: "string"
+                                    type: "array"
+                                  name:
+                                    type: "string"
+                                  stringVal:
+                                    type: "string"
+                                required:
+                                - "name"
+                                type: "object"
+                              type: "array"
+                            resources:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources"
+                              properties:
+                                inputs:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs"
+                                  items:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items"
+                                    properties:
+                                      name:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.name"
+                                        type: "string"
+                                      paths:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.paths"
+                                        items:
+                                          type: "string"
+                                        type: "array"
+                                      resourceRef:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.resourceRef"
+                                        properties:
+                                          apiVersion:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.resourceRef.properties.apiVersion"
+                                            type: "string"
+                                          name:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.resourceRef.properties.name"
+                                            type: "string"
+                                        type: "object"
+                                      resourceSpec:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.resourceSpec"
+                                        properties:
+                                          description:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.resourceSpec.properties.description"
+                                            type: "string"
+                                          params:
+                                            items:
+                                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.resourceSpec.properties.params.items"
+                                              properties:
+                                                name:
+                                                  type: "string"
+                                                value:
+                                                  type: "string"
+                                              required:
+                                              - "name"
+                                              - "value"
+                                              type: "object"
+                                            type: "array"
+                                          secrets:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.resourceSpec.properties.secrets"
+                                            items:
+                                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.inputs.items.properties.resourceSpec.properties.secrets.items"
+                                              properties:
+                                                fieldName:
+                                                  type: "string"
+                                                secretKey:
+                                                  type: "string"
+                                                secretName:
+                                                  type: "string"
+                                              required:
+                                              - "fieldName"
+                                              - "secretKey"
+                                              - "secretName"
+                                              type: "object"
+                                            type: "array"
+                                          type:
+                                            type: "string"
+                                        required:
+                                        - "params"
+                                        - "type"
+                                        type: "object"
+                                    type: "object"
+                                  type: "array"
+                                outputs:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs"
+                                  items:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items"
+                                    properties:
+                                      name:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.name"
+                                        type: "string"
+                                      paths:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.paths"
+                                        items:
+                                          type: "string"
+                                        type: "array"
+                                      resourceRef:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.resourceRef"
+                                        properties:
+                                          apiVersion:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.resourceRef.properties.apiVersion"
+                                            type: "string"
+                                          name:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.resourceRef.properties.name"
+                                            type: "string"
+                                        type: "object"
+                                      resourceSpec:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.resourceSpec"
+                                        properties:
+                                          description:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.resourceSpec.properties.description"
+                                            type: "string"
+                                          params:
+                                            items:
+                                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.resourceSpec.properties.params.items"
+                                              properties:
+                                                name:
+                                                  type: "string"
+                                                value:
+                                                  type: "string"
+                                              required:
+                                              - "name"
+                                              - "value"
+                                              type: "object"
+                                            type: "array"
+                                          secrets:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.resourceSpec.properties.secrets"
+                                            items:
+                                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.resources.properties.outputs.items.properties.resourceSpec.properties.secrets.items"
+                                              properties:
+                                                fieldName:
+                                                  type: "string"
+                                                secretKey:
+                                                  type: "string"
+                                                secretName:
+                                                  type: "string"
+                                              required:
+                                              - "fieldName"
+                                              - "secretKey"
+                                              - "secretName"
+                                              type: "object"
+                                            type: "array"
+                                          type:
+                                            type: "string"
+                                        required:
+                                        - "params"
+                                        - "type"
+                                        type: "object"
+                                    type: "object"
+                                  type: "array"
+                              type: "object"
+                            taskRef:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.taskRef"
+                              properties:
+                                catalog:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.taskRef.properties.catalog"
+                                  type: "string"
+                                local:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.taskRef.properties.local"
+                                  properties:
+                                    apiVersion:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.taskRef.properties.local.properties.apiVersion"
+                                      type: "string"
+                                    bundle:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.taskRef.properties.local.properties.bundle"
+                                      type: "string"
+                                    kind:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.taskRef.properties.local.properties.kind"
+                                      type: "string"
+                                    name:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.taskRef.properties.local.properties.name"
+                                      type: "string"
+                                  type: "object"
+                              type: "object"
+                            workspaces:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.workspaces"
+                              items:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.workspaces.items"
+                                properties:
+                                  name:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.workspaces.items.properties.name"
+                                    type: "string"
+                                  subPath:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.workspaces.items.properties.subPath"
+                                    type: "string"
+                                  workspace:
+                                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonTask.properties.workspaces.items.properties.workspace"
+                                    type: "string"
+                                required:
+                                - "name"
+                                - "workspace"
+                                type: "object"
+                              type: "array"
+                          required:
+                          - "taskRef"
+                          type: "object"
+                        tektonWhen:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonWhen"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonWhen.items"
+                            properties:
+                              input:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonWhen.items.properties.input"
+                                type: "string"
+                              operator:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonWhen.items.properties.operator"
+                                type: "string"
+                              values:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tektonWhen.items.properties.values"
+                                items:
+                                  type: "string"
+                                type: "array"
+                            required:
+                            - "input"
+                            - "operator"
+                            - "values"
+                            type: "object"
+                          type: "array"
+                        terminationMessagePath:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.terminationMessagePath"
+                          type: "string"
+                        terminationMessagePolicy:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.terminationMessagePolicy"
+                          type: "string"
+                        tty:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.tty"
+                          type: "boolean"
+                        volumeDevices:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeDevices"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeDevices.items"
+                            properties:
+                              devicePath:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeDevices.items.properties.devicePath"
+                                type: "string"
+                              name:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeDevices.items.properties.name"
+                                type: "string"
+                            required:
+                            - "devicePath"
+                            - "name"
+                            type: "object"
+                          type: "array"
+                        volumeMounts:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeMounts"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeMounts.items"
+                            properties:
+                              mountPath:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeMounts.items.properties.mountPath"
+                                type: "string"
+                              mountPropagation:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeMounts.items.properties.mountPropagation"
+                                type: "string"
+                              name:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeMounts.items.properties.name"
+                                type: "string"
+                              readOnly:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeMounts.items.properties.readOnly"
+                                type: "boolean"
+                              subPath:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeMounts.items.properties.subPath"
+                                type: "string"
+                              subPathExpr:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.volumeMounts.items.properties.subPathExpr"
+                                type: "string"
+                            required:
+                            - "mountPath"
+                            - "name"
+                            type: "object"
+                          type: "array"
+                        when:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.when"
+                          properties:
+                            branch:
+                              items:
+                                type: "string"
+                              type: "array"
+                            skipBranch:
+                              items:
+                                type: "string"
+                              type: "array"
+                            skipTag:
+                              items:
+                                type: "string"
+                              type: "array"
+                            tag:
+                              items:
+                                type: "string"
+                              type: "array"
+                          type: "object"
+                        workingDir:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.periodic.items.properties.workingDir"
+                          type: "string"
+                      required:
+                      - "name"
+                      type: "object"
+                    type: "array"
                   postSubmit:
                     description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit"
                     items:
@@ -111,7 +1280,15 @@ spec:
                             approvers:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.approval.properties.approvers"
                               items:
-                                type: "string"
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.approval.properties.approvers.items"
+                                properties:
+                                  email:
+                                    type: "string"
+                                  name:
+                                    type: "string"
+                                required:
+                                - "name"
+                                type: "object"
                               type: "array"
                             approversConfigMap:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.approval.properties.approversConfigMap"
@@ -489,6 +1666,10 @@ spec:
                               required:
                               - "port"
                               type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.livenessProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
                             timeoutSeconds:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.livenessProbe.properties.timeoutSeconds"
                               format: "int32"
@@ -688,6 +1869,10 @@ spec:
                               required:
                               - "port"
                               type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.readinessProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
                             timeoutSeconds:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.readinessProbe.properties.timeoutSeconds"
                               format: "int32"
@@ -717,6 +1902,21 @@ spec:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.resources.properties.requests"
                               type: "object"
                           type: "object"
+                        results:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.results"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.results.items"
+                            properties:
+                              description:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.results.items.properties.description"
+                                type: "string"
+                              name:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.results.items.properties.name"
+                                type: "string"
+                            required:
+                            - "name"
+                            type: "object"
+                          type: "array"
                         script:
                           description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.script"
                           type: "string"
@@ -778,6 +1978,18 @@ spec:
                                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.securityContext.properties.seLinuxOptions.properties.user"
                                   type: "string"
                               type: "object"
+                            seccompProfile:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.securityContext.properties.seccompProfile"
+                              properties:
+                                localhostProfile:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.securityContext.properties.seccompProfile.properties.localhostProfile"
+                                  type: "string"
+                                type:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.securityContext.properties.seccompProfile.properties.type"
+                                  type: "string"
+                              required:
+                              - "type"
+                              type: "object"
                             windowsOptions:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.securityContext.properties.windowsOptions"
                               properties:
@@ -787,6 +1999,9 @@ spec:
                                 gmsaCredentialSpecName:
                                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.securityContext.properties.windowsOptions.properties.gmsaCredentialSpecName"
                                   type: "string"
+                                hostProcess:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.securityContext.properties.windowsOptions.properties.hostProcess"
+                                  type: "boolean"
                                 runAsUserName:
                                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.securityContext.properties.windowsOptions.properties.runAsUserName"
                                   type: "string"
@@ -888,6 +2103,10 @@ spec:
                               required:
                               - "port"
                               type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.startupProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
                             timeoutSeconds:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.startupProbe.properties.timeoutSeconds"
                               format: "int32"
@@ -1102,6 +2321,28 @@ spec:
                           required:
                           - "taskRef"
                           type: "object"
+                        tektonWhen:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.tektonWhen"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.tektonWhen.items"
+                            properties:
+                              input:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.tektonWhen.items.properties.input"
+                                type: "string"
+                              operator:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.tektonWhen.items.properties.operator"
+                                type: "string"
+                              values:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.tektonWhen.items.properties.values"
+                                items:
+                                  type: "string"
+                                type: "array"
+                            required:
+                            - "input"
+                            - "operator"
+                            - "values"
+                            type: "object"
+                          type: "array"
                         terminationMessagePath:
                           description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.postSubmit.items.properties.terminationMessagePath"
                           type: "string"
@@ -1198,7 +2439,15 @@ spec:
                             approvers:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.approval.properties.approvers"
                               items:
-                                type: "string"
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.approval.properties.approvers.items"
+                                properties:
+                                  email:
+                                    type: "string"
+                                  name:
+                                    type: "string"
+                                required:
+                                - "name"
+                                type: "object"
                               type: "array"
                             approversConfigMap:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.approval.properties.approversConfigMap"
@@ -1576,6 +2825,10 @@ spec:
                               required:
                               - "port"
                               type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.livenessProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
                             timeoutSeconds:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.livenessProbe.properties.timeoutSeconds"
                               format: "int32"
@@ -1775,6 +3028,10 @@ spec:
                               required:
                               - "port"
                               type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.readinessProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
                             timeoutSeconds:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.readinessProbe.properties.timeoutSeconds"
                               format: "int32"
@@ -1804,6 +3061,21 @@ spec:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.resources.properties.requests"
                               type: "object"
                           type: "object"
+                        results:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.results"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.results.items"
+                            properties:
+                              description:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.results.items.properties.description"
+                                type: "string"
+                              name:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.results.items.properties.name"
+                                type: "string"
+                            required:
+                            - "name"
+                            type: "object"
+                          type: "array"
                         script:
                           description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.script"
                           type: "string"
@@ -1865,6 +3137,18 @@ spec:
                                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.securityContext.properties.seLinuxOptions.properties.user"
                                   type: "string"
                               type: "object"
+                            seccompProfile:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.securityContext.properties.seccompProfile"
+                              properties:
+                                localhostProfile:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.securityContext.properties.seccompProfile.properties.localhostProfile"
+                                  type: "string"
+                                type:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.securityContext.properties.seccompProfile.properties.type"
+                                  type: "string"
+                              required:
+                              - "type"
+                              type: "object"
                             windowsOptions:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.securityContext.properties.windowsOptions"
                               properties:
@@ -1874,6 +3158,9 @@ spec:
                                 gmsaCredentialSpecName:
                                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.securityContext.properties.windowsOptions.properties.gmsaCredentialSpecName"
                                   type: "string"
+                                hostProcess:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.securityContext.properties.windowsOptions.properties.hostProcess"
+                                  type: "boolean"
                                 runAsUserName:
                                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.securityContext.properties.windowsOptions.properties.runAsUserName"
                                   type: "string"
@@ -1975,6 +3262,10 @@ spec:
                               required:
                               - "port"
                               type: "object"
+                            terminationGracePeriodSeconds:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.startupProbe.properties.terminationGracePeriodSeconds"
+                              format: "int64"
+                              type: "integer"
                             timeoutSeconds:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.startupProbe.properties.timeoutSeconds"
                               format: "int32"
@@ -2189,6 +3480,28 @@ spec:
                           required:
                           - "taskRef"
                           type: "object"
+                        tektonWhen:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.tektonWhen"
+                          items:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.tektonWhen.items"
+                            properties:
+                              input:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.tektonWhen.items.properties.input"
+                                type: "string"
+                              operator:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.tektonWhen.items.properties.operator"
+                                type: "string"
+                              values:
+                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.tektonWhen.items.properties.values"
+                                items:
+                                  type: "string"
+                                type: "array"
+                            required:
+                            - "input"
+                            - "operator"
+                            - "values"
+                            type: "object"
+                          type: "array"
                         terminationMessagePath:
                           description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.jobs.properties.preSubmit.items.properties.terminationMessagePath"
                           type: "string"
@@ -2331,6 +3644,46 @@ spec:
                     type: "object"
                 required:
                 - "query"
+                type: "object"
+              paramConfig:
+                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.paramConfig"
+                properties:
+                  paramDefine:
+                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.paramConfig.properties.paramDefine"
+                    items:
+                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.paramConfig.properties.paramDefine.items"
+                      properties:
+                        defaultArray:
+                          items:
+                            type: "string"
+                          type: "array"
+                        defaultStr:
+                          type: "string"
+                        description:
+                          type: "string"
+                        name:
+                          type: "string"
+                      required:
+                      - "name"
+                      type: "object"
+                    type: "array"
+                  paramValue:
+                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.paramConfig.properties.paramValue"
+                    items:
+                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.paramConfig.properties.paramValue.items"
+                      properties:
+                        arrayVal:
+                          items:
+                            type: "string"
+                          type: "array"
+                        name:
+                          type: "string"
+                        stringVal:
+                          type: "string"
+                      required:
+                      - "name"
+                      type: "object"
+                    type: "array"
                 type: "object"
               podTemplate:
                 description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate"
@@ -2498,6 +3851,36 @@ spec:
                                           description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.labelSelector.properties.matchLabels"
                                           type: "object"
                                       type: "object"
+                                    namespaceSelector:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector"
+                                      properties:
+                                        matchExpressions:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions"
+                                          items:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions.items"
+                                            properties:
+                                              key:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions.items.properties.key"
+                                                type: "string"
+                                              operator:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions.items.properties.operator"
+                                                type: "string"
+                                              values:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions.items.properties.values"
+                                                items:
+                                                  type: "string"
+                                                type: "array"
+                                            required:
+                                            - "key"
+                                            - "operator"
+                                            type: "object"
+                                          type: "array"
+                                        matchLabels:
+                                          additionalProperties:
+                                            type: "string"
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchLabels"
+                                          type: "object"
+                                      type: "object"
                                     namespaces:
                                       description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaces"
                                       items:
@@ -2553,6 +3936,36 @@ spec:
                                       description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.labelSelector.properties.matchLabels"
                                       type: "object"
                                   type: "object"
+                                namespaceSelector:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector"
+                                  properties:
+                                    matchExpressions:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions"
+                                      items:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions.items"
+                                        properties:
+                                          key:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions.items.properties.key"
+                                            type: "string"
+                                          operator:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions.items.properties.operator"
+                                            type: "string"
+                                          values:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions.items.properties.values"
+                                            items:
+                                              type: "string"
+                                            type: "array"
+                                        required:
+                                        - "key"
+                                        - "operator"
+                                        type: "object"
+                                      type: "array"
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: "string"
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchLabels"
+                                      type: "object"
+                                  type: "object"
                                 namespaces:
                                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaces"
                                   items:
@@ -2605,6 +4018,36 @@ spec:
                                           additionalProperties:
                                             type: "string"
                                           description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.labelSelector.properties.matchLabels"
+                                          type: "object"
+                                      type: "object"
+                                    namespaceSelector:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector"
+                                      properties:
+                                        matchExpressions:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions"
+                                          items:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions.items"
+                                            properties:
+                                              key:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions.items.properties.key"
+                                                type: "string"
+                                              operator:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions.items.properties.operator"
+                                                type: "string"
+                                              values:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchExpressions.items.properties.values"
+                                                items:
+                                                  type: "string"
+                                                type: "array"
+                                            required:
+                                            - "key"
+                                            - "operator"
+                                            type: "object"
+                                          type: "array"
+                                        matchLabels:
+                                          additionalProperties:
+                                            type: "string"
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.preferredDuringSchedulingIgnoredDuringExecution.items.properties.podAffinityTerm.properties.namespaceSelector.properties.matchLabels"
                                           type: "object"
                                       type: "object"
                                     namespaces:
@@ -2662,6 +4105,36 @@ spec:
                                       description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.labelSelector.properties.matchLabels"
                                       type: "object"
                                   type: "object"
+                                namespaceSelector:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector"
+                                  properties:
+                                    matchExpressions:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions"
+                                      items:
+                                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions.items"
+                                        properties:
+                                          key:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions.items.properties.key"
+                                            type: "string"
+                                          operator:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions.items.properties.operator"
+                                            type: "string"
+                                          values:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchExpressions.items.properties.values"
+                                            items:
+                                              type: "string"
+                                            type: "array"
+                                        required:
+                                        - "key"
+                                        - "operator"
+                                        type: "object"
+                                      type: "array"
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: "string"
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaceSelector.properties.matchLabels"
+                                      type: "object"
+                                  type: "object"
                                 namespaces:
                                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.affinity.properties.podAntiAffinity.properties.requiredDuringSchedulingIgnoredDuringExecution.items.properties.namespaces"
                                   items:
@@ -2711,6 +4184,21 @@ spec:
                   enableServiceLinks:
                     description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.enableServiceLinks"
                     type: "boolean"
+                  hostAliases:
+                    description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.hostAliases"
+                    items:
+                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.hostAliases.items"
+                      properties:
+                        hostnames:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.hostAliases.items.properties.hostnames"
+                          items:
+                            type: "string"
+                          type: "array"
+                        ip:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.hostAliases.items.properties.ip"
+                          type: "string"
+                      type: "object"
+                    type: "array"
                   hostNetwork:
                     description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.hostNetwork"
                     type: "boolean"
@@ -2775,6 +4263,18 @@ spec:
                             description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.securityContext.properties.seLinuxOptions.properties.user"
                             type: "string"
                         type: "object"
+                      seccompProfile:
+                        description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.securityContext.properties.seccompProfile"
+                        properties:
+                          localhostProfile:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.securityContext.properties.seccompProfile.properties.localhostProfile"
+                            type: "string"
+                          type:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.securityContext.properties.seccompProfile.properties.type"
+                            type: "string"
+                        required:
+                        - "type"
+                        type: "object"
                       supplementalGroups:
                         description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.securityContext.properties.supplementalGroups"
                         items:
@@ -2806,6 +4306,9 @@ spec:
                           gmsaCredentialSpecName:
                             description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.securityContext.properties.windowsOptions.properties.gmsaCredentialSpecName"
                             type: "string"
+                          hostProcess:
+                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.securityContext.properties.windowsOptions.properties.hostProcess"
+                            type: "boolean"
                           runAsUserName:
                             description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.securityContext.properties.windowsOptions.properties.runAsUserName"
                             type: "string"
@@ -3083,6 +4586,125 @@ spec:
                               pattern: "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\\
                                 +|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$"
                               x-kubernetes-int-or-string: true
+                          type: "object"
+                        ephemeral:
+                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral"
+                          properties:
+                            volumeClaimTemplate:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate"
+                              properties:
+                                metadata:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.metadata"
+                                  type: "object"
+                                spec:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec"
+                                  properties:
+                                    accessModes:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.accessModes"
+                                      items:
+                                        type: "string"
+                                      type: "array"
+                                    dataSource:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.dataSource"
+                                      properties:
+                                        apiGroup:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.dataSource.properties.apiGroup"
+                                          type: "string"
+                                        kind:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.dataSource.properties.kind"
+                                          type: "string"
+                                        name:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.dataSource.properties.name"
+                                          type: "string"
+                                      required:
+                                      - "kind"
+                                      - "name"
+                                      type: "object"
+                                    dataSourceRef:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.dataSourceRef"
+                                      properties:
+                                        apiGroup:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.dataSourceRef.properties.apiGroup"
+                                          type: "string"
+                                        kind:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.dataSourceRef.properties.kind"
+                                          type: "string"
+                                        name:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.dataSourceRef.properties.name"
+                                          type: "string"
+                                      required:
+                                      - "kind"
+                                      - "name"
+                                      type: "object"
+                                    resources:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.resources"
+                                      properties:
+                                        limits:
+                                          additionalProperties:
+                                            anyOf:
+                                            - type: "integer"
+                                            - type: "string"
+                                            pattern: "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\\
+                                              .[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\\
+                                              +|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$"
+                                            x-kubernetes-int-or-string: true
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.resources.properties.limits"
+                                          type: "object"
+                                        requests:
+                                          additionalProperties:
+                                            anyOf:
+                                            - type: "integer"
+                                            - type: "string"
+                                            pattern: "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\\
+                                              .[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\\
+                                              +|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$"
+                                            x-kubernetes-int-or-string: true
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.resources.properties.requests"
+                                          type: "object"
+                                      type: "object"
+                                    selector:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.selector"
+                                      properties:
+                                        matchExpressions:
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.selector.properties.matchExpressions"
+                                          items:
+                                            description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.selector.properties.matchExpressions.items"
+                                            properties:
+                                              key:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.selector.properties.matchExpressions.items.properties.key"
+                                                type: "string"
+                                              operator:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.selector.properties.matchExpressions.items.properties.operator"
+                                                type: "string"
+                                              values:
+                                                description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.selector.properties.matchExpressions.items.properties.values"
+                                                items:
+                                                  type: "string"
+                                                type: "array"
+                                            required:
+                                            - "key"
+                                            - "operator"
+                                            type: "object"
+                                          type: "array"
+                                        matchLabels:
+                                          additionalProperties:
+                                            type: "string"
+                                          description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.selector.properties.matchLabels"
+                                          type: "object"
+                                      type: "object"
+                                    storageClassName:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.storageClassName"
+                                      type: "string"
+                                    volumeMode:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.volumeMode"
+                                      type: "string"
+                                    volumeName:
+                                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.ephemeral.properties.volumeClaimTemplate.properties.spec.properties.volumeName"
+                                      type: "string"
+                                  type: "object"
+                              required:
+                              - "spec"
+                              type: "object"
                           type: "object"
                         fc:
                           description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.fc"
@@ -3457,8 +5079,6 @@ spec:
                                     type: "object"
                                 type: "object"
                               type: "array"
-                          required:
-                          - "sources"
                           type: "object"
                         quobyte:
                           description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.podTemplate.properties.volumes.items.properties.quobyte"
@@ -3796,6 +5416,22 @@ spec:
                               - "kind"
                               - "name"
                               type: "object"
+                            dataSourceRef:
+                              description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.workspaces.items.properties.volumeClaimTemplate.properties.spec.properties.dataSourceRef"
+                              properties:
+                                apiGroup:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.workspaces.items.properties.volumeClaimTemplate.properties.spec.properties.dataSourceRef.properties.apiGroup"
+                                  type: "string"
+                                kind:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.workspaces.items.properties.volumeClaimTemplate.properties.spec.properties.dataSourceRef.properties.kind"
+                                  type: "string"
+                                name:
+                                  description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.workspaces.items.properties.volumeClaimTemplate.properties.spec.properties.dataSourceRef.properties.name"
+                                  type: "string"
+                              required:
+                              - "kind"
+                              - "name"
+                              type: "object"
                             resources:
                               description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.workspaces.items.properties.volumeClaimTemplate.properties.spec.properties.resources"
                               properties:
@@ -3929,19 +5565,40 @@ spec:
                   description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items"
                   properties:
                     lastTransitionTime:
+                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items.properties.lastTransitionTime"
                       format: "date-time"
                       type: "string"
                     message:
+                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items.properties.message"
+                      maxLength: 32768
                       type: "string"
+                    observedGeneration:
+                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items.properties.observedGeneration"
+                      format: "int64"
+                      minimum: 0
+                      type: "integer"
                     reason:
                       description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items.properties.reason"
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: "^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$"
                       type: "string"
                     status:
+                      description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items.properties.status"
+                      enum:
+                      - "True"
+                      - "False"
+                      - "Unknown"
                       type: "string"
                     type:
                       description: "%cicd.tmax.io_integrationconfigs.yaml.spec.versions.schema.openAPIV3Schema.properties.status.properties.conditions.items.properties.type"
+                      maxLength: 316
+                      pattern: "^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$"
                       type: "string"
                   required:
+                  - "lastTransitionTime"
+                  - "message"
+                  - "reason"
                   - "status"
                   - "type"
                   type: "object"
