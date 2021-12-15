@@ -415,19 +415,19 @@ func Test_exposeIngressReconciler_reconcile(t *testing.T) {
 		"noUpdate": {
 			exposeMode:   "LoadBalancer",
 			ingressClass: strNginx,
-			obj:          &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}},
+			obj:          &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}},
 			expectedObj:  &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"kubernetes.io/ingress.class": "nginx"}}, Spec: networkingv1.IngressSpec{IngressClassName: &strNginx, Rules: []networkingv1.IngressRule{{}}}},
 		},
 		"emptyClass": {
 			exposeMode:  "LoadBalancer",
-			obj:         &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}},
+			obj:         &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}},
 			expectedObj: &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}},
 		},
 		"setHost": {
 			exposeMode:   "Ingress",
 			ingressHost:  "host.ingress.com",
 			ingressClass: strNginx,
-			obj:          &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}},
+			obj:          &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}},
 			expectedObj:  &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"kubernetes.io/ingress.class": "nginx"}}, Spec: networkingv1.IngressSpec{IngressClassName: &strNginx, Rules: []networkingv1.IngressRule{{Host: "host.ingress.com"}}}},
 			configHost:   true,
 			expectedHost: "host.ingress.com",
@@ -435,7 +435,7 @@ func Test_exposeIngressReconciler_reconcile(t *testing.T) {
 		"setDefaultHost": {
 			exposeMode:   "Ingress",
 			ingressClass: strNginx,
-			obj:          &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}, Status: networkingv1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: []corev1.LoadBalancerIngress{{IP: "172.22.11.11"}}}}},
+			obj:          &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{}, Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{}}}, Status: networkingv1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: []corev1.LoadBalancerIngress{{IP: "172.22.11.11"}}}}},
 			expectedObj:  &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"kubernetes.io/ingress.class": "nginx"}}, Spec: networkingv1.IngressSpec{IngressClassName: &strNginx, Rules: []networkingv1.IngressRule{{Host: "cicd-webhook.172.22.11.11.nip.io"}}}, Status: networkingv1.IngressStatus{LoadBalancer: corev1.LoadBalancerStatus{Ingress: []corev1.LoadBalancerIngress{{IP: "172.22.11.11"}}}}},
 			configHost:   true,
 			expectedHost: "cicd-webhook.172.22.11.11.nip.io",

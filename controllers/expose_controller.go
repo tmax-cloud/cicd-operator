@@ -284,6 +284,9 @@ func (i *exposeIngressReconciler) reconcile(obj runtime.Object, exposeMode expos
 
 	// Check if class is set properly
 	if configs.IngressClass != "" {
+		if ing.Annotations == nil {
+			ing.Annotations = map[string]string{}
+		}
 		ing.Annotations["kubernetes.io/ingress.class"] = configs.IngressClass
 		ing.Spec.IngressClassName = &configs.IngressClass
 	}
