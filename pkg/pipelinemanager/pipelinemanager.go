@@ -85,6 +85,9 @@ func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 		workspaceDefs = append(workspaceDefs, tektonv1beta1.PipelineWorkspaceDeclaration{Name: w.Name})
 	}
 
+	// Params
+	paramDefine, paramValue := getParams(job)
+
 	// Resources
 	var specResources []tektonv1beta1.PipelineDeclaredResource
 	var runResources []tektonv1beta1.PipelineResourceBinding
@@ -127,16 +130,27 @@ func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 				Resources:  specResources,
 				Tasks:      tasks,
 				Workspaces: workspaceDefs,
-				Params:     cicdv1.ConvertToTektonParamSpecs(job.Spec.ParamConfig.ParamDefine),
+				Params:     paramDefine,
 			},
 			PodTemplate: job.Spec.PodTemplate,
 			Workspaces:  job.Spec.Workspaces,
 			Timeout: &metav1.Duration{
 				Duration: job.Spec.Timeout.Duration,
 			},
-			Params: cicdv1.ConvertToTektonParams(job.Spec.ParamConfig.ParamValue),
+			Params: paramValue,
 		},
 	}, nil
+}
+
+func getParams(job *cicdv1.IntegrationJob) ([]tektonv1beta1.ParamSpec, []tektonv1beta1.Param) {
+	var paramSpec []tektonv1beta1.ParamSpec
+	var param []tektonv1beta1.Param
+	if job.Spec.ParamConfig != nil {
+		paramSpec = cicdv1.ConvertToTektonParamSpecs(job.Spec.ParamConfig.ParamDefine)
+		param = cicdv1.ConvertToTektonParams(job.Spec.ParamConfig.ParamValue)
+	}
+
+	return paramSpec, param
 }
 
 func (p *pipelineManager) convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns string) (*tektonv1beta1.PipelineDeclaredResource, error) {

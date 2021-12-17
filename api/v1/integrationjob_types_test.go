@@ -20,88 +20,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func TestConvertToTektonParamSpecs(t *testing.T) {
-	tc := map[string]struct {
-		params            []ParameterDefine
-		expectedParamSpec []tektonv1beta1.ParamSpec
-	}{
-		"params": {
-			params: []ParameterDefine{
-				{
-					Name:         "array-param-spec",
-					DefaultArray: []string{"array-string1", "array-string2"},
-					Description:  "ParamSpec with default array",
-				},
-				{
-					Name:        "string-param-spec",
-					DefaultStr:  "string",
-					Description: "ParamSpec with default string",
-				},
-			},
-			expectedParamSpec: []tektonv1beta1.ParamSpec{
-				{
-					Name:        "array-param-spec",
-					Type:        "array",
-					Description: "ParamSpec with default array",
-					Default:     tektonv1beta1.NewArrayOrString("array-string1", "array-string2"),
-				},
-				{
-					Name:        "string-param-spec",
-					Type:        "string",
-					Description: "ParamSpec with default string",
-					Default:     tektonv1beta1.NewArrayOrString("string"),
-				},
-			},
-		},
-	}
-	for name, c := range tc {
-		t.Run(name, func(t *testing.T) {
-			paramSpec := ConvertToTektonParamSpecs(c.params)
-			require.Equal(t, c.expectedParamSpec, paramSpec)
-		})
-	}
-}
-
-func TestConvertToTektonParams(t *testing.T) {
-	tc := map[string]struct {
-		params         []ParameterValue
-		expectedParams []tektonv1beta1.Param
-	}{
-		"params": {
-			params: []ParameterValue{
-				{
-					Name:     "array-param",
-					ArrayVal: []string{"array-string1", "array-string2"},
-				},
-				{
-					Name:      "string-param",
-					StringVal: "string",
-				},
-			},
-			expectedParams: []tektonv1beta1.Param{
-				{
-					Name:  "array-param",
-					Value: *tektonv1beta1.NewArrayOrString("array-string1", "array-string2"),
-				},
-				{
-					Name:  "string-param",
-					Value: *tektonv1beta1.NewArrayOrString("string"),
-				},
-			},
-		},
-	}
-	for name, c := range tc {
-		t.Run(name, func(t *testing.T) {
-			params := ConvertToTektonParams(c.params)
-			require.Equal(t, c.expectedParams, params)
-		})
-	}
-}
 
 func TestIntegrationJobStatus_SetDefaults(t *testing.T) {
 	tc := map[string]struct {

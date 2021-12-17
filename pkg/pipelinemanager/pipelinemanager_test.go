@@ -17,9 +17,13 @@
 package pipelinemanager
 
 import (
-	"github.com/bmizerany/assert"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"testing"
+
+	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/require"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
 )
 
 func TestAppendBaseShaToDescription(t *testing.T) {
@@ -49,4 +53,83 @@ func TestParseBaseFromDescription(t *testing.T) {
 	fullDesc = "Job is running... BaseSHA:zzzzzzzzzzzzzzzzz"
 	sha = ParseBaseFromDescription(fullDesc)
 	assert.Equal(t, "", sha)
+}
+
+func TestGetParams(t *testing.T) {
+	tc := map[string]struct {
+		job *cicdv1.IntegrationJob
+
+		expectedParamSpec []tektonv1beta1.ParamSpec
+		expectedParam     []tektonv1beta1.Param
+	}{
+		"nilConfig": {
+			job: &cicdv1.IntegrationJob{
+				Spec: cicdv1.IntegrationJobSpec{},
+			},
+			expectedParamSpec: nil,
+			expectedParam:     nil,
+		},
+		"existConfig": {
+			job: &cicdv1.IntegrationJob{
+				Spec: cicdv1.IntegrationJobSpec{
+					ParamConfig: &cicdv1.ParameterConfig{
+						ParamDefine: []cicdv1.ParameterDefine{
+							{
+								Name:         "array-param-spec",
+								DefaultArray: []string{"array-string1", "array-string2"},
+								Description:  "ParamSpec with default array",
+							},
+							{
+								Name:        "string-param-spec",
+								DefaultStr:  "string",
+								Description: "ParamSpec with default string",
+							},
+						},
+						ParamValue: []cicdv1.ParameterValue{
+							{
+								Name:     "array-param",
+								ArrayVal: []string{"array-string1", "array-string2"},
+							},
+							{
+								Name:      "string-param",
+								StringVal: "string",
+							},
+						},
+					},
+				},
+			},
+			expectedParamSpec: []tektonv1beta1.ParamSpec{
+				{
+					Name:        "array-param-spec",
+					Type:        "array",
+					Description: "ParamSpec with default array",
+					Default:     tektonv1beta1.NewArrayOrString("array-string1", "array-string2"),
+				},
+				{
+					Name:        "string-param-spec",
+					Type:        "string",
+					Description: "ParamSpec with default string",
+					Default:     tektonv1beta1.NewArrayOrString("string"),
+				},
+			},
+			expectedParam: []tektonv1beta1.Param{
+				{
+					Name:  "array-param",
+					Value: *tektonv1beta1.NewArrayOrString("array-string1", "array-string2"),
+				},
+				{
+					Name:  "string-param",
+					Value: *tektonv1beta1.NewArrayOrString("string"),
+				},
+			},
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			paramSpec, param := getParams(c.job)
+
+			require.Equal(t, c.expectedParamSpec, paramSpec)
+			require.Equal(t, c.expectedParam, param)
+		})
+	}
 }
