@@ -78,7 +78,9 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + encodedRepoPath + "/hooks"
 
 	var entries []WebhookEntry
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+	tlsConfig := c.IntegrationConfig.GetTLSConfig()
+
+	err := git.GetPaginatedRequest(apiURL, tlsConfig, c.header, func() interface{} {
 		return &[]WebhookEntry{}
 	}, func(i interface{}) {
 		entries = append(entries, *i.(*[]WebhookEntry)...)
@@ -143,7 +145,9 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/api/v4/projects/" + urlEncodePath + "/repository/commits/" + ref + "/statuses"
 
 	var statuses []CommitStatusResponse
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+	tlsConfig := c.IntegrationConfig.GetTLSConfig()
+
+	err := git.GetPaginatedRequest(apiURL, tlsConfig, c.header, func() interface{} {
 		return &[]CommitStatusResponse{}
 	}, func(i interface{}) {
 		statuses = append(statuses, *i.(*[]CommitStatusResponse)...)
@@ -277,7 +281,9 @@ func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 	}
 
 	var mrs []MergeRequest
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+	tlsConfig := c.IntegrationConfig.GetTLSConfig()
+
+	err := git.GetPaginatedRequest(apiURL, tlsConfig, c.header, func() interface{} {
 		return &[]MergeRequest{}
 	}, func(i interface{}) {
 		mrs = append(mrs, *i.(*[]MergeRequest)...)
@@ -491,7 +497,9 @@ func (c *Client) GetBranch(branch string) (*git.Branch, error) {
 }
 
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
-	return git.RequestHTTP(method, apiURL, c.header, data)
+	tlsConfig := c.IntegrationConfig.GetTLSConfig()
+
+	return git.RequestHTTP(method, apiURL, c.header, data, tlsConfig)
 }
 
 func convertState(original string) git.PullRequestState {

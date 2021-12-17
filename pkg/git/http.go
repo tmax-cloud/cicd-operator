@@ -18,6 +18,7 @@ package git
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -26,7 +27,7 @@ import (
 )
 
 // GetPaginatedRequest gets paginated APIs and accumulates them together
-func GetPaginatedRequest(apiURL string, header map[string]string, newObj func() interface{}, accumulate func(interface{})) error {
+func GetPaginatedRequest(apiURL string, tlsConfig *tls.Config, header map[string]string, newObj func() interface{}, accumulate func(interface{})) error {
 	u, err := url.Parse(apiURL)
 	if err != nil {
 		return err
@@ -38,7 +39,7 @@ func GetPaginatedRequest(apiURL string, header map[string]string, newObj func() 
 	}
 	uri := u.String()
 	for {
-		data, h, err := RequestHTTP(http.MethodGet, uri, header, nil)
+		data, h, err := RequestHTTP(http.MethodGet, uri, header, nil, tlsConfig)
 		if err != nil {
 			return err
 		}
@@ -65,7 +66,7 @@ func GetPaginatedRequest(apiURL string, header map[string]string, newObj func() 
 }
 
 // RequestHTTP requests api call
-func RequestHTTP(method string, uri string, header map[string]string, data interface{}) ([]byte, http.Header, error) {
+func RequestHTTP(method string, uri string, header map[string]string, data interface{}, tlsConfig *tls.Config) ([]byte, http.Header, error) {
 	var jsonBytes []byte
 	var err error
 
@@ -85,9 +86,23 @@ func RequestHTTP(method string, uri string, header map[string]string, data inter
 		req.Header.Add(k, v)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, nil, err
+	var resp *http.Response
+
+	if tlsConfig != nil {
+		tr := &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+		tlsClient := http.Client{Transport: tr}
+
+		resp, err = tlsClient.Do(req)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		resp, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	defer func() {
