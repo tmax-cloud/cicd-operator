@@ -32,6 +32,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
 - [Configuring `paramConfig`](#configuring-paramconfig)
     - [`paramDefine`](#paramdefine)
     - [`paramValue`](#paramvalue)
+- [Configuring `TLSConfig`](#configuring-tlsconfig)
 - [Triggering jobs](#triggering-jobs)
   - [Option.1 Using `cicdctl`](#option1-using-cicdctl)
   - [Option.2 Using `curl`](#option2-using-curl)
@@ -401,6 +402,20 @@ spec:
     paramValue:
     - name: "test-param"
       stringVal: "true"
+```
+
+## Configuring `tlsConfig`
+TLSConfig is used to define parameters for TLS. 
+Currently provide InsecureSkipVerify flag.
+Set true if you want to accept any certificate.
+
+```yaml
+spec:
+  jobs:
+    - name: test
+      ...
+  tlsConfig:
+    insecureSkipVerify: true
 ```
 
 

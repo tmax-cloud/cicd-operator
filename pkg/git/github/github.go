@@ -81,7 +81,9 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 	var apiURL = c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/hooks"
 
 	var entries []WebhookEntry
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+	tlsConfig := c.IntegrationConfig.GetTLSConfig()
+
+	err := git.GetPaginatedRequest(apiURL, tlsConfig, c.header, func() interface{} {
 		return &[]WebhookEntry{}
 	}, func(i interface{}) {
 		entries = append(entries, *i.(*[]WebhookEntry)...)
@@ -135,7 +137,9 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/commits/" + ref + "/statuses"
 
 	var statuses []CommitStatusResponse
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+	tlsConfig := c.IntegrationConfig.GetTLSConfig()
+
+	err := git.GetPaginatedRequest(apiURL, tlsConfig, c.header, func() interface{} {
 		return &[]CommitStatusResponse{}
 	}, func(i interface{}) {
 		statuses = append(statuses, *i.(*[]CommitStatusResponse)...)
@@ -247,7 +251,9 @@ func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 	}
 
 	var prs []PullRequest
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+	tlsConfig := c.IntegrationConfig.GetTLSConfig()
+
+	err := git.GetPaginatedRequest(apiURL, tlsConfig, c.header, func() interface{} {
 		return &[]PullRequest{}
 	}, func(i interface{}) {
 		prs = append(prs, *i.(*[]PullRequest)...)
@@ -435,7 +441,9 @@ func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 }
 
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
-	return git.RequestHTTP(method, apiURL, c.header, data)
+	tlsConfig := c.IntegrationConfig.GetTLSConfig()
+
+	return git.RequestHTTP(method, apiURL, c.header, data, tlsConfig)
 }
 
 // IsValidPayload validates the webhook payload

@@ -18,6 +18,7 @@ package v1
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"time"
 
@@ -72,6 +73,15 @@ type IntegrationConfigSpec struct {
 
 	// ParamConfig specifies parameter
 	ParamConfig *ParameterConfig `json:"paramConfig,omitempty"`
+
+	// TLSConfig set tls configurations
+	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
+}
+
+// TLSConfig is parameters for tls connection
+type TLSConfig struct {
+	// InsecureSkipVerify is flag for accepting any certificate presented by the server and any host name in that certificate.
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 }
 
 // ParameterConfig for parameters
@@ -251,6 +261,16 @@ func (i *IntegrationConfig) GetDuration() *metav1.Duration {
 	return &metav1.Duration{
 		Duration: time.Duration(configs.IntegrationJobTTL) * time.Hour,
 	}
+}
+
+// GetTLSConfig returns tls config from integration configs' tlsConfig
+func (i *IntegrationConfig) GetTLSConfig() *tls.Config {
+	if i.Spec.TLSConfig != nil {
+		return &tls.Config{
+			InsecureSkipVerify: i.Spec.TLSConfig.InsecureSkipVerify,
+		}
+	}
+	return nil
 }
 
 // IntegrationConfig's API kinds

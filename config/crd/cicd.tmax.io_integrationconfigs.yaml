@@ -8052,6 +8052,14 @@ spec:
                       type: string
                   type: object
                 type: array
+              tlsConfig:
+                description: TLSConfig set tls configurations
+                properties:
+                  insecureSkipVerify:
+                    description: InsecureSkipVerify is flag for accepting any certificate
+                      presented by the server and any host name in that certificate.
+                    type: boolean
+                type: object
               workspaces:
                 description: Workspaces list
                 items:
