@@ -6,7 +6,7 @@ spec:
   group: cicdapi.tmax.io
   groupPriorityMinimum: 100
   service:
-    name: cicd-webhook
+    name: cicd-api-server
     namespace: cicd-system
     port: 34335
   version: v1

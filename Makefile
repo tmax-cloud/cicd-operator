@@ -5,6 +5,8 @@ REGISTRY ?= tmaxcloudck
 # Image URL to use all building/pushing image targets
 IMG_CONTROLLER ?= $(REGISTRY)/cicd-operator:$(VERSION)
 IMG_BLOCKER ?= $(REGISTRY)/cicd-blocker:$(VERSION)
+IMG_WEBHOOK ?= $(REGISTRY)/cicd-webhook:$(VERSION)
+IMG_APISERVER ?= $(REGISTRY)/cicd-api-server:$(VERSION)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -36,7 +38,7 @@ run-cicdctl:
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) crd rbac:roleName=cicd-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd
-	./hack/release-manifest.sh $(VERSION)
+	./hack/release-manifest.sh $(VERSION) $(REGISTRY)
 
 # Run go fmt against code
 fmt:
@@ -52,7 +54,7 @@ generate: controller-gen
 
 # Build the docker image
 .PHONY: docker-build
-docker-build: docker-build-controller docker-build-blocker
+docker-build: docker-build-controller docker-build-blocker docker-build-webhook docker-build-apiserver
 
 docker-build-controller:
 	docker build . -f build/controller/Dockerfile -t ${IMG_CONTROLLER}
@@ -60,15 +62,27 @@ docker-build-controller:
 docker-build-blocker:
 	docker build . -f build/blocker/Dockerfile -t ${IMG_BLOCKER}
 
+docker-build-webhook:
+	docker build . -f build/webhook/Dockerfile -t ${IMG_WEBHOOK}
+
+docker-build-apiserver:
+	docker build . -f build/apiserver/Dockerfile -t ${IMG_APISERVER}
+
 # Push the docker image
 .PHONY: docker-push
-docker-push: docker-push-controller docker-push-blocker
+docker-push: docker-push-controller docker-push-blocker docker-push-webhook docker-push-apiserver
 
 docker-push-controller:
 	docker push ${IMG_CONTROLLER}
 
 docker-push-blocker:
 	docker push ${IMG_BLOCKER}
+
+docker-push-webhook:
+	docker push ${IMG_WEBHOOK}
+
+docker-push-apiserver:
+	docker push ${IMG_APISERVER}
 
 # find or download controller-gen
 # download controller-gen if necessary

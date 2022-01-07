@@ -225,10 +225,9 @@ func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.Pip
 	task.WhenExpressions = append(task.WhenExpressions, j.TektonWhen...)
 
 	// Results
-	if task.TaskSpec == nil {
-		task.TaskSpec = &tektonv1beta1.EmbeddedTask{}
+	if task.TaskSpec != nil {
+		task.TaskSpec.Results = append(task.TaskSpec.Results, j.Results...)
 	}
-	task.TaskSpec.Results = append(task.TaskSpec.Results, j.Results...)
 
 	return task, resources, nil
 }
