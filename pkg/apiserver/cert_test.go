@@ -114,8 +114,8 @@ func Test_createCert(t *testing.T) {
 				cert, err := x509.ParseCertificate(p.Bytes)
 				require.NoError(t, err)
 				require.Equal(t, []string{"knative.dev"}, cert.Issuer.Organization)
-				require.Equal(t, fmt.Sprintf("cicd-webhook.%s.svc", utils.Namespace()), cert.Issuer.CommonName)
-				require.Equal(t, []string{"cicd-webhook", fmt.Sprintf("cicd-webhook.%s", utils.Namespace()), fmt.Sprintf("cicd-webhook.%s.svc", utils.Namespace()), fmt.Sprintf("cicd-webhook.%s.svc.cluster.local", utils.Namespace())}, cert.DNSNames)
+				require.Equal(t, fmt.Sprintf("cicd-api-server.%s.svc", utils.Namespace()), cert.Issuer.CommonName)
+				require.Equal(t, []string{"cicd-api-server", fmt.Sprintf("cicd-api-server.%s", utils.Namespace()), fmt.Sprintf("cicd-api-server.%s.svc", utils.Namespace()), fmt.Sprintf("cicd-api-server.%s.svc.cluster.local", utils.Namespace())}, cert.DNSNames)
 			}
 		})
 	}

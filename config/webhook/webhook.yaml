@@ -1,52 +1,40 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: blocker
+  name: cicd-webhook
   namespace: cicd-system
   labels:
-    cicd.tmax.io/part-of: blocker
+    cicd.tmax.io/part-of: webhook
 spec:
   selector:
-    cicd.tmax.io/part-of: blocker
+    cicd.tmax.io/part-of: webhook
   ports:
-    - port: 8808
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: blocker-config
-  namespace: cicd-system
-  labels:
-    cicd.tmax.io/part-of: blocker
-data:
-  mergeSyncPeriod: "1" # in minute
-  mergeBlockLabel: "ci/hold"
-  mergeKindSquashLabel: "ci/merge-squash"
-  mergeKindMergeLabel: "ci/merge-merge"
+    - name: webhook
+      port: 24335
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: blocker
+  name: webhook-server
   namespace: cicd-system
   labels:
     control-plane: controller-manager
-    cicd.tmax.io/part-of: blocker
+    cicd.tmax.io/part-of: webhook
 spec:
   selector:
     matchLabels:
-      cicd.tmax.io/part-of: blocker
+      cicd.tmax.io/part-of: webhook
   replicas: 1
   template:
     metadata:
       labels:
-        cicd.tmax.io/part-of: blocker
+        cicd.tmax.io/part-of: webhook
     spec:
       serviceAccountName: cicd-service-account
       containers:
         - command:
-            - /blocker
-          image: docker.io/tmaxcloudck/cicd-blocker:latest
+            - /webhook
+          image: docker.io/tmaxcloudck/cicd-webhook:latest
           imagePullPolicy: Always
           name: manager
           resources:

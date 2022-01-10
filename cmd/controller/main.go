@@ -27,17 +27,8 @@ import (
 	"github.com/tmax-cloud/cicd-operator/controllers/customs"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
 	"github.com/tmax-cloud/cicd-operator/internal/logrotate"
-	"github.com/tmax-cloud/cicd-operator/pkg/apiserver"
-	"github.com/tmax-cloud/cicd-operator/pkg/chatops"
-	"github.com/tmax-cloud/cicd-operator/pkg/chatops/plugins/approve"
-	"github.com/tmax-cloud/cicd-operator/pkg/chatops/plugins/hold"
-	"github.com/tmax-cloud/cicd-operator/pkg/chatops/plugins/trigger"
 	"github.com/tmax-cloud/cicd-operator/pkg/collector"
-	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/notification/mail"
-	"github.com/tmax-cloud/cicd-operator/pkg/plugins/size"
-	"github.com/tmax-cloud/cicd-operator/pkg/server"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -207,37 +198,6 @@ func main() {
 		os.Exit(1)
 	}
 	go exposeCon.Start(nil)
-
-	// Init chat-ops
-	co := chatops.New(mgr.GetClient())
-
-	// Init chat-ops plugins
-	approveHandler := &approve.Handler{Client: mgr.GetClient()}
-	triggerHandler := &trigger.Handler{Client: mgr.GetClient()}
-	holdHandler := &hold.Handler{Client: mgr.GetClient()}
-
-	co.RegisterCommandHandler(approve.CommandTypeApprove, approveHandler.HandleChatOps)
-	co.RegisterCommandHandler(approve.CommandTypeGitLabApprove, approveHandler.HandleChatOps)
-	co.RegisterCommandHandler(trigger.CommandTypeTest, triggerHandler.HandleChatOps)
-	co.RegisterCommandHandler(trigger.CommandTypeRetest, triggerHandler.HandleChatOps)
-	co.RegisterCommandHandler(hold.CommandTypeHold, holdHandler.HandleChatOps)
-
-	// Create and start webhook server
-	srv := server.New(mgr.GetClient(), mgr.GetConfig())
-	// Add plugins for webhook
-	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
-	server.AddPlugin([]git.EventType{git.EventTypeIssueComment, git.EventTypePullRequestReview, git.EventTypePullRequestReviewComment}, co)
-	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePullRequestReview}, approveHandler)
-	server.AddPlugin([]git.EventType{git.EventTypePullRequest}, &size.Size{Client: mgr.GetClient()})
-	go srv.Start()
-
-	// Start API aggregation server
-	apiServer, err := apiserver.New(mgr.GetClient(), mgr.GetConfig(), mgr.GetCache())
-	if err != nil {
-		setupLog.Error(err, "unable to create api server")
-		os.Exit(1)
-	}
-	go apiServer.Start()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

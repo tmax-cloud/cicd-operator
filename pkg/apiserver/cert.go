@@ -40,7 +40,7 @@ import (
 const (
 	// APIServiceName is a name of APIService object
 	APIServiceName = "v1.cicdapi.tmax.io"
-	serviceName    = "cicd-webhook"
+	serviceName    = "cicd-api-server"
 
 	k8sConfigMapName = "extension-apiserver-authentication"
 	k8sConfigMapKey  = "requestheader-client-ca-file"

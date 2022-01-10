@@ -5,6 +5,7 @@ apiVersion: cicd.tmax.io/v1
 kind: IntegrationConfig
 metadata:
   name: cicd-operator
+  namespace: cicd
 spec:
   git:
     type: github
@@ -71,6 +72,8 @@ spec:
 
         IMG_OPERATOR="$IMAGE_URL_OPERATOR:$TAG"
         IMG_BLOCKER="$IMAGE_URL_BLOCKER:$TAG"
+        IMG_APISERVER="$IMAGE_URL_APISERVER:$TAG"
+        IMG_WEBHOOK="$IMAGE_URL_WEBHOOK:$TAG"
 
         buildah bud --format docker --storage-driver=vfs -f ./build/controller/Dockerfile -t $IMG_OPERATOR .
         buildah tag --storage-driver=vfs $IMG_OPERATOR $IMAGE_URL_OPERATOR:latest
@@ -81,11 +84,25 @@ spec:
         buildah tag --storage-driver=vfs $IMG_BLOCKER $IMAGE_URL_BLOCKER:latest
         buildah push --storage-driver=vfs $IMG_BLOCKER docker://$IMG_BLOCKER
         buildah push --storage-driver=vfs $IMAGE_URL_BLOCKER:latest docker://$IMAGE_URL_BLOCKER:latest
+        
+        buildah bud --format docker --storage-driver=vfs -f ./build/apiserver/Dockerfile -t $IMG_APISERVER .
+        buildah tag --storage-driver=vfs $IMG_APISERVER $IMAGE_URL_APISERVER:latest
+        buildah push --storage-driver=vfs $IMG_APISERVER docker://$IMG_APISERVER
+        buildah push --storage-driver=vfs $IMAGE_URL_APISERVER:latest docker://$IMAGE_URL_APISERVER:latest
+        
+        buildah bud --format docker --storage-driver=vfs -f ./build/webhook/Dockerfile -t $IMG_WEBHOOK .
+        buildah tag --storage-driver=vfs $IMG_WEBHOOK $IMAGE_URL_WEBHOOK:latest
+        buildah push --storage-driver=vfs $IMG_WEBHOOK docker://$IMG_WEBHOOK
+        buildah push --storage-driver=vfs $IMAGE_URL_WEBHOOK:latest docker://$IMAGE_URL_WEBHOOK:latest
       env:
       - name: IMAGE_URL_OPERATOR
         value: tmaxcloudck/cicd-operator
       - name: IMAGE_URL_BLOCKER
         value: tmaxcloudck/cicd-blocker
+      - name: IMAGE_URL_APISERVER
+        value: tmaxcloudck/cicd-api-server
+      - name: IMAGE_URL_WEBHOOK
+        value: tmaxcloudck/cicd-webhook
       securityContext:
         privileged: true
       when:
@@ -97,7 +114,7 @@ spec:
             receivers:
               - ck1_2@tmax.co.kr
               - cqa1@tmax.co.kr
-              - cqbqdd11519@gmail.com
+              - light9632@gmail.com
             title: "CI/CD Operator {{ .Spec.Refs.Base.Ref.GetTag }} 배포 안내 메일"
             isHtml: true
             content: |
@@ -110,7 +127,7 @@ spec:
               </head>
               <body>
                 <div style="font-size: 10pt; font-family: Verdana,Geneva,sans-serif">
-                  <div>안녕하세요, CK1-2팀 김성현입니다.<br>HyperCloud CI/CD Operator {{ .Spec.Refs.Base.Ref.GetTag }} 배포 안내 메일입니다.</div>
+                  <div>안녕하세요, CK1-2팀 김창주입니다.<br>HyperCloud CI/CD Operator {{ .Spec.Refs.Base.Ref.GetTag }} 배포 안내 메일입니다.</div>
                   <div>
                     <ul>
                       <li>이미지: docker.io/tmaxcloudck/cicd-operator:{{ .Spec.Refs.Base.Ref.GetTag }}</li>
