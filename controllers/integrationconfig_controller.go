@@ -18,6 +18,9 @@ package controllers
 
 import (
 	"context"
+	"github.com/tmax-cloud/cicd-operator/pkg/git/github"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,7 +107,13 @@ func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	r.setSecretString(instance)
 
 	// Set webhook registered
-	r.setWebhookRegisteredCond(instance)
+	var re reconcile.Result
+	if resetTime := r.setWebhookRegisteredCond(instance); resetTime > 0 {
+		// Get time remaining from reset time and set to run reconcile at that time.
+		re = ctrl.Result{RequeueAfter: time.Duration(github.GetGapTime(resetTime)) * time.Second, Requeue: true}
+	} else {
+		re = ctrl.Result{}
+	}
 
 	// Set ready
 	r.setReadyCond(instance)
@@ -133,7 +142,7 @@ func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
-	return ctrl.Result{}, nil
+	return re, nil
 }
 
 // SetupWithManager sets IntegrationConfigReconciler to the manager
@@ -228,7 +237,7 @@ func (r *IntegrationConfigReconciler) setSecretString(instance *cicdv1.Integrati
 }
 
 // Set webhook-registered condition, return if it's changed or not
-func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.IntegrationConfig) {
+func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.IntegrationConfig) int {
 	webhookRegistered := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
 	if webhookRegistered == nil {
 		meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
@@ -243,7 +252,7 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 	if instance.Spec.Git.Token == nil {
 		webhookRegistered.Reason = cicdv1.IntegrationConfigConditionReasonNoGitToken
 		webhookRegistered.Message = "Skipped to register webhook"
-		return
+		return 0
 	}
 
 	// Register only if the condition is false
@@ -283,8 +292,12 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 					webhookRegistered.Message = "Webhook is registered"
 				}
 			}
+			if err != nil {
+				return github.CheckRateLimitError(err)
+			}
 		}
 	}
+	return 0
 }
 
 // Set ready condition, return if it's changed or not

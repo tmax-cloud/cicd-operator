@@ -513,6 +513,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 		expectedStatus     metav1.ConditionStatus
 		expectedReason     string
 		expectedMessage    string
+		doRateLimit        bool
 	}{
 		"create": {
 			ic: &cicdv1.IntegrationConfig{
@@ -532,6 +533,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 			expectedStatus:     metav1.ConditionTrue,
 			expectedReason:     "Registered",
 			expectedMessage:    "Webhook is registered",
+			doRateLimit:        false,
 		},
 		"noToken": {
 			ic: &cicdv1.IntegrationConfig{
@@ -550,6 +552,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "noGitToken",
 			expectedMessage:    "Skipped to register webhook",
+			doRateLimit:        false,
 		},
 		"getGitCliErr": {
 			ic: &cicdv1.IntegrationConfig{
@@ -569,6 +572,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "gitCliErr",
 			expectedMessage:    "git type dummy is not supported",
+			doRateLimit:        false,
 		},
 		"listWebhookErr": {
 			ic: &cicdv1.IntegrationConfig{
@@ -588,6 +592,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "webhookRegisterFailed",
 			expectedMessage:    "404 no such repository",
+			doRateLimit:        false,
 		},
 		"webhookAlreadyRegistered": {
 			ic: &cicdv1.IntegrationConfig{
@@ -608,6 +613,28 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 			expectedStatus:          metav1.ConditionFalse,
 			expectedReason:          "webhookRegisterFailed",
 			expectedMessage:         "same webhook has already registered",
+			doRateLimit:             false,
+		},
+		"rateLimitError": {
+			ic: &cicdv1.IntegrationConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-rate-limit",
+					Namespace: "test-ns",
+				},
+				Spec: cicdv1.IntegrationConfigSpec{
+					Git: cicdv1.GitConfig{
+						Type:       cicdv1.GitTypeFake,
+						Repository: "test-repo",
+						Token:      &cicdv1.GitToken{Value: "test-tkn"},
+					},
+				},
+			},
+			preRegisteredWebhookURL: "http://cicd-webhook.com/webhook/test-ns/test-rate-limit",
+			expectedWebhookURL:      "",
+			expectedStatus:          metav1.ConditionFalse,
+			expectedReason:          "webhookRegisterFailed",
+			expectedMessage:         "unixtime::0000. Rate limit exceeded, code 403. Please increase the limit or wait until 0000",
+			doRateLimit:             true,
 		},
 	}
 

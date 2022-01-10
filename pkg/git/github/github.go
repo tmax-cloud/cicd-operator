@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
@@ -472,4 +473,21 @@ func Validate(secret, headerHash string, payload []byte) error {
 		return fmt.Errorf("invalid request : X-Hub-Signature does not match secret")
 	}
 	return nil
+}
+
+// CheckRateLimitError checks if the error is a rate limit exceeded error and return time at which limit is reset
+func CheckRateLimitError(err error) int {
+	if err != nil && strings.Contains(err.Error(), "Rate limit exceeded") {
+		strErr := err.Error()
+		unixTime := strings.Split(strings.Split(strErr, "::")[1], ".")[0]
+		if tm, convertErr := strconv.Atoi(unixTime); convertErr == nil {
+			return tm
+		}
+	}
+	return 0
+}
+
+// GetGapTime return target time - current time
+func GetGapTime(target int) int64 {
+	return int64(target) - time.Now().Unix()
 }

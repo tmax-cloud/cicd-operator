@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/bmizerany/assert"
 	"github.com/gorilla/mux"
@@ -136,11 +138,40 @@ func TestClient_ListPullRequestCommits(t *testing.T) {
 	require.Equal(t, "cqbqdd11519@gmail.com", commits[0].Committer.Email)
 }
 
+func TestClient_CheckRateLimitError(t *testing.T) {
+	c, err := testEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	apiURL := fmt.Sprintf("%s/exceed", c.IntegrationConfig.Spec.Git.GetAPIUrl())
+
+	_, _, newErr := c.requestHTTP(http.MethodPost, apiURL, nil)
+	tm := CheckRateLimitError(newErr)
+	assert.NotEqual(t, 0, tm)
+
+	_, newErr = c.ListWebhook()
+	tm = CheckRateLimitError(newErr)
+	assert.Equal(t, 0, tm)
+}
+
+func TestClient_GetGapTime(t *testing.T) {
+	assert.Equal(t, time.Now().Unix()*-1, GetGapTime(0))
+	assert.Equal(t, 10-time.Now().Unix(), GetGapTime(10))
+	assert.Equal(t, 20-time.Now().Unix(), GetGapTime(20))
+}
+
 func testEnv() (*Client, error) {
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(req.URL.String()))
+	})
+	r.HandleFunc("/exceed", func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		tm := strconv.FormatInt(time.Now().Unix()+300, 10)
+		msg := fmt.Sprintf("unixtime::%s. Rate limit exceeded, code 403. Please increase the limit or wait until %s", tm, tm)
+		_, _ = w.Write([]byte(msg))
 	})
 	r.HandleFunc("/repos/{org}/{repo}/hooks", func(w http.ResponseWriter, req *http.Request) {
 		page := req.URL.Query().Get("page")
