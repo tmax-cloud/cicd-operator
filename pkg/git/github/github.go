@@ -443,7 +443,24 @@ func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
 	tlsConfig := c.IntegrationConfig.GetTLSConfig()
 
-	return git.RequestHTTP(method, apiURL, c.header, data, tlsConfig)
+	body, header, err := git.RequestHTTP(method, apiURL, c.header, data, tlsConfig)
+
+	if err != nil {
+		if isRateLimit, unixTime := CheckRateLimit(string(body), header); isRateLimit {
+			rateLimitErr := fmt.Errorf("unixtime::%s. Rate limit exceeded, code %s. Please increase the limit or wait until reset",
+				unixTime, strings.Split(strings.Split(err.Error(), ", code ")[1], ",")[0])
+			return body, header, rateLimitErr
+		}
+	}
+	return body, header, err
+}
+
+// CheckRateLimit checks if the error is a rate limit exceeded error
+func CheckRateLimit(msg string, header http.Header) (bool, string) {
+	if strings.Contains(msg, "API rate limit exceeded") {
+		return true, header.Get("X-RateLimit-Reset")
+	}
+	return false, ""
 }
 
 // IsValidPayload validates the webhook payload
