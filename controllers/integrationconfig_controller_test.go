@@ -53,6 +53,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 		preRegisteredWebhooks []string
 		scheme                *runtime.Scheme
 
+		doRateLimit            bool
 		errorOccurs            bool
 		errorMessage           string
 		expectedWebhooks       []string
@@ -72,6 +73,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			scheme:               s,
+			doRateLimit:          false,
 			expectedFinalizers:   []string{finalizer},
 			expectedReadyStatus:  metav1.ConditionFalse,
 			expectedReadyReason:  "NotReady",
@@ -93,6 +95,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			scheme:                 s,
+			doRateLimit:            false,
 			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
 			expectedFinalizers:     []string{finalizer},
 			expectedWebhookStatus:  metav1.ConditionTrue,
@@ -117,8 +120,9 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			scheme:     s,
-			notApplied: true,
+			scheme:      s,
+			doRateLimit: false,
+			notApplied:  true,
 		},
 		"getError": {
 			ic: &cicdv1.IntegrationConfig{
@@ -137,6 +141,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			},
 			notApplied:   true,
 			scheme:       sNoCicd,
+			doRateLimit:  false,
 			errorOccurs:  true,
 			errorMessage: "no kind is registered for the type v1.IntegrationConfig in scheme \"pkg/runtime/scheme.go:100\"",
 		},
@@ -163,6 +168,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			scheme:                 s,
+			doRateLimit:            false,
 			expectedFinalizers:     []string{finalizer},
 			expectedWebhookStatus:  metav1.ConditionTrue,
 			expectedWebhookReason:  "Registered",
@@ -188,6 +194,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			scheme:                 s,
+			doRateLimit:            false,
 			expectedFinalizers:     []string{finalizer},
 			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
 			expectedWebhookStatus:  metav1.ConditionTrue,
@@ -213,6 +220,7 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			scheme:                 sNoCore,
+			doRateLimit:            false,
 			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
 			expectedFinalizers:     []string{finalizer},
 			expectedWebhookStatus:  metav1.ConditionTrue,
@@ -221,6 +229,31 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			expectedReadyStatus:    metav1.ConditionFalse,
 			expectedReadyReason:    "CannotCreateAccount",
 			expectedReadyMessage:   "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:100\"",
+		},
+		"rateLimitError": {
+			ic: &cicdv1.IntegrationConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-rate-limit",
+					Namespace:  "test-ns",
+					Finalizers: []string{finalizer},
+				},
+				Spec: cicdv1.IntegrationConfigSpec{
+					Git: cicdv1.GitConfig{
+						Type:       cicdv1.GitTypeFake,
+						Repository: "test-repo",
+						Token:      &cicdv1.GitToken{Value: "test-tkn"},
+					},
+				},
+			},
+			scheme:                 s,
+			doRateLimit:            true,
+			expectedFinalizers:     []string{finalizer},
+			expectedWebhookStatus:  metav1.ConditionFalse,
+			expectedWebhookReason:  "webhookRegisterFailed",
+			expectedWebhookMessage: "Rate limit exceeded",
+			expectedReadyStatus:    metav1.ConditionFalse,
+			expectedReadyReason:    "NotReady",
+			expectedReadyMessage:   "Not ready",
 		},
 	}
 
@@ -277,7 +310,11 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 					require.NotNil(t, webhookCond)
 					require.Equal(t, c.expectedWebhookStatus, webhookCond.Status)
 					require.Equal(t, c.expectedWebhookReason, webhookCond.Reason)
-					require.Equal(t, c.expectedWebhookMessage, webhookCond.Message)
+					if c.doRateLimit {
+						require.Contains(t, webhookCond.Message, c.expectedWebhookMessage)
+					} else {
+						require.Equal(t, c.expectedWebhookMessage, webhookCond.Message)
+					}
 				}
 
 				readyCond := meta.FindStatusCondition(result.Status.Conditions, cicdv1.IntegrationConfigConditionReady)
@@ -509,6 +546,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 		ic                      *cicdv1.IntegrationConfig
 		preRegisteredWebhookURL string
 
+		doRateLimit        bool
 		expectedWebhookURL string
 		expectedStatus     metav1.ConditionStatus
 		expectedReason     string
@@ -528,6 +566,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 					},
 				},
 			},
+			doRateLimit:        false,
 			expectedWebhookURL: "http://cicd-webhook.com/webhook/test-ns/test-ic",
 			expectedStatus:     metav1.ConditionTrue,
 			expectedReason:     "Registered",
@@ -546,6 +585,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 					},
 				},
 			},
+			doRateLimit:        false,
 			expectedWebhookURL: "",
 			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "noGitToken",
@@ -565,6 +605,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 					},
 				},
 			},
+			doRateLimit:        false,
 			expectedWebhookURL: "",
 			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "gitCliErr",
@@ -584,6 +625,7 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 					},
 				},
 			},
+			doRateLimit:        false,
 			expectedWebhookURL: "",
 			expectedStatus:     metav1.ConditionFalse,
 			expectedReason:     "webhookRegisterFailed",
@@ -604,10 +646,32 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 				},
 			},
 			preRegisteredWebhookURL: "http://cicd-webhook.com/webhook/test-ns/test-ic",
+			doRateLimit:             false,
 			expectedWebhookURL:      "",
 			expectedStatus:          metav1.ConditionFalse,
 			expectedReason:          "webhookRegisterFailed",
 			expectedMessage:         "same webhook has already registered",
+		},
+		"rateLimitError": {
+			ic: &cicdv1.IntegrationConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-rate-limit",
+					Namespace: "test-ns",
+				},
+				Spec: cicdv1.IntegrationConfigSpec{
+					Git: cicdv1.GitConfig{
+						Type:       cicdv1.GitTypeFake,
+						Repository: "test-repo",
+						Token:      &cicdv1.GitToken{Value: "test-tkn"},
+					},
+				},
+			},
+			preRegisteredWebhookURL: "http://cicd-webhook.com/webhook/test-ns/test-rate-limit",
+			doRateLimit:             true,
+			expectedWebhookURL:      "",
+			expectedStatus:          metav1.ConditionFalse,
+			expectedReason:          "webhookRegisterFailed",
+			expectedMessage:         "Rate limit exceeded",
 		},
 	}
 
@@ -641,7 +705,12 @@ func TestIntegrationConfigReconciler_setWebhookRegisteredCond(t *testing.T) {
 			require.NotNil(t, cond)
 			require.Equal(t, c.expectedStatus, cond.Status)
 			require.Equal(t, c.expectedReason, cond.Reason)
-			require.Equal(t, c.expectedMessage, cond.Message)
+
+			if c.doRateLimit {
+				require.Contains(t, cond.Message, c.expectedMessage)
+			} else {
+				require.Equal(t, c.expectedMessage, cond.Message)
+			}
 		})
 	}
 }

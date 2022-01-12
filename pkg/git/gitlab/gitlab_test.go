@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/bmizerany/assert"
 	"github.com/gorilla/mux"
@@ -41,6 +43,24 @@ const (
 )
 
 var serverURL string
+
+func TestClient_CheckRateLimit(t *testing.T) {
+	req, _ := http.NewRequest("GET", "", nil)
+	testTime := strconv.FormatInt(time.Now().Unix(), 10)
+
+	// GitLab test
+	msg := "Rate limit exceeded"
+	req.Header.Add("Ratelimit-Reset", testTime)
+	isRateLimit, unixTime := CheckRateLimit(msg, req.Header)
+	require.Equal(t, isRateLimit, true)
+	require.Equal(t, unixTime, testTime)
+
+	// Non error
+	msg = ""
+	isRateLimit, unixTime = CheckRateLimit(msg, req.Header)
+	require.Equal(t, isRateLimit, false)
+	require.Equal(t, unixTime, "")
+}
 
 func TestClient_ListWebhook(t *testing.T) {
 	c, err := testEnv()
