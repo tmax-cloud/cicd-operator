@@ -18,6 +18,7 @@ package approve
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -130,6 +131,11 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 		return h.handleApproveCancelCommand(issueComment, gitCli)
 	}
 
+	// /approve check
+	if len(command.Args) == 1 && command.Args[0] == "check" {
+		return h.handleApproveCheckCommand(issueComment, gitCli)
+	}
+
 	// Default - malformed comment
 	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateHelpComment()); err != nil {
 		return err
@@ -220,6 +226,75 @@ func (h *Handler) handleApproveCancelCommand(issueComment *git.IssueComment, git
 		return err
 	}
 	return nil
+}
+
+func (h *Handler) handleApproveCheckCommand(issueComment *git.IssueComment, gitCli git.Client) error {
+	log.Info(fmt.Sprintf("%s check approval status on %s", issueComment.Author.Name, issueComment.Issue.PullRequest.URL))
+	// Check approved label
+	labels, err := gitCli.ListLabels(issueComment.Issue.PullRequest.ID)
+	if err != nil {
+		return err
+	}
+	approveLabel := false
+	for _, label := range labels {
+		if label.Name == "approved" {
+			approveLabel = true
+			break
+		}
+	}
+	// Check approved comments
+	comments, err := gitCli.ListComments(issueComment.Issue.PullRequest.ID)
+	if err != nil {
+		return err
+	}
+
+	// sort latest comment to oldest comment
+	sort.Slice(comments, func(i, j int) bool {
+		return comments[j].Comment.CreatedAt.Before(comments[i].Comment.CreatedAt)
+	})
+
+	approvedComment := checkApproval(comments)
+	// Sync approval label with comments
+	if err = h.syncApproval(approveLabel, approvedComment, issueComment, gitCli); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h *Handler) syncApproval(label, comment bool, issueComment *git.IssueComment, gitCli git.Client) error {
+	if comment && !label {
+		if err := h.handleApproveCommand(issueComment, gitCli); err != nil {
+			return err
+		}
+	}
+	if !comment && label {
+		if err := h.handleApproveCancelCommand(issueComment, gitCli); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkApproval(comments []git.IssueComment) bool {
+	var comment git.IssueComment
+	for _, comment = range comments {
+		if comment.ReviewState == git.PullRequestReviewStateApproved {
+			return true
+		}
+		if comment.ReviewState == git.PullRequestReviewStateUnapproved {
+			return false
+		}
+		commands := chatops.ExtractCommands(comment.Comment.Body)
+		for _, command := range commands {
+			if command.Type == "approve" && len(command.Args) == 0 {
+				return true
+			}
+			if command.Type == "approve" && len(command.Args) == 1 && command.Args[0] == "cancel" {
+				return false
+			}
+		}
+	}
+	return false
 }
 
 // authorize decides if the sender is authorized to approve the PR

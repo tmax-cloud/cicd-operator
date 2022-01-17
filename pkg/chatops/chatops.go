@@ -53,7 +53,7 @@ func (c *chatOps) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfig)
 	}
 
 	// Extract commands from comment and call handler
-	commands := c.extractCommands(issueComment.Comment.Body)
+	commands := ExtractCommands(issueComment.Comment.Body)
 	for _, command := range commands {
 		handler, ok := c.handlers[command.Type]
 		if !ok {
@@ -67,8 +67,8 @@ func (c *chatOps) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfig)
 	return nil
 }
 
-// extractCommands extracts commands (i.e. /[a-z], e.g., /test /retest /assign) from the comment body
-func (c *chatOps) extractCommands(comment string) []Command {
+// ExtractCommands extracts commands (i.e. /[a-z], e.g., /test /retest /assign) from the comment body
+func ExtractCommands(comment string) []Command {
 	var commands []Command
 
 	lines := strings.Split(comment, "\n")

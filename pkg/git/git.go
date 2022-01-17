@@ -44,6 +44,7 @@ type Client interface {
 	// Comments
 
 	RegisterComment(issueType IssueType, issueNo int, body string) error
+	ListComments(issueNo int) ([]IssueComment, error)
 
 	// Pull Request
 
@@ -56,6 +57,7 @@ type Client interface {
 	// Issue Labels
 
 	SetLabel(issueType IssueType, id int, label string) error
+	ListLabels(id int) ([]IssueLabel, error)
 	DeleteLabel(issueType IssueType, id int, label string) error
 
 	// Branch

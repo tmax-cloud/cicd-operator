@@ -16,6 +16,11 @@
 
 package github
 
+import (
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
 // UserInfo is a body of user get API
 type UserInfo struct {
 	ID       int    `json:"id"`
@@ -96,4 +101,17 @@ type CommitResponse struct {
 			Email string `json:"email"`
 		} `json:"committer"`
 	} `json:"commit"`
+}
+
+// CommentResponse is a comment list response
+type CommentResponse struct {
+	Body      string   `json:"body"`
+	CreatedAt *v1.Time `json:"created_at"`
+}
+
+// ReviewResponse is a review list response
+type ReviewResponse struct {
+	Body        string                     `json:"body"`
+	SubmittedAt *v1.Time                   `json:"submitted_at"`
+	State       git.PullRequestReviewState `json:"state"`
 }

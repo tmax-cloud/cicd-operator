@@ -226,6 +226,19 @@ func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) erro
 	return nil
 }
 
+// ListComments lists comments of the issue id
+func (c *Client) ListComments(issueNo int) ([]git.IssueComment, error) {
+	if Repos == nil {
+		return nil, fmt.Errorf("repos not initialized")
+	}
+	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
+	if !repoExist {
+		return nil, fmt.Errorf("404 no such repository")
+	}
+
+	return repo.Comments[issueNo], nil
+}
+
 // ListPullRequests gets pull request list
 func (c *Client) ListPullRequests(_ bool) ([]git.PullRequest, error) {
 	if Repos == nil {
@@ -339,6 +352,19 @@ func (c *Client) ListPullRequestCommits(id int) ([]git.Commit, error) {
 	}
 
 	return commits, nil
+}
+
+// ListLabels lists labels of pr id
+func (c *Client) ListLabels(id int) ([]git.IssueLabel, error) {
+	if Repos == nil {
+		return nil, fmt.Errorf("repos not initialized")
+	}
+	repo, repoExist := Repos[c.IntegrationConfig.Spec.Git.Repository]
+	if !repoExist {
+		return nil, fmt.Errorf("404 no such repository")
+	}
+
+	return repo.PullRequests[id].Labels, nil
 }
 
 // SetLabel sets label to the issue id

@@ -210,6 +210,83 @@ func TestChatOps_handleApprove(t *testing.T) {
 				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
 			},
 		},
+		"successApprovalCheckAddLabel": {
+			command: chatops.Command{Type: "approve", Args: []string{"check"}},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				gitfake.Repos[testRepo].Comments[testPRID] = append(gitfake.Repos[testRepo].Comments[testPRID], git.IssueComment{Comment: git.Comment{Body: "/approve"}})
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 2, "Comment length")
+				require.Equal(t, generateApprovedComment(testUser2Name), repo.Comments[testPRID][1].Comment.Body, "Successfully approved comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 1, "Label length")
+			},
+		},
+		"successApprovalCheckDeleteLabel": {
+			command: chatops.Command{Type: "approve", Args: []string{"check"}},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				gitfake.Repos[testRepo].PullRequests[testPRID].Labels = append(gitfake.Repos[testRepo].PullRequests[testPRID].Labels, git.IssueLabel{Name: "approved"})
+				gitfake.Repos[testRepo].Comments[testPRID] = append(gitfake.Repos[testRepo].Comments[testPRID], git.IssueComment{Comment: git.Comment{Body: "/approve cancel"}}, git.IssueComment{Comment: git.Comment{Body: "/approve"}})
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 3, "Comment length")
+				require.Equal(t, generateApproveCanceledComment(testUser2Name), repo.Comments[testPRID][2].Comment.Body, "Successfully removed approval comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
+			},
+		},
+		"successApprovalCheckAddLabelByState": {
+			command: chatops.Command{Type: "approve", Args: []string{"check"}},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				gitfake.Repos[testRepo].Comments[testPRID] = append(gitfake.Repos[testRepo].Comments[testPRID], git.IssueComment{ReviewState: git.PullRequestReviewStateApproved}, git.IssueComment{Comment: git.Comment{Body: "/approve cancel"}})
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 3, "Comment length")
+				require.Equal(t, generateApprovedComment(testUser2Name), repo.Comments[testPRID][2].Comment.Body, "Successfully approved comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 1, "Label length")
+			},
+		},
+		"successApprovalCheckDeleteLabelByState": {
+			command: chatops.Command{Type: "approve", Args: []string{"check"}},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				gitfake.Repos[testRepo].PullRequests[testPRID].Labels = append(gitfake.Repos[testRepo].PullRequests[testPRID].Labels, git.IssueLabel{Name: "approved"})
+				gitfake.Repos[testRepo].Comments[testPRID] = append(gitfake.Repos[testRepo].Comments[testPRID], git.IssueComment{ReviewState: git.PullRequestReviewStateUnapproved}, git.IssueComment{Comment: git.Comment{Body: "/approve"}})
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 3, "Comment length")
+				require.Equal(t, generateApproveCanceledComment(testUser2Name), repo.Comments[testPRID][2].Comment.Body, "Successfully removed approval comment")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 0, "Label length")
+			},
+		},
+		"successApprovalCheckDoNothing": {
+			command: chatops.Command{Type: "approve", Args: []string{"check"}},
+			preFunc: func(wh *git.Webhook) {
+				gitfake.Repos[testRepo].UserCanWrite[testUser2Name] = true
+				gitfake.Repos[testRepo].PullRequests[testPRID].Labels = append(gitfake.Repos[testRepo].PullRequests[testPRID].Labels, git.IssueLabel{Name: "approved"})
+				gitfake.Repos[testRepo].Comments[testPRID] = append(gitfake.Repos[testRepo].Comments[testPRID], git.IssueComment{Comment: git.Comment{Body: "/approve"}})
+				wh.Sender = *gitfake.Users[testUser2Name]
+				wh.IssueComment.Author = wh.Sender
+			},
+			verifyFunc: func(t *testing.T) {
+				repo := gitfake.Repos[testRepo]
+				require.Len(t, repo.Comments[testPRID], 1, "Comment length")
+				require.Len(t, repo.PullRequests[testPRID].Labels, 1, "Label length")
+			},
+		},
 	}
 
 	for name, c := range tc {
