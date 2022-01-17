@@ -273,6 +273,31 @@ func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, body stri
 	return nil
 }
 
+// ListComments lists comments of the issue id
+// TODO: Consider Gitlab approve
+func (c *Client) ListComments(issueNo int) ([]git.IssueComment, error) {
+	var comments []git.IssueComment
+	apiUrl := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%d/notes", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), issueNo)
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	var noteResponses []NoteResponse
+	if err := json.Unmarshal(raw, &noteResponses); err != nil {
+		return nil, err
+	}
+	for _, noteResponse := range noteResponses {
+		comments = append(comments, git.IssueComment{
+			Comment: git.Comment{
+				Body:      noteResponse.Body,
+				CreatedAt: noteResponse.CreatedAt,
+			},
+		})
+	}
+	return comments, nil
+}
+
 // ListPullRequests gets pull request list
 func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests?with_merge_status_recheck=true", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository))
@@ -457,6 +482,29 @@ func (c *Client) SetLabel(issueType git.IssueType, id int, label string) error {
 	}
 
 	return nil
+}
+
+// ListLabels lists labels of pr id
+func (c *Client) ListLabels(id int) ([]git.IssueLabel, error) {
+	apiUrl := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%d", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), id)
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &MergeRequest{}
+	if err := json.Unmarshal(raw, resp); err != nil {
+		return nil, err
+	}
+
+	var issueLabels []git.IssueLabel
+	for _, label := range resp.Labels {
+		issueLabels = append(issueLabels, git.IssueLabel{
+			Name: label,
+		})
+	}
+	return issueLabels, nil
 }
 
 // DeleteLabel deletes label from the issue id

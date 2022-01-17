@@ -16,6 +16,8 @@
 
 package gitlab
 
+import v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 // UserInfo is a body of user get API
 type UserInfo struct {
 	ID          int    `json:"id"`
@@ -108,4 +110,10 @@ type CommitResponse struct {
 	AuthorEmail    string `json:"author_email"`
 	CommitterName  string `json:"committer_name"`
 	CommitterEmail string `json:"committer_email"`
+}
+
+// NoteResponse is a note list response
+type NoteResponse struct {
+	Body      string   `json:"body"`
+	CreatedAt *v1.Time `json:"created_at"`
 }

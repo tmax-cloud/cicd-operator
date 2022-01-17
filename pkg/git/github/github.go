@@ -243,6 +243,68 @@ func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) erro
 	return nil
 }
 
+// ListComments lists comments of the issue id
+func (c *Client) ListComments(issueNo int) ([]git.IssueComment, error) {
+	var comments []git.IssueComment
+
+	issueApiUrl := fmt.Sprintf("%s/repos/%s/issues/%d/comments", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, issueNo)
+	prCommentApiUrl := fmt.Sprintf("%s/repos/%s/pulls/%d/comments", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, issueNo)
+	prReviewApiUrl := fmt.Sprintf("%s/repos/%s/pulls/%d/reviews", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, issueNo)
+
+	raw, _, err := c.requestHTTP(http.MethodGet, issueApiUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	var issueComments []CommentResponse
+	if err := json.Unmarshal(raw, &issueComments); err != nil {
+		return nil, err
+	}
+	for _, issueComment := range issueComments {
+		comments = append(comments, git.IssueComment{
+			Comment: git.Comment{
+				Body:      issueComment.Body,
+				CreatedAt: issueComment.CreatedAt,
+			},
+		})
+	}
+
+	raw, _, err = c.requestHTTP(http.MethodGet, prCommentApiUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	var prComments []CommentResponse
+	if err = json.Unmarshal(raw, &prComments); err != nil {
+		return nil, err
+	}
+	for _, prComment := range prComments {
+		comments = append(comments, git.IssueComment{
+			Comment: git.Comment{
+				Body:      prComment.Body,
+				CreatedAt: prComment.CreatedAt,
+			},
+		})
+	}
+
+	raw, _, err = c.requestHTTP(http.MethodGet, prReviewApiUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	var prReviews []ReviewResponse
+	if err = json.Unmarshal(raw, &prReviews); err != nil {
+		return nil, err
+	}
+	for _, prReview := range prReviews {
+		comments = append(comments, git.IssueComment{
+			Comment: git.Comment{
+				Body:      prReview.Body,
+				CreatedAt: prReview.SubmittedAt,
+			},
+			ReviewState: prReview.State,
+		})
+	}
+	return comments, nil
+}
+
 // ListPullRequests gets pull request list
 func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 	apiURL := fmt.Sprintf("%s/repos/%s/pulls", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository)
@@ -387,6 +449,22 @@ func (c *Client) SetLabel(_ git.IssueType, id int, label string) error {
 	}
 
 	return nil
+}
+
+// ListLabels lists labels of pr id
+func (c *Client) ListLabels(id int) ([]git.IssueLabel, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/issues/%d/labels", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, id)
+
+	raw, _, err := c.requestHTTP(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []git.IssueLabel
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 // DeleteLabel deletes label from the issue id
