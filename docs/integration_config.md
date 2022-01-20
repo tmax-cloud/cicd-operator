@@ -199,7 +199,7 @@ spec:
       - name: test
         ...
         tektonWhen:
-        - input: "$(tasks.task-name.results.result-name)"
+        - input: "$(tasks.<task-name>.results.<result-name>)"
           operator: in
           values: ["true"]
 
@@ -210,7 +210,7 @@ spec:
       - name: test
         ...
         tektonWhen:
-        - input: "$(params.param-name)"
+        - input: "$(params.<param-name>)"
           operator: in
           values: ["true"]
 ```
