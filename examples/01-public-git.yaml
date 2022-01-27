@@ -5,13 +5,13 @@ metadata:
 spec:
   git: # Configs for target repository
     type: github # Available : github, gitlab
-    apiUrl: # url for self-served git servers (e.g. http://my.github). it is optional. 
+    apiUrl: "" # url for self-served git servers (e.g. http://my.github). it is optional.
     repository: tmax-cloud/cicd-sample-repo # pattern is {repo-owner}/{repo-name}
     token:
       valueFrom:
         secretKeyRef:
-          name: git-token # FIY : 00-git-token.yaml 
+          name: git-token # FIY : 00-git-token.yaml
           key: token # FIY : 00-git-token.yaml
   jobs:
-    preSubmit:
-    postSubmit:
+    preSubmit: []
+    postSubmit: []

@@ -5,11 +5,11 @@ metadata:
 spec:
   git:
     type: github
-    apiUrl: 
+    apiUrl: ""
     repository: tmax-cloud/cicd-sample-repo
   jobs:
-    preSubmit:
-    postSubmit:
+    preSubmit: []
+    postSubmit: []
 
 # 
 # It will be ready but skipped to register webhook.

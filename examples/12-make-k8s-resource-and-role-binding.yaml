@@ -46,7 +46,7 @@ metadata:
 spec:
   git:
     type: github
-    apiUrl: 
+    apiUrl: ""
     repository: tmax-cloud/cicd-sample-repo
     token:
       valueFrom:

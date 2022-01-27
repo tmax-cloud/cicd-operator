@@ -303,7 +303,7 @@ Useful for configuring Docker hub secrets.
 ```yaml
 spec:
   secrets:
-    - my-docker-hub-secret
+    - name: my-docker-hub-secret
 ```
 
 ## Configuring `workspaces`
