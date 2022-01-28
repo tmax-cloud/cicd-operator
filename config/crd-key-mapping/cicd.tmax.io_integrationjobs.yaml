@@ -2534,6 +2534,17 @@ spec:
                 - "repository"
                 - "sender"
                 type: "object"
+              saRef:
+                description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.saRef"
+                properties:
+                  name:
+                    type: "string"
+                  tokenName:
+                    type: "string"
+                required:
+                - "name"
+                - "tokenName"
+                type: "object"
               workspaces:
                 description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.spec.properties.workspaces"
                 items:
@@ -2801,6 +2812,7 @@ spec:
             - "id"
             - "jobs"
             - "refs"
+            - "saRef"
             type: "object"
           status:
             description: "%cicd.tmax.io_integrationjobs.yaml.spec.versions.schema.openAPIV3Schema.properties.status"

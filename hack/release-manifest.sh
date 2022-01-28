@@ -28,7 +28,7 @@ CONFIG_DIR="$PROJECT_DIR/config"
 
 RELEASE_MANIFEST="$CONFIG_DIR/release.yaml"
 
-TARGETS=("$CONFIG_DIR/controller/controller.yaml" "$CONFIG_DIR/blocker/blocker.yaml" "$CONFIG_DIR/rbac/role.yaml" "$CONFIG_DIR/rbac/role_binding.yaml" "$CONFIG_DIR/apiservice" "$CONFIG_DIR/templates" "$CONFIG_DIR/crd")
+TARGETS=("$CONFIG_DIR/controller/controller.yaml" "$CONFIG_DIR/blocker/blocker.yaml" "$CONFIG_DIR/rbac/role.yaml" "$CONFIG_DIR/rbac/role_binding.yaml" "$CONFIG_DIR/rbac/service_account.yaml" "$CONFIG_DIR/apiservice" "$CONFIG_DIR/templates" "$CONFIG_DIR/crd-key-mapping")
 
 function append_target(){
   local TARGET="$1"

@@ -3946,6 +3946,8 @@ spec:
                   - "type"
                   type: "object"
                 type: "array"
+              saSecretName:
+                type: "string"
               secrets:
                 type: "string"
             required:
