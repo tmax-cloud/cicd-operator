@@ -161,10 +161,12 @@ func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.Pip
 	task := &tektonv1beta1.PipelineTask{Name: j.Name}
 
 	var resources []tektonv1beta1.TaskResourceBinding
+	volumes := generateSATokenVolumes(job.Spec.SARef.TokenName)
+	volumeMounts := generateSATokenVolumeMounts(job.Spec.SARef.TokenName)
 
 	// Handle TektonTask/Approval/Email
 	if j.TektonTask != nil {
-		res, err := generateTektonTaskRunTask(j, task)
+		res, err := generateTektonTaskRunTask(j, task, volumes, volumeMounts)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -177,13 +179,14 @@ func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.Pip
 		generateSlackRunTask(job, j, task)
 	} else {
 		// Steps
-		steps, err := generateSteps(j)
+		steps, err := generateSteps(j, volumeMounts)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		task.TaskSpec = &tektonv1beta1.EmbeddedTask{}
 		task.TaskSpec.Steps = steps
+		task.TaskSpec.Volumes = volumes
 
 		// Workspaces
 		var wsDefs []tektonv1beta1.WorkspaceDeclaration
@@ -206,11 +209,36 @@ func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.Pip
 	return task, resources, nil
 }
 
-func generateSteps(j *cicdv1.Job) ([]tektonv1beta1.Step, error) {
+func generateSATokenVolumes(name string) []corev1.Volume {
+	var mode int32 = 0420
+	return []corev1.Volume{
+		{
+			Name: name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					DefaultMode: &mode,
+					SecretName:  name,
+				},
+			},
+		},
+	}
+}
+
+func generateSATokenVolumeMounts(name string) []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{
+			MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+			Name:      name,
+			ReadOnly:  true,
+		},
+	}
+}
+
+func generateSteps(j *cicdv1.Job, mounts []corev1.VolumeMount) ([]tektonv1beta1.Step, error) {
 	var steps []tektonv1beta1.Step
 
 	if !j.SkipCheckout {
-		steps = append(steps, gitCheckout())
+		steps = append(steps, gitCheckout(mounts))
 	}
 
 	step := tektonv1beta1.Step{}
@@ -223,6 +251,7 @@ func generateSteps(j *cicdv1.Job) ([]tektonv1beta1.Step, error) {
 		step.WorkingDir = DefaultWorkingDir
 	}
 	step.Script = j.Script
+	step.VolumeMounts = mounts
 	steps = append(steps, step)
 	return steps, nil
 }

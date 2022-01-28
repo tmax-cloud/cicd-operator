@@ -80,8 +80,9 @@ type IntegrationConfigJobs struct {
 // IntegrationConfigStatus defines the observed state of IntegrationConfig
 type IntegrationConfigStatus struct {
 	// Conditions of IntegrationConfig
-	Conditions status.Conditions `json:"conditions"`
-	Secrets    string            `json:"secrets,omitempty"`
+	Conditions   status.Conditions `json:"conditions"`
+	Secrets      string            `json:"secrets,omitempty"`
+	SASecretName string            `json:"saSecretName,omitempty"`
 }
 
 // +kubebuilder:object:root=true

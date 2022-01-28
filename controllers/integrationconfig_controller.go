@@ -18,6 +18,9 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -71,8 +74,10 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	cond := instance.Status.Conditions.GetCondition(cicdv1.IntegrationConfigConditionReady)
 	if cond == nil {
 		cond = &status.Condition{
-			Type:   cicdv1.IntegrationConfigConditionReady,
-			Status: corev1.ConditionFalse,
+			Type:    cicdv1.IntegrationConfigConditionReady,
+			Status:  corev1.ConditionFalse,
+			Message: "",
+			Reason:  "",
 		}
 	}
 
@@ -130,6 +135,14 @@ func (r *IntegrationConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		cond.Reason = "CannotCreateSecret"
 		cond.Message = err.Error()
 		return ctrl.Result{}, nil
+	}
+
+	if err := r.setServiceAccountTokenName(instance); err != nil {
+		log.Error(err, "")
+		cond.Status = corev1.ConditionFalse
+		cond.Reason = "CannotLoadTokenSecret"
+		cond.Message = err.Error()
+		return ctrl.Result{RequeueAfter: 1 * time.Second, Requeue: true}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -342,6 +355,21 @@ func (r *IntegrationConfigReconciler) updateGitSecret(instance *cicdv1.Integrati
 	secret.Data[corev1.BasicAuthPasswordKey] = []byte(token)
 
 	return needPatch, nil
+}
+
+// Set service account token secret name
+func (r *IntegrationConfigReconciler) setServiceAccountTokenName(instance *cicdv1.IntegrationConfig) error {
+	sa := &corev1.ServiceAccount{}
+	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: cicdv1.GetServiceAccountName(instance.Name), Namespace: instance.Namespace}, sa); err != nil {
+		return err
+	}
+	for _, secret := range sa.Secrets {
+		if strings.Contains(secret.Name, instance.Name+"-sa-token") {
+			instance.Status.SASecretName = secret.Name
+			return nil
+		}
+	}
+	return fmt.Errorf("no token secret loaded")
 }
 
 // Create service account for pipeline run

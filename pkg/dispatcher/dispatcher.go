@@ -91,6 +91,10 @@ func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.
 				Name: config.Name,
 				Type: cicdv1.JobTypePreSubmit,
 			},
+			SARef: cicdv1.ServiceAccountRef{
+				Name:      cicdv1.GetServiceAccountName(config.Name),
+				TokenName: config.Status.SASecretName,
+			},
 			ID:         jobID,
 			Jobs:       jobs,
 			Workspaces: config.Spec.Workspaces,
@@ -126,6 +130,10 @@ func GeneratePostSubmit(push *git.Push, repo *git.Repository, sender *git.User, 
 			ConfigRef: cicdv1.IntegrationJobConfigRef{
 				Name: config.Name,
 				Type: cicdv1.JobTypePostSubmit,
+			},
+			SARef: cicdv1.ServiceAccountRef{
+				Name:      cicdv1.GetServiceAccountName(config.Name),
+				TokenName: config.Status.SASecretName,
 			},
 			ID:         jobID,
 			Jobs:       jobs,

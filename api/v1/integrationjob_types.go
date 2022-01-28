@@ -41,6 +41,9 @@ type IntegrationJobSpec struct {
 	// ConfigRef refers to the corresponding IntegrationConfig
 	ConfigRef IntegrationJobConfigRef `json:"configRef"`
 
+	// SARef refers to the corresponding ServiceAccount
+	SARef ServiceAccountRef `json:"saRef"`
+
 	// ID is a unique random string for the IntegrationJob
 	ID string `json:"id"`
 
@@ -55,6 +58,12 @@ type IntegrationJobSpec struct {
 
 	// PodTemplate for the TaskRun pods. Same as tekton's pod template
 	PodTemplate *pod.Template `json:"podTemplate,omitempty"`
+}
+
+// ServiceAccountRef refers to the ServiceAccount
+type ServiceAccountRef struct {
+	Name      string `json:"name"`
+	TokenName string `json:"tokenName"`
 }
 
 // IntegrationJobConfigRef refers to the IntegrationConfig

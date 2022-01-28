@@ -23,6 +23,7 @@ import (
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"strings"
 )
@@ -31,7 +32,7 @@ const (
 	catalogURL = "https://raw.githubusercontent.com/tektoncd/catalog/master/task/%s/%s/%s.yaml"
 )
 
-func generateTektonTaskRunTask(j *cicdv1.Job, target *tektonv1beta1.PipelineTask) ([]tektonv1beta1.TaskResourceBinding, error) {
+func generateTektonTaskRunTask(j *cicdv1.Job, target *tektonv1beta1.PipelineTask, volumes []corev1.Volume, volumeMounts []corev1.VolumeMount) ([]tektonv1beta1.TaskResourceBinding, error) {
 	taskSpec := j.TektonTask
 
 	// Ref local or catalog
@@ -49,6 +50,10 @@ func generateTektonTaskRunTask(j *cicdv1.Job, target *tektonv1beta1.PipelineTask
 		spec, err := fetchCatalog(catName, catVer)
 		if err != nil {
 			return nil, err
+		}
+		spec.Volumes = append(spec.Volumes, volumes...)
+		for i := range spec.Steps {
+			spec.Steps[i].VolumeMounts = append(spec.Steps[i].VolumeMounts, volumeMounts...)
 		}
 		target.TaskSpec = &tektonv1beta1.EmbeddedTask{TaskSpec: *spec}
 	} else {

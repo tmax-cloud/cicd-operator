@@ -3796,6 +3796,17 @@ spec:
                 - repository
                 - sender
                 type: object
+              saRef:
+                description: SARef refers to the corresponding ServiceAccount
+                properties:
+                  name:
+                    type: string
+                  tokenName:
+                    type: string
+                required:
+                - name
+                - tokenName
+                type: object
               workspaces:
                 description: Workspaces list
                 items:
@@ -4197,6 +4208,7 @@ spec:
             - id
             - jobs
             - refs
+            - saRef
             type: object
           status:
             description: IntegrationJobStatus defines the observed state of IntegrationJob

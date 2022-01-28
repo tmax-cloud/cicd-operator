@@ -28,7 +28,7 @@ const (
 	gitCheckoutMemReq = "100Mi"
 )
 
-func gitCheckout() tektonv1beta1.Step {
+func gitCheckout(mounts []corev1.VolumeMount) tektonv1beta1.Step {
 	step := tektonv1beta1.Step{}
 
 	step.Name = "git-clone"
@@ -74,6 +74,7 @@ git submodule update --init --recursive
 		Limits:   resources,
 		Requests: resources,
 	}
+	step.VolumeMounts = mounts
 
 	return step
 }
