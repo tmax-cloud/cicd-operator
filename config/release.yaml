@@ -98,7 +98,7 @@ spec:
       containers:
       - command:
         - /controller
-        image: docker.io/tmaxcloudck/cicd-operator:v0.4.2-beta
+        image: docker.io/tmaxcloudck/cicd-operator:v0.4.2-release2
         imagePullPolicy: Always
         name: manager
         resources:
@@ -170,7 +170,7 @@ spec:
       containers:
         - command:
             - /blocker
-          image: docker.io/tmaxcloudck/cicd-blocker:v0.4.2-beta
+          image: docker.io/tmaxcloudck/cicd-blocker:v0.4.2-release2
           imagePullPolicy: Always
           name: manager
           resources:
@@ -500,7 +500,8 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cicd-service-account
-  namespace: cicd-system---
+  namespace: cicd-system
+---
 apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
