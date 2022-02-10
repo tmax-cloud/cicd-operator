@@ -37,7 +37,7 @@ run-cicdctl:
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) crd rbac:roleName=cicd-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd
+	$(CONTROLLER_GEN) crd:maxDescLen=0 rbac:roleName=cicd-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd
 	./hack/release-manifest.sh $(VERSION) $(REGISTRY)
 
 # Run go fmt against code
