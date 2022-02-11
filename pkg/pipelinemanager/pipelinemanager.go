@@ -92,7 +92,7 @@ func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 	// Generate Tasks
 	var tasks []tektonv1beta1.PipelineTask
 	for _, j := range job.Spec.Jobs {
-		taskSpec, resources, err := generateTask(job, &j)
+		taskSpec, resources, err := p.generateTask(job, &j)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +157,7 @@ func (p *pipelineManager) convertResourceToSpec(binding tektonv1beta1.PipelineRe
 	}, nil
 }
 
-func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.PipelineTask, []tektonv1beta1.TaskResourceBinding, error) {
+func (p *pipelineManager) generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.PipelineTask, []tektonv1beta1.TaskResourceBinding, error) {
 	task := &tektonv1beta1.PipelineTask{Name: j.Name}
 
 	var resources []tektonv1beta1.TaskResourceBinding
@@ -166,7 +166,7 @@ func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.Pip
 
 	// Handle TektonTask/Approval/Email
 	if j.TektonTask != nil {
-		res, err := generateTektonTaskRunTask(j, task, volumes, volumeMounts)
+		res, err := p.generateTektonTaskRunTask(j, job.Namespace, task, volumes, volumeMounts)
 		if err != nil {
 			return nil, nil, err
 		}

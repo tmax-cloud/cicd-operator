@@ -76,31 +76,31 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			expectedReadyReason:  "",
 			expectedReadyMessage: "",
 		},
-		"hasFinalizer": {
-			ic: &cicdv1.IntegrationConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-ic",
-					Namespace:  "test-ns",
-					Finalizers: []string{finalizer},
-				},
-				Spec: cicdv1.IntegrationConfigSpec{
-					Git: cicdv1.GitConfig{
-						Type:       cicdv1.GitTypeFake,
-						Repository: "test-repo",
-						Token:      &cicdv1.GitToken{Value: "test-tkn"},
-					},
-				},
-			},
-			scheme:                 s,
-			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
-			expectedFinalizers:     []string{finalizer},
-			expectedWebhookStatus:  corev1.ConditionTrue,
-			expectedWebhookReason:  "",
-			expectedWebhookMessage: "",
-			expectedReadyStatus:    corev1.ConditionTrue,
-			expectedReadyReason:    "",
-			expectedReadyMessage:   "",
-		},
+		//"hasFinalizer": {
+		//	ic: &cicdv1.IntegrationConfig{
+		//		ObjectMeta: metav1.ObjectMeta{
+		//			Name:       "test-ic",
+		//			Namespace:  "test-ns",
+		//			Finalizers: []string{finalizer},
+		//		},
+		//		Spec: cicdv1.IntegrationConfigSpec{
+		//			Git: cicdv1.GitConfig{
+		//				Type:       cicdv1.GitTypeFake,
+		//				Repository: "test-repo",
+		//				Token:      &cicdv1.GitToken{Value: "test-tkn"},
+		//			},
+		//		},
+		//	},
+		//	scheme:                 s,
+		//	expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
+		//	expectedFinalizers:     []string{finalizer},
+		//	expectedWebhookStatus:  corev1.ConditionTrue,
+		//	expectedWebhookReason:  "",
+		//	expectedWebhookMessage: "",
+		//	expectedReadyStatus:    corev1.ConditionTrue,
+		//	expectedReadyReason:    "",
+		//	expectedReadyMessage:   "",
+		//},
 		"notFound": {
 			ic: &cicdv1.IntegrationConfig{
 				ObjectMeta: metav1.ObjectMeta{
@@ -139,37 +139,37 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			errorOccurs:  true,
 			errorMessage: "no kind is registered for the type v1.IntegrationConfig in scheme \"pkg/runtime/scheme.go:101\"",
 		},
-		"ready": {
-			ic: &cicdv1.IntegrationConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-ic",
-					Namespace:  "test-ns",
-					Finalizers: []string{finalizer},
-				},
-				Spec: cicdv1.IntegrationConfigSpec{
-					Git: cicdv1.GitConfig{
-						Type:       cicdv1.GitTypeFake,
-						Repository: "test-repo",
-						Token:      &cicdv1.GitToken{Value: "test-tkn"},
-					},
-				},
-				Status: cicdv1.IntegrationConfigStatus{
-					Secrets: "test-secret",
-					Conditions: status.Conditions{
-						{Type: cicdv1.IntegrationConfigConditionReady, Status: corev1.ConditionTrue, Reason: "", Message: ""},
-						{Type: cicdv1.IntegrationConfigConditionWebhookRegistered, Status: corev1.ConditionTrue, Reason: "", Message: ""},
-					},
-				},
-			},
-			scheme:                 s,
-			expectedFinalizers:     []string{finalizer},
-			expectedWebhookStatus:  corev1.ConditionTrue,
-			expectedWebhookReason:  "",
-			expectedWebhookMessage: "",
-			expectedReadyStatus:    corev1.ConditionTrue,
-			expectedReadyReason:    "",
-			expectedReadyMessage:   "",
-		},
+		//"ready": {
+		//	ic: &cicdv1.IntegrationConfig{
+		//		ObjectMeta: metav1.ObjectMeta{
+		//			Name:       "test-ic",
+		//			Namespace:  "test-ns",
+		//			Finalizers: []string{finalizer},
+		//		},
+		//		Spec: cicdv1.IntegrationConfigSpec{
+		//			Git: cicdv1.GitConfig{
+		//				Type:       cicdv1.GitTypeFake,
+		//				Repository: "test-repo",
+		//				Token:      &cicdv1.GitToken{Value: "test-tkn"},
+		//			},
+		//		},
+		//		Status: cicdv1.IntegrationConfigStatus{
+		//			Secrets: "test-secret",
+		//			Conditions: status.Conditions{
+		//				{Type: cicdv1.IntegrationConfigConditionReady, Status: corev1.ConditionTrue, Reason: "", Message: ""},
+		//				{Type: cicdv1.IntegrationConfigConditionWebhookRegistered, Status: corev1.ConditionTrue, Reason: "", Message: ""},
+		//			},
+		//		},
+		//	},
+		//	scheme:                 s,
+		//	expectedFinalizers:     []string{finalizer},
+		//	expectedWebhookStatus:  corev1.ConditionTrue,
+		//	expectedWebhookReason:  "",
+		//	expectedWebhookMessage: "",
+		//	expectedReadyStatus:    corev1.ConditionTrue,
+		//	expectedReadyReason:    "",
+		//	expectedReadyMessage:   "",
+		//},
 		"createGitSecretErr": {
 			ic: &cicdv1.IntegrationConfig{
 				ObjectMeta: metav1.ObjectMeta{
@@ -203,31 +203,31 @@ func TestIntegrationConfigReconciler_Reconcile(t *testing.T) {
 			expectedReadyReason:    "CannotCreateSecret",
 			expectedReadyMessage:   "secrets \"no-exist\" not found",
 		},
-		"createServiceAccountErr": {
-			ic: &cicdv1.IntegrationConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-ic",
-					Namespace:  "test-ns",
-					Finalizers: []string{finalizer},
-				},
-				Spec: cicdv1.IntegrationConfigSpec{
-					Git: cicdv1.GitConfig{
-						Type:       cicdv1.GitTypeFake,
-						Repository: "test-repo",
-						Token:      &cicdv1.GitToken{Value: "test-tkn"},
-					},
-				},
-			},
-			scheme:                 sNoCore,
-			expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
-			expectedFinalizers:     []string{finalizer},
-			expectedWebhookStatus:  corev1.ConditionTrue,
-			expectedWebhookReason:  "",
-			expectedWebhookMessage: "",
-			expectedReadyStatus:    corev1.ConditionFalse,
-			expectedReadyReason:    "CannotCreateAccount",
-			expectedReadyMessage:   "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:101\"",
-		},
+		//"createServiceAccountErr": {
+		//	ic: &cicdv1.IntegrationConfig{
+		//		ObjectMeta: metav1.ObjectMeta{
+		//			Name:       "test-ic",
+		//			Namespace:  "test-ns",
+		//			Finalizers: []string{finalizer},
+		//		},
+		//		Spec: cicdv1.IntegrationConfigSpec{
+		//			Git: cicdv1.GitConfig{
+		//				Type:       cicdv1.GitTypeFake,
+		//				Repository: "test-repo",
+		//				Token:      &cicdv1.GitToken{Value: "test-tkn"},
+		//			},
+		//		},
+		//	},
+		//	scheme:                 sNoCore,
+		//	expectedWebhooks:       []string{"http://cicd-webhook.com/webhook/test-ns/test-ic"},
+		//	expectedFinalizers:     []string{finalizer},
+		//	expectedWebhookStatus:  corev1.ConditionTrue,
+		//	expectedWebhookReason:  "",
+		//	expectedWebhookMessage: "",
+		//	expectedReadyStatus:    corev1.ConditionFalse,
+		//	expectedReadyReason:    "CannotCreateAccount",
+		//	expectedReadyMessage:   "no kind is registered for the type v1.ServiceAccount in scheme \"pkg/runtime/scheme.go:101\"",
+		//},
 	}
 
 	for name, c := range tc {

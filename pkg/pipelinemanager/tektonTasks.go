@@ -17,6 +17,7 @@
 package pipelinemanager
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -24,6 +25,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"strings"
 )
@@ -32,12 +34,19 @@ const (
 	catalogURL = "https://raw.githubusercontent.com/tektoncd/catalog/master/task/%s/%s/%s.yaml"
 )
 
-func generateTektonTaskRunTask(j *cicdv1.Job, target *tektonv1beta1.PipelineTask, volumes []corev1.Volume, volumeMounts []corev1.VolumeMount) ([]tektonv1beta1.TaskResourceBinding, error) {
+func (p *pipelineManager) generateTektonTaskRunTask(j *cicdv1.Job, namespace string, target *tektonv1beta1.PipelineTask, volumes []corev1.Volume, volumeMounts []corev1.VolumeMount) ([]tektonv1beta1.TaskResourceBinding, error) {
 	taskSpec := j.TektonTask
-
+	var spec *tektonv1beta1.TaskSpec
+	var err error
 	// Ref local or catalog
 	if taskSpec.TaskRef.Local != nil {
-		target.TaskRef = taskSpec.TaskRef.Local
+		// target.TaskRef = taskSpec.TaskRef.Local
+		taskRef := taskSpec.TaskRef.Local
+
+		spec, err = p.fetchLocalTask(taskRef, namespace)
+		if err != nil {
+			return nil, err
+		}
 	} else if taskSpec.TaskRef.Catalog != "" {
 		catTok := strings.Split(taskSpec.TaskRef.Catalog, "@")
 		if len(catTok) != 2 {
@@ -47,19 +56,19 @@ func generateTektonTaskRunTask(j *cicdv1.Job, target *tektonv1beta1.PipelineTask
 		catVer := catTok[1]
 
 		// Fetch from catalog
-		spec, err := fetchCatalog(catName, catVer)
+		spec, err = fetchCatalog(catName, catVer)
 		if err != nil {
 			return nil, err
 		}
-		spec.Volumes = append(spec.Volumes, volumes...)
-		for i := range spec.Steps {
-			spec.Steps[i].VolumeMounts = append(spec.Steps[i].VolumeMounts, volumeMounts...)
-		}
-		target.TaskSpec = &tektonv1beta1.EmbeddedTask{TaskSpec: *spec}
 	} else {
 		return nil, fmt.Errorf("both local task and catalog are nil")
 	}
-
+	// Manual VolumeMounts
+	spec.Volumes = append(spec.Volumes, volumes...)
+	for i := range spec.Steps {
+		spec.Steps[i].VolumeMounts = append(spec.Steps[i].VolumeMounts, volumeMounts...)
+	}
+	target.TaskSpec = &tektonv1beta1.EmbeddedTask{TaskSpec: *spec}
 	// Params
 	for _, p := range taskSpec.Params {
 		v := tektonv1beta1.ArrayOrString{}
@@ -117,6 +126,26 @@ func generateTektonTaskRunTask(j *cicdv1.Job, target *tektonv1beta1.PipelineTask
 	target.Workspaces = append(target.Workspaces, taskSpec.Workspaces...)
 
 	return resources, nil
+}
+
+func (p *pipelineManager) fetchLocalTask(taskRef *tektonv1beta1.TaskRef, namespace string) (*tektonv1beta1.TaskSpec, error) {
+	var spec *tektonv1beta1.TaskSpec
+	if taskRef.Kind == tektonv1beta1.NamespacedTaskKind {
+		task := &tektonv1beta1.Task{}
+		if err := p.Client.Get(context.Background(), types.NamespacedName{Name: taskRef.Name, Namespace: namespace}, task); err != nil {
+			return nil, err
+		}
+		spec = &task.Spec
+	} else if taskRef.Kind == tektonv1beta1.ClusterTaskKind {
+		clusterTask := &tektonv1beta1.ClusterTask{}
+		if err := p.Client.Get(context.Background(), types.NamespacedName{Name: taskRef.Name, Namespace: ""}, clusterTask); err != nil {
+			return nil, err
+		}
+		spec = &clusterTask.Spec
+	} else {
+		return nil, fmt.Errorf("task kind should be task or clustertask")
+	}
+	return spec, nil
 }
 
 func globalResourceName(jobName, resName string) string {
