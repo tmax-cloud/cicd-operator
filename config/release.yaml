@@ -379,6 +379,20 @@ rules:
 - apiGroups:
   - tekton.dev
   resources:
+  - clustertasks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - clustertasks/status
+  verbs:
+  - get
+- apiGroups:
+  - tekton.dev
+  resources:
   - pipelineruns
   verbs:
   - create
@@ -414,6 +428,20 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - tekton.dev
+  resources:
+  - tasks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
+  - tasks/status
+  verbs:
+  - get
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1

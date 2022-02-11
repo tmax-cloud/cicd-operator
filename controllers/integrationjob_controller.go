@@ -65,6 +65,10 @@ func NewIntegrationJobReconciler(cli client.Client, scheme *runtime.Scheme, log 
 // +kubebuilder:rbac:groups=cicd.tmax.io,resources=integrationjobs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=tekton.dev,resources=pipelineruns/status,verbs=get
+// +kubebuilder:rbac:groups=tekton.dev,resources=tasks,verbs=get;list;watch
+// +kubebuilder:rbac:groups=tekton.dev,resources=tasks/status,verbs=get
+// +kubebuilder:rbac:groups=tekton.dev,resources=clustertasks,verbs=get;list;watch
+// +kubebuilder:rbac:groups=tekton.dev,resources=clustertasks/status,verbs=get
 
 // Reconcile reconciles IntegrationJob
 func (r *integrationJobReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
