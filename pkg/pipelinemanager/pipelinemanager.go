@@ -382,18 +382,26 @@ func (p *pipelineManager) reflectJobStatus(pr *tektonv1beta1.PipelineRun, j *cic
 func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobStatus {
 	jobStatus := &cicdv1.JobStatus{Name: j.Name, State: cicdv1.CommitStatusStatePending}
 	// Find in TaskRun first
+	reflectFromTaskRuns(pr, j, jobStatus)
+	// Now find in Run
+	reflectFromRuns(pr, j, jobStatus)
+
+	return jobStatus
+}
+
+func reflectFromTaskRuns(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job, jobStatus *cicdv1.JobStatus) {
 	for _, runStatus := range pr.Status.TaskRuns {
 		if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
 			rStatus := runStatus.Status
 			jobStatus.PodName = rStatus.PodName
 			jobStatus.StartTime = rStatus.StartTime.DeepCopy()
 			jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
-			if len(rStatus.Conditions) > 0 {
+			if len(rStatus.Conditions) > 0 && rStatus.CompletionTime != nil {
 				jobStatus.Message = rStatus.Conditions[0].Message
-				switch tektonv1beta1.TaskRunReason(rStatus.Conditions[0].Reason) {
-				case tektonv1beta1.TaskRunReasonSuccessful:
+				switch rStatus.Conditions[0].Status {
+				case corev1.ConditionTrue:
 					jobStatus.State = cicdv1.CommitStatusStateSuccess
-				case tektonv1beta1.TaskRunReasonFailed, tektonv1beta1.TaskRunReasonCancelled, tektonv1beta1.TaskRunReasonTimedOut:
+				case corev1.ConditionFalse:
 					jobStatus.State = cicdv1.CommitStatusStateFailure
 				}
 			}
@@ -405,7 +413,9 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobSt
 			break
 		}
 	}
-	// Now find in Run
+}
+
+func reflectFromRuns(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job, jobStatus *cicdv1.JobStatus) {
 	if jobStatus.PodName == "" {
 		for _, runStatus := range pr.Status.Runs {
 			if runStatus.Status != nil && runStatus.PipelineTaskName == j.Name {
@@ -425,7 +435,6 @@ func getJobRunStatus(pr *tektonv1beta1.PipelineRun, j *cicdv1.Job) *cicdv1.JobSt
 			}
 		}
 	}
-	return jobStatus
 }
 
 func (p *pipelineManager) updateGitCommitStatus(cfg *cicdv1.IntegrationConfig, job *cicdv1.IntegrationJob, stateChanged []bool) error {
