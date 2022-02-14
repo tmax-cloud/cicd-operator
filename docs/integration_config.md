@@ -271,15 +271,27 @@ spec:
           - name: source
             workspace: s2i
 ```
-For users' convenience, we provide catalog reference. The catalog is fetched from the Tekton's catalog repository (https://github.com/tektoncd/catalog/tree/master/task).
-Be sure to specify the catalog name as `[name]@[version]` (e.g., `s2i@0.1`)
+For users' convenience, we provide catalog reference. Three different types are allowed. 
+
+Specify catalog name as following in accordance with your use-case.
+
+|       TYPE        |                       Valid Parameter                        |
+| :---------------: | :----------------------------------------------------------: |
+|      Public       | public@{URL}<br />eg) public@https://raw.githubusercontent.com/tektoncd/catalog/main/task/s2i/0.2/s2i.yaml |
+|      Private      |                        private@{URL}                         |
+| Name with Version |              {NAME}@{VERSION}<br />eg) s2i@0.1               |
+
+When employing catalog from private repo, personal-access-token from git is required and should be stored as secret under the name of  `private-access-token` and `access-token` for key value. Lastly, secret should be listed on workspaces.
+
 ```yaml
 spec:
   jobs:
     - name: test-1
       tektonTask:
         taskRef:
-          catalog: 's2i@0.1'
+          catalog: 's2i@0.1' // Name with Version specified
+          // catalog: private@https://raw.githubusercontent.com/{OWNER_NAME}/{REPO_NAME}/{BRANCH}/{FILE}
+          // catalog: public@https://raw.githubusercontent.com/tektoncd/catalog/main/task/s2i/0.2/s2i.yaml
         params:
           - name: BUILDER_IMAGE
             stringVal: tmaxcloudck/s2i-tomcat:latest
@@ -294,6 +306,10 @@ spec:
         workspaces:
           - name: source
             workspace: s2i
+          # when employing catalog from private repo 
+          - name: {NAME} # eg) private-access-token
+            secret:
+              secretName: private-access-token
 ```
 
 
@@ -437,13 +453,13 @@ cicdctl run -n <Namespace> post <IntegrationConfig Name>
    ```bash
    KUBERNETES_API_SERVER=<Kubernetes api server host:port>
    TOKEN=<Token got from 1.>
-
+   
    INTEGRATION_CONFIG=<Name of the IntegrationConfig object>
    NAMESPACE=<Namespace where the IntegrationConfig exists>
-
+   
    BASE_BRANCH="master"
    HEAD_BRANCH="feat/new-feat"
-
+   
    curl -k -X POST \
    -H "Authorization: Bearer $TOKEN" \
    -d "{\"base_branch\": \"$BASE_BRANCH\", \"head_branch\": \"$HEAD_BRANCH\"}"
@@ -454,12 +470,12 @@ cicdctl run -n <Namespace> post <IntegrationConfig Name>
    ```bash
    KUBERNETES_API_SERVER=<Kubernetes api server host:port>
    TOKEN=<Token got from 1.>
-
+   
    INTEGRATION_CONFIG=<Name of the IntegrationConfig object>
    NAMESPACE=<Namespace where the IntegrationConfig exists>
-
+   
    BRANCH="master"
-
+   
    curl -k -X POST \
    -H "Authorization: Bearer $TOKEN" \
    -d "{\"branch\": \"$BRANCH\"}"

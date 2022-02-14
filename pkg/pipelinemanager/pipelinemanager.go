@@ -78,11 +78,15 @@ func NewPipelineManager(c client.Client, s *runtime.Scheme) PipelineManager {
 // Generate generates (but not creates) a PipelineRun object
 func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
 	log.Info("Generating a pipeline run")
-
+	// token for private repo
+	var token string
 	// Workspace defs
 	var workspaceDefs []tektonv1beta1.PipelineWorkspaceDeclaration
 	for _, w := range job.Spec.Workspaces {
 		workspaceDefs = append(workspaceDefs, tektonv1beta1.PipelineWorkspaceDeclaration{Name: w.Name})
+		if w.Secret.SecretName == "private-access-token" {
+			token = p.getToken(w.Secret.SecretName, job.Namespace)
+		}
 	}
 
 	// Params
@@ -95,28 +99,27 @@ func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 	// Generate Tasks
 	var tasks []tektonv1beta1.PipelineTask
 	for _, j := range job.Spec.Jobs {
-		taskSpec, resources, err := generateTask(job, &j)
+		taskSpec, resources, err := generateTask(job, &j, token)
 		if err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, *taskSpec)
-
 		// Append resources
 		for _, res := range resources {
 			specRes, err := p.convertResourceToSpec(res.PipelineResourceBinding, job.Namespace)
+
 			if err != nil {
 				return nil, err
 			}
 			runResources = append(runResources, res.PipelineResourceBinding)
 			specResources = append(specResources, *specRes)
+
 		}
 	}
-
 	// Fill default env.s
 	if err := fillDefaultEnvs(tasks, job); err != nil {
 		return nil, err
 	}
-
 	return &tektonv1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      Name(job),
@@ -153,6 +156,18 @@ func getParams(job *cicdv1.IntegrationJob) ([]tektonv1beta1.ParamSpec, []tektonv
 	return paramSpec, param
 }
 
+func (p *pipelineManager) getToken(name string, ns string) string {
+	secret := &corev1.Secret{}
+	if err := p.Client.Get(context.Background(), types.NamespacedName{Name: name, Namespace: ns}, secret); err != nil {
+		return "fail to get token"
+	}
+	token, ok := secret.Data["access-token"]
+	if !ok {
+		return ""
+	}
+	return string(token)
+}
+
 func (p *pipelineManager) convertResourceToSpec(binding tektonv1beta1.PipelineResourceBinding, ns string) (*tektonv1beta1.PipelineDeclaredResource, error) {
 	// Get resource type
 	var t tektonv1beta1.PipelineResourceType
@@ -175,14 +190,13 @@ func (p *pipelineManager) convertResourceToSpec(binding tektonv1beta1.PipelineRe
 	}, nil
 }
 
-func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.PipelineTask, []tektonv1beta1.TaskResourceBinding, error) {
+func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job, token string) (*tektonv1beta1.PipelineTask, []tektonv1beta1.TaskResourceBinding, error) {
 	task := &tektonv1beta1.PipelineTask{Name: j.Name}
-
 	var resources []tektonv1beta1.TaskResourceBinding
 
 	// Handle TektonTask/Approval/Email
 	if j.TektonTask != nil {
-		res, err := generateTektonTaskRunTask(j, task)
+		res, err := generateTektonTaskRunTask(j, task, token)
 		if err != nil {
 			return nil, nil, err
 		}
