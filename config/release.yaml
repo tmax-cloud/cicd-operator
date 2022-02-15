@@ -98,7 +98,7 @@ spec:
       containers:
       - command:
         - /controller
-        image: docker.io/tmaxcloudck/cicd-operator:v0.4.2-release2
+        image: docker.io/tmaxcloudck/cicd-operator:v0.4.2-release3
         imagePullPolicy: Always
         name: manager
         resources:
@@ -170,7 +170,7 @@ spec:
       containers:
         - command:
             - /blocker
-          image: docker.io/tmaxcloudck/cicd-blocker:v0.4.2-release2
+          image: docker.io/tmaxcloudck/cicd-blocker:v0.4.2-release3
           imagePullPolicy: Always
           name: manager
           resources:
