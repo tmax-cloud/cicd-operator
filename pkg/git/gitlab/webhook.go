@@ -63,18 +63,27 @@ type NoteHook struct {
 		CreatedAt gitlabTime `json:"created_at"`
 		UpdatedAt gitlabTime `json:"updated_at"`
 	} `json:"object_attributes"`
-	MergeRequest struct {
-		ID           int    `json:"iid"`
-		Title        string `json:"title"`
-		State        string `json:"state"`
-		URL          string `json:"url"`
-		AuthorID     int    `json:"author_id"`
-		SourceBranch string `json:"source_branch"`
-		TargetBranch string `json:"target_branch"`
-		LastCommit   struct {
-			ID string `json:"id"`
-		} `json:"last_commit"`
-	} `json:"merge_request"`
+	MergeRequest NoteMR `json:"merge_request"`
+	Commit       struct {
+		ID      string `json:"id"`
+		Message string `json:"message"`
+		URL     string `json:"URL"`
+		Author  User   `json:"author"`
+	}
+}
+
+// NoteMR is a gitlab-specific note hook merge request webhook body
+type NoteMR struct {
+	ID           int    `json:"iid"`
+	Title        string `json:"title"`
+	State        string `json:"state"`
+	URL          string `json:"url"`
+	AuthorID     int    `json:"author_id"`
+	SourceBranch string `json:"source_branch"`
+	TargetBranch string `json:"target_branch"`
+	LastCommit   struct {
+		ID string `json:"id"`
+	} `json:"last_commit"`
 }
 
 // Project is a name/url for the repository

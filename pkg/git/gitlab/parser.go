@@ -114,12 +114,46 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 		return nil, err
 	}
 
-	mrState := git.PullRequestState(data.MergeRequest.State)
-	switch string(mrState) {
-	case "opened":
-		mrState = git.PullRequestStateOpen
-	case "closed":
-		mrState = git.PullRequestStateClosed
+	var mrState git.PullRequestState
+	var pr *git.PullRequest
+
+	mr := NoteMR{}
+	if data.MergeRequest != mr {
+		mrState = git.PullRequestState(data.MergeRequest.State)
+		switch string(mrState) {
+		case "opened":
+			mrState = git.PullRequestStateOpen
+		case "closed":
+			mrState = git.PullRequestStateClosed
+		}
+		// Get Merge Request user info
+		if data.MergeRequest.TargetBranch != "" {
+			// Get User info
+			mrAuthor, err := c.GetUserInfo(strconv.Itoa(data.MergeRequest.AuthorID))
+			if err != nil {
+				mrAuthor = &git.User{ID: data.MergeRequest.AuthorID}
+			}
+			// Get Target branch
+			baseBranch, err := c.GetBranch(data.MergeRequest.TargetBranch)
+			if err != nil {
+				return nil, err
+			}
+			pr = &git.PullRequest{
+				ID:     data.MergeRequest.ID,
+				Title:  data.MergeRequest.Title,
+				State:  mrState,
+				Author: *mrAuthor,
+				URL:    data.MergeRequest.URL,
+				Base: git.Base{
+					Ref: data.MergeRequest.TargetBranch,
+					Sha: baseBranch.CommitID,
+				},
+				Head: git.Head{
+					Ref: data.MergeRequest.SourceBranch,
+					Sha: data.MergeRequest.LastCommit.ID,
+				},
+			}
+		}
 	}
 
 	// Only handle creation
@@ -130,36 +164,6 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 	sender, author, err := c.getSenderAuthor(data.User, data.ObjectAttributes.AuthorID)
 	if err != nil {
 		return nil, err
-	}
-
-	// Get Merge Request user info
-	var pr *git.PullRequest
-	if data.MergeRequest.TargetBranch != "" {
-		// Get User info
-		mrAuthor, err := c.GetUserInfo(strconv.Itoa(data.MergeRequest.AuthorID))
-		if err != nil {
-			mrAuthor = &git.User{ID: data.MergeRequest.AuthorID}
-		}
-		// Get Target branch
-		baseBranch, err := c.GetBranch(data.MergeRequest.TargetBranch)
-		if err != nil {
-			return nil, err
-		}
-		pr = &git.PullRequest{
-			ID:     data.MergeRequest.ID,
-			Title:  data.MergeRequest.Title,
-			State:  mrState,
-			Author: *mrAuthor,
-			URL:    data.MergeRequest.URL,
-			Base: git.Base{
-				Ref: data.MergeRequest.TargetBranch,
-				Sha: baseBranch.CommitID,
-			},
-			Head: git.Head{
-				Ref: data.MergeRequest.SourceBranch,
-				Sha: data.MergeRequest.LastCommit.ID,
-			},
-		}
 	}
 
 	return &git.Webhook{EventType: git.EventTypeIssueComment, Repo: git.Repository{
@@ -174,6 +178,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 			},
 			Issue: git.Issue{
 				PullRequest: pr,
+				CommitID:    data.Commit.ID,
 			},
 			Author: *author,
 		}}, nil

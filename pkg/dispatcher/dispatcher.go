@@ -201,9 +201,34 @@ func FilterJobs(cand []cicdv1.Job, evType git.EventType, ref string) []cicdv1.Jo
 		}
 	}
 
+	// Commit comment events
+	if incomingBranch == "" && incomingTag == "" {
+		filteredJobs = filterCommits(cand)
+		return filteredJobs
+	}
 	//tag push events
 	filteredJobs = filterTags(cand, incomingTag)
 	filteredJobs = filterBranches(filteredJobs, incomingBranch)
+	return filteredJobs
+}
+
+func filterCommits(jobs []cicdv1.Job) []cicdv1.Job {
+	var filteredJobs []cicdv1.Job
+
+	for _, job := range jobs {
+		if job.When == nil {
+			filteredJobs = append(filteredJobs, job)
+			continue
+		}
+		branches := job.When.Branch
+		for _, branch := range branches {
+			if match := matchString("[commit]", branch); match {
+				filteredJobs = append(filteredJobs, job)
+				break
+			}
+		}
+	}
+
 	return filteredJobs
 }
 

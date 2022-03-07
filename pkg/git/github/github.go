@@ -72,6 +72,8 @@ func (c *Client) ParseWebhook(header http.Header, jsonString []byte) (*git.Webho
 		return c.parsePullRequestReviewWebhook(jsonString)
 	case git.EventTypePullRequestReviewComment:
 		return c.parsePullRequestReviewCommentWebhook(jsonString)
+	case git.EventTypeCommitComment:
+		return c.parseCommitCommentWebhook(jsonString)
 	}
 	return nil, nil
 }
@@ -233,8 +235,13 @@ func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
 }
 
 // RegisterComment registers comment to an issue
-func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) error {
-	apiUrl := fmt.Sprintf("%s/repos/%s/issues/%d/comments", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, issueNo)
+func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, sha, body string) error {
+	var apiUrl string
+	if issueType == git.IssueTypePullRequest {
+		apiUrl = fmt.Sprintf("%s/repos/%s/issues/%d/comments", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, issueNo)
+	} else if issueType == git.IssueTypeCommit {
+		apiUrl = fmt.Sprintf("%s/repos/%s/commits/%s/comments", c.IntegrationConfig.Spec.Git.GetAPIUrl(), c.IntegrationConfig.Spec.Git.Repository, sha)
+	}
 
 	commentBody := &CommentBody{Body: body}
 	if _, _, err := c.requestHTTP(http.MethodPost, apiUrl, commentBody); err != nil {

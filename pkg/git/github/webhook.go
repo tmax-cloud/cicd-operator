@@ -76,6 +76,14 @@ type PullRequestReviewCommentWebhook struct {
 	Sender      User        `json:"sender"`
 }
 
+// CommitCommentWebhook is a github-specific commit_comment webhook body
+type CommitCommentWebhook struct {
+	Action  string  `json:"action"`
+	Comment Comment `json:"comment"`
+	Repo    Repo    `json:"repository"`
+	Sender  User    `json:"sender"`
+}
+
 // Repo structure for webhook event
 type Repo struct {
 	Name  string `json:"full_name"`
@@ -120,6 +128,7 @@ type Comment struct {
 	User      User         `json:"user"`
 	CreatedAt *metav1.Time `json:"created_at"`
 	UpdatedAt *metav1.Time `json:"updated_at"`
+	CommitId  string       `json:"commit_id"`
 }
 
 // RegistrationWebhookBody is a request body for registering webhook to remote git server

@@ -69,7 +69,7 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 	}
 
 	// Default - malformed comment
-	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateHelpComment()); err != nil {
+	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, "", generateHelpComment()); err != nil {
 		return err
 	}
 

@@ -115,7 +115,7 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 			return err
 		}
 
-		if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateUserUnauthorizedComment(unAuthErr.User)); err != nil {
+		if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, "", generateUserUnauthorizedComment(unAuthErr.User)); err != nil {
 			return err
 		}
 		return nil
@@ -137,7 +137,7 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 	}
 
 	// Default - malformed comment
-	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateHelpComment()); err != nil {
+	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, "", generateHelpComment()); err != nil {
 		return err
 	}
 
@@ -190,7 +190,7 @@ func (h *Handler) handleLabelEvent(wh *git.Webhook, ic *cicdv1.IntegrationConfig
 				return err
 			}
 		}
-		if err := gitCli.RegisterComment(git.IssueTypePullRequest, pr.ID, generateUserUnauthorizedComment(unAuthErr.User)); err != nil {
+		if err := gitCli.RegisterComment(git.IssueTypePullRequest, pr.ID, "", generateUserUnauthorizedComment(unAuthErr.User)); err != nil {
 			return err
 		}
 		return nil
@@ -207,7 +207,7 @@ func (h *Handler) handleApproveCommand(issueComment *git.IssueComment, gitCli gi
 	}
 
 	// Register comment
-	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateApprovedComment(issueComment.Author.Name)); err != nil {
+	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, "", generateApprovedComment(issueComment.Author.Name)); err != nil {
 		return err
 	}
 	return nil
@@ -222,7 +222,7 @@ func (h *Handler) handleApproveCancelCommand(issueComment *git.IssueComment, git
 	}
 
 	// Register comment
-	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, generateApproveCanceledComment(issueComment.Author.Name)); err != nil {
+	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueComment.Issue.PullRequest.ID, "", generateApproveCanceledComment(issueComment.Author.Name)); err != nil {
 		return err
 	}
 	return nil

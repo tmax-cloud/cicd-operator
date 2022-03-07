@@ -43,7 +43,7 @@ type Client interface {
 
 	// Comments
 
-	RegisterComment(issueType IssueType, issueNo int, body string) error
+	RegisterComment(issueType IssueType, issueNo int, sha, body string) error
 	ListComments(issueNo int) ([]IssueComment, error)
 
 	// Pull Request
@@ -72,6 +72,7 @@ type IssueType string
 const (
 	IssueTypeIssue       = IssueType("issue")
 	IssueTypePullRequest = IssueType("pull_request")
+	IssueTypeCommit      = IssueType("commit")
 )
 
 // CommitStatusState is a commit status type

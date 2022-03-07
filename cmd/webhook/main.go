@@ -114,7 +114,7 @@ func main() {
 	srv := server.New(mgr.GetClient(), mgr.GetConfig())
 	// Add plugins for webhook
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePush}, &dispatcher.Dispatcher{Client: mgr.GetClient()})
-	server.AddPlugin([]git.EventType{git.EventTypeIssueComment, git.EventTypePullRequestReview, git.EventTypePullRequestReviewComment}, co)
+	server.AddPlugin([]git.EventType{git.EventTypeIssueComment, git.EventTypePullRequestReview, git.EventTypePullRequestReviewComment, git.EventTypeCommitComment}, co)
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest, git.EventTypePullRequestReview}, approveHandler)
 	server.AddPlugin([]git.EventType{git.EventTypePullRequest}, &size.Size{Client: mgr.GetClient()})
 	go srv.Start()
