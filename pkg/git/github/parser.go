@@ -177,6 +177,39 @@ func (c *Client) parsePullRequestReviewCommentWebhook(jsonString []byte) (*git.W
 			},
 			Issue: git.Issue{
 				PullRequest: convertPullRequestToShared(&reviewComment.PullRequest),
+				CommitID:    reviewComment.Comment.CommitId,
+			},
+		}}, nil
+}
+
+func (c *Client) parseCommitCommentWebhook(jsonString []byte) (*git.Webhook, error) {
+	commitComment := &CommitCommentWebhook{}
+	if err := json.Unmarshal(jsonString, commitComment); err != nil {
+		return nil, err
+	}
+
+	// Only handle creation
+	if commitComment.Action != "created" {
+		return nil, nil
+	}
+
+	// Get sender & author
+	sender, author := c.getSenderAuthor(commitComment.Sender, commitComment.Comment.User)
+
+	return &git.Webhook{EventType: git.EventTypePullRequestReviewComment, Repo: git.Repository{
+		Name: commitComment.Repo.Name,
+		URL:  commitComment.Repo.URL,
+	},
+		Sender: *sender,
+		IssueComment: &git.IssueComment{
+			Author: *author,
+			Comment: git.Comment{
+				Body:      commitComment.Comment.Body,
+				CreatedAt: commitComment.Comment.CreatedAt,
+			},
+			Issue: git.Issue{
+				PullRequest: nil,
+				CommitID:    commitComment.Comment.CommitId,
 			},
 		}}, nil
 }

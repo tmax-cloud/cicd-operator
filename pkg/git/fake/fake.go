@@ -201,7 +201,7 @@ func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
 }
 
 // RegisterComment registers comment to an issue
-func (c *Client) RegisterComment(_ git.IssueType, issueNo int, body string) error {
+func (c *Client) RegisterComment(_ git.IssueType, issueNo int, sha, body string) error {
 	if Repos == nil {
 		return fmt.Errorf("repos not initialized")
 	}

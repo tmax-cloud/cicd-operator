@@ -52,6 +52,11 @@ type CommentBody struct {
 	Body string `json:"body"`
 }
 
+// CommitCommentBody is a body structure for creating new commit comment
+type CommitCommentBody struct {
+	Note string `json:"note"`
+}
+
 // UpdateMergeRequest is a struct to update a merge request
 type UpdateMergeRequest struct {
 	AddLabels    string `json:"add_labels"`

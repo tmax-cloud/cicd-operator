@@ -253,20 +253,23 @@ func (c *Client) CanUserWriteToRepo(user git.User) (bool, error) {
 }
 
 // RegisterComment registers comment to an issue
-func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, body string) error {
-	var t string
+func (c *Client) RegisterComment(issueType git.IssueType, issueNo int, sha, body string) error {
+	var apiUrl string
+	var commentBody interface{}
 	switch issueType {
 	case git.IssueTypeIssue:
-		t = "issues"
+		apiUrl = fmt.Sprintf("%s/api/v4/projects/%s/issues/%d/notes", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), issueNo)
+		commentBody = &CommentBody{Body: body}
 	case git.IssueTypePullRequest:
-		t = "merge_requests"
+		apiUrl = fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%d/notes", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), issueNo)
+		commentBody = &CommentBody{Body: body}
+	case git.IssueTypeCommit:
+		apiUrl = fmt.Sprintf("%s/api/v4/projects/%s/commits/%s/comments", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), sha)
+		commentBody = &CommitCommentBody{Note: body}
 	default:
 		return fmt.Errorf("issue type %s is not supported", issueType)
 	}
 
-	apiUrl := fmt.Sprintf("%s/api/v4/projects/%s/%s/%d/notes", c.IntegrationConfig.Spec.Git.GetAPIUrl(), url.QueryEscape(c.IntegrationConfig.Spec.Git.Repository), t, issueNo)
-
-	commentBody := &CommentBody{Body: body}
 	if _, _, err := c.requestHTTP(http.MethodPost, apiUrl, commentBody); err != nil {
 		return err
 	}

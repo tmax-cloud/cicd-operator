@@ -37,6 +37,7 @@ const (
 	EventTypeIssueComment             = EventType("issue_comment")
 	EventTypePullRequestReview        = EventType("pull_request_review")
 	EventTypePullRequestReviewComment = EventType("pull_request_review_comment")
+	EventTypeCommitComment            = EventType("commit_comment")
 )
 
 // Pull Request states
@@ -141,6 +142,7 @@ type Comment struct {
 // Issue is an issue related to the Comment
 type Issue struct {
 	PullRequest *PullRequest
+	CommitID    string
 }
 
 // Repository is a repository of the git

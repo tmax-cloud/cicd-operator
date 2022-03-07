@@ -39,9 +39,12 @@ git init
 CHECKOUT_URL="$CI_SERVER_URL/$CI_REPOSITORY"
 CI_HEAD_REF_ARRAY="$CI_HEAD_REF"
 
-if [ "$CI_BASE_REF" = "" ]; then 
+if [ "$CI_BASE_REF" = "" -a "$CI_HEAD_REF" != "" ]; then 
   # Push Event
   CHECKOUT_REF="$CI_HEAD_REF"
+elif [ "$CI_BASE_REF" = "" -a "CI_HEAD_REF" = "" ]; then
+  # Commit comment
+  CHECKOUT_REF="$CI_HEAD_SHA"
 else 
   # Pull Request Event
   CHECKOUT_REF="$CI_BASE_REF"

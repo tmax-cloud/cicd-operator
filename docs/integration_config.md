@@ -118,7 +118,9 @@ spec:
 If you want this job to be executed only for specific branches or tags, you can specify here.
 
 **All values for the fields should be in valid regular expression**  
-**At most one category should be configured, among branch-related and tag-related**
+**At most one category should be configured, among branch-related and tag-related**   
+**Add branch "commit" if you want to re-run job by commit comment chat-ops**
+
 
 > Optional  
 > Available fields: branch, skipBranch, tag, skipTag

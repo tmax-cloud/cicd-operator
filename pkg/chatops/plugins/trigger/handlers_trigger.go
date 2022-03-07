@@ -42,14 +42,18 @@ type Handler struct {
 // HandleChatOps handles /test and /retest comment commands
 func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
 	issueComment := webhook.IssueComment
-	// Do nothing if it's not pull request's comment or it's closed
-	if issueComment.Issue.PullRequest == nil || issueComment.Issue.PullRequest.State != git.PullRequestStateOpen {
+	// Do nothing if it's not pull request's comment, commit comment, nor it's closed
+	if (issueComment.Issue.PullRequest == nil || issueComment.Issue.PullRequest.State != git.PullRequestStateOpen) && issueComment.Issue.CommitID == "" {
 		return nil
 	}
 
 	// Authorize or exit
 	if err := h.authorize(config, &webhook.Sender, issueComment); err != nil {
-		if err := h.registerUnauthorizedComment(config, issueComment.Issue.PullRequest.ID, err); err != nil {
+		id := -1
+		if issueComment.Issue.PullRequest != nil {
+			id = issueComment.Issue.PullRequest.ID
+		}
+		if err := h.registerUnauthorizedComment(config, id, issueComment.Issue.CommitID, err); err != nil {
 			return err
 		}
 		return nil
@@ -65,9 +69,18 @@ func (h *Handler) HandleChatOps(command chatops.Command, webhook *git.Webhook, c
 
 // handleTestCommand handles '/test <ARGS>' command
 func (h *Handler) handleTestCommand(command chatops.Command, webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
+	var job *cicdv1.IntegrationJob
 	// Generate IntegrationJob for the PullRequest
-	prs := []git.PullRequest{*webhook.IssueComment.Issue.PullRequest}
-	job := dispatcher.GeneratePreSubmit(prs, &webhook.Repo, &webhook.Sender, config)
+	if webhook.IssueComment.Issue.PullRequest != nil {
+		prs := []git.PullRequest{*webhook.IssueComment.Issue.PullRequest}
+		job = dispatcher.GeneratePreSubmit(prs, &webhook.Repo, &webhook.Sender, config)
+	} else {
+		push := &git.Push{
+			Sha: webhook.IssueComment.Issue.CommitID,
+		}
+		job = dispatcher.GeneratePostSubmit(push, &webhook.Repo, &webhook.Sender, config)
+	}
+
 	if job == nil {
 		return nil
 	}
@@ -91,9 +104,17 @@ func (h *Handler) handleTestCommand(command chatops.Command, webhook *git.Webhoo
 
 // handleTestCommand handles '/retest' command
 func (h *Handler) handleRetestCommand(webhook *git.Webhook, config *cicdv1.IntegrationConfig) error {
+	var job *cicdv1.IntegrationJob
 	// Generate IntegrationJob for the PullRequest
-	prs := []git.PullRequest{*webhook.IssueComment.Issue.PullRequest}
-	job := dispatcher.GeneratePreSubmit(prs, &webhook.Repo, &webhook.Sender, config)
+	if webhook.IssueComment.Issue.PullRequest != nil {
+		prs := []git.PullRequest{*webhook.IssueComment.Issue.PullRequest}
+		job = dispatcher.GeneratePreSubmit(prs, &webhook.Repo, &webhook.Sender, config)
+	} else {
+		push := &git.Push{
+			Sha: webhook.IssueComment.Issue.CommitID,
+		}
+		job = dispatcher.GeneratePostSubmit(push, &webhook.Repo, &webhook.Sender, config)
+	}
 	if job == nil {
 		return nil
 	}
@@ -109,7 +130,7 @@ func (h *Handler) handleRetestCommand(webhook *git.Webhook, config *cicdv1.Integ
 // authorize decides if the sender is authorized to trigger the tests
 func (h *Handler) authorize(cfg *cicdv1.IntegrationConfig, sender *git.User, issueComment *git.IssueComment) error {
 	// Check if it's PR's author
-	if sender.ID == issueComment.Issue.PullRequest.Author.ID {
+	if issueComment.Issue.PullRequest != nil && sender.ID == issueComment.Issue.PullRequest.Author.ID {
 		return nil
 	}
 
@@ -166,7 +187,7 @@ func dependentJobs(wanted string, jobs cicdv1.Jobs) (map[string]struct{}, error)
 }
 
 // registerUnauthorizedComment registers comment that the user cannot trigger the test
-func (h *Handler) registerUnauthorizedComment(config *cicdv1.IntegrationConfig, issueID int, err error) error {
+func (h *Handler) registerUnauthorizedComment(config *cicdv1.IntegrationConfig, issueID int, sha string, err error) error {
 	unAuthErr, ok := err.(*git.UnauthorizedError)
 	if !ok {
 		return err
@@ -181,9 +202,18 @@ func (h *Handler) registerUnauthorizedComment(config *cicdv1.IntegrationConfig, 
 	if err != nil {
 		return err
 	}
-	if err := gitCli.RegisterComment(git.IssueTypePullRequest, issueID, generateUnauthorizedComment(unAuthErr.User, unAuthErr.Repo)); err != nil {
+
+	var issueType git.IssueType
+	if issueID == -1 {
+		issueType = git.IssueTypeCommit
+	} else {
+		issueType = git.IssueTypePullRequest
+	}
+
+	if err := gitCli.RegisterComment(issueType, issueID, sha, generateUnauthorizedComment(unAuthErr.User, unAuthErr.Repo)); err != nil {
 		return err
 	}
+
 	return nil
 }
 
