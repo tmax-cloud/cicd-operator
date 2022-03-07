@@ -26,8 +26,11 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis/duck/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 	"time"
 )
@@ -349,6 +352,150 @@ func TestGetParams(t *testing.T) {
 
 			require.Equal(t, c.expectedParamSpec, paramSpec)
 			require.Equal(t, c.expectedParam, param)
+		})
+	}
+}
+
+func TestGenerate(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "private-access-token",
+			Namespace: "test-generate",
+		},
+		Data: map[string][]byte{
+			"access-token": []byte(""),
+		},
+	}
+	s := runtime.NewScheme()
+	utilruntime.Must(corev1.AddToScheme(s))
+	utilruntime.Must(cicdv1.AddToScheme(s))
+	cli := fake.NewClientBuilder().WithScheme(s).WithObjects(secret).Build()
+
+	pm := NewPipelineManager(cli, s)
+	tc := map[string]struct {
+		job                   *cicdv1.IntegrationJob
+		expectedContainerName string
+		errorOccurs           bool
+	}{
+		"basic": {
+			job: &cicdv1.IntegrationJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-generate",
+					Namespace: "test-generate",
+				},
+				Spec: cicdv1.IntegrationJobSpec{
+					ConfigRef: cicdv1.IntegrationJobConfigRef{Name: "test-generate"},
+					Timeout: &metav1.Duration{
+						Duration: 60,
+					},
+					Jobs: cicdv1.Jobs{
+						{
+							Container: corev1.Container{Name: "test-job01"},
+							TektonTask: &cicdv1.TektonTask{
+								TaskRef: cicdv1.JobTaskRef{
+									Catalog: "s2i@0.1",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedContainerName: "test-job01",
+			errorOccurs:           false,
+		},
+		"public": {
+			job: &cicdv1.IntegrationJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-generate",
+					Namespace: "test-generate",
+				},
+				Spec: cicdv1.IntegrationJobSpec{
+					Timeout: &metav1.Duration{
+						Duration: 60,
+					},
+					Jobs: cicdv1.Jobs{
+						{
+							Container: corev1.Container{Name: "test-job02"},
+							TektonTask: &cicdv1.TektonTask{
+								TaskRef: cicdv1.JobTaskRef{
+									Catalog: "public@https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.3/git-cli.yaml",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedContainerName: "test-job02",
+			errorOccurs:           false,
+		},
+		"private": {
+			job: &cicdv1.IntegrationJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-generate",
+					Namespace: "test-generate",
+				},
+				Spec: cicdv1.IntegrationJobSpec{
+					Workspaces: []tektonv1beta1.WorkspaceBinding{{
+						Name: "private-access-token",
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: "private-access-token",
+						}},
+					},
+					Timeout: &metav1.Duration{
+						Duration: 60,
+					},
+					Jobs: cicdv1.Jobs{
+						{
+							Container: corev1.Container{Name: "test-job03"},
+							TektonTask: &cicdv1.TektonTask{
+								TaskRef: cicdv1.JobTaskRef{
+									Catalog: "private@https://raw.githubusercontent.com/S-hayeon/test/main/test-task.yaml",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedContainerName: "test-job03",
+			errorOccurs:           true,
+		},
+		"private-no-secret": {
+			job: &cicdv1.IntegrationJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-generate",
+					Namespace: "test-generate",
+				},
+				Spec: cicdv1.IntegrationJobSpec{
+					Timeout: &metav1.Duration{
+						Duration: 60,
+					},
+					Jobs: cicdv1.Jobs{
+						{
+							Container: corev1.Container{Name: "test-job04"},
+							TektonTask: &cicdv1.TektonTask{
+								TaskRef: cicdv1.JobTaskRef{
+									Catalog: "private@https://raw.githubusercontent.com/S-hayeon/test/main/test-task.yaml",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedContainerName: "test-job04",
+			errorOccurs:           true,
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			job, err := pm.Generate(c.job)
+			if c.errorOccurs {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				for _, task := range job.Spec.PipelineSpec.Tasks {
+					require.Equal(t, task.Name, c.expectedContainerName)
+				}
+			}
 		})
 	}
 }
