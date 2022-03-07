@@ -28,10 +28,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 	"knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis/duck/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 	"time"
 )
@@ -364,7 +363,7 @@ func TestGenerate(t *testing.T) {
 			Namespace: "test-generate",
 		},
 		Data: map[string][]byte{
-			"access-token": []byte("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"),
+			"access-token": []byte(""),
 		},
 	}
 	s := runtime.NewScheme()
@@ -458,7 +457,7 @@ func TestGenerate(t *testing.T) {
 				},
 			},
 			expectedContainerName: "test-job03",
-			errorOccurs:           false,
+			errorOccurs:           true,
 		},
 		"private-no-secret": {
 			job: &cicdv1.IntegrationJob{

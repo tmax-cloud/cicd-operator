@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	tektonv1alpha1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
@@ -84,7 +85,7 @@ func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 	var workspaceDefs []tektonv1beta1.PipelineWorkspaceDeclaration
 	for _, w := range job.Spec.Workspaces {
 		workspaceDefs = append(workspaceDefs, tektonv1beta1.PipelineWorkspaceDeclaration{Name: w.Name})
-		if w.Secret.SecretName == "private-access-token" {
+		if strings.HasPrefix(w.Secret.SecretName, "private-access-token-") {
 			token = p.getToken(w.Secret.SecretName, job.Namespace)
 		}
 	}

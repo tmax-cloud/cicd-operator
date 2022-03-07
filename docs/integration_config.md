@@ -281,7 +281,7 @@ Specify catalog name as following in accordance with your use-case.
 |      Private      |                        private@{URL}                         |
 | Name with Version |              {NAME}@{VERSION}<br />eg) s2i@0.1               |
 
-When employing catalog from private repo, personal-access-token from git is required and should be stored as secret under the name of  `private-access-token` and `access-token` for key value. Lastly, secret should be listed on workspaces.
+When employing catalog from private repo, personal-access-token from git is required and should be stored as secret under the name of  `private-access-token-{NAME}` and `access-token` for key value. Lastly, secret should be listed on workspaces.
 
 ```yaml
 spec:
@@ -307,7 +307,7 @@ spec:
           - name: source
             workspace: s2i
           # when employing catalog from private repo 
-          - name: {NAME} # eg) private-access-token
+          - name: {NAME} # eg) private-access-token-s2i
             secret:
               secretName: private-access-token
 ```
