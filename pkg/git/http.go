@@ -24,9 +24,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // GetPaginatedRequest gets paginated APIs and accumulates them together
@@ -123,21 +120,4 @@ func RequestHTTP(method string, uri string, header map[string]string, data inter
 		newErr = fmt.Errorf("error requesting api [%s] %s, code %d, msg %s", method, uri, resp.StatusCode, string(body))
 	}
 	return body, resp.Header, newErr
-}
-
-// CheckRateLimitGetResetTime checks if the error is a rate limit exceeded error and return time at which limit is reset
-func CheckRateLimitGetResetTime(err error) int {
-	if err != nil && strings.Contains(err.Error(), "Rate limit exceeded") {
-		strErr := err.Error()
-		unixTime := strings.Split(strings.Split(strErr, "::")[1], ".")[0]
-		if tm, convertErr := strconv.Atoi(unixTime); convertErr == nil {
-			return tm
-		}
-	}
-	return 0
-}
-
-// GetGapTime return target time - current time
-func GetGapTime(target int) int64 {
-	return int64(target) - time.Now().Unix()
 }

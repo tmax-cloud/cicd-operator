@@ -18,12 +18,6 @@ package github
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"strconv"
-	"testing"
-	"time"
-
 	"github.com/bmizerany/assert"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -31,7 +25,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"net/http"
+	"net/http/httptest"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"testing"
 )
 
 const (
@@ -47,24 +44,6 @@ const (
 )
 
 var serverURL string
-
-func TestClient_CheckRateLimit(t *testing.T) {
-	req, _ := http.NewRequest("GET", "", nil)
-	testTime := strconv.FormatInt(time.Now().Unix(), 10)
-
-	// GitHub test
-	msg := "API rate limit exceeded"
-	req.Header.Add("X-RateLimit-Reset", testTime)
-	isRateLimit, unixTime := CheckRateLimit(msg, req.Header)
-	require.Equal(t, isRateLimit, true)
-	require.Equal(t, unixTime, testTime)
-
-	// Non error
-	msg = ""
-	isRateLimit, unixTime = CheckRateLimit(msg, req.Header)
-	require.Equal(t, isRateLimit, false)
-	require.Equal(t, unixTime, "")
-}
 
 func TestClient_ListWebhook(t *testing.T) {
 	c, err := testEnv()

@@ -18,17 +18,12 @@ package controllers
 
 import (
 	"context"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
-
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/go-logr/logr"
 	"github.com/tmax-cloud/cicd-operator/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -107,13 +102,7 @@ func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	r.setSecretString(instance)
 
 	// Set webhook registered
-	var re reconcile.Result
-	if resetTime := r.setWebhookRegisteredCond(instance); resetTime > 0 {
-		// Get time remaining from reset time and set to run reconcile at that time.
-		re = ctrl.Result{RequeueAfter: time.Duration(git.GetGapTime(resetTime)) * time.Second, Requeue: true}
-	} else {
-		re = ctrl.Result{}
-	}
+	r.setWebhookRegisteredCond(instance)
 
 	// Set ready
 	r.setReadyCond(instance)
@@ -142,7 +131,7 @@ func (r *IntegrationConfigReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
-	return re, nil
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets IntegrationConfigReconciler to the manager
@@ -237,7 +226,7 @@ func (r *IntegrationConfigReconciler) setSecretString(instance *cicdv1.Integrati
 }
 
 // Set webhook-registered condition, return if it's changed or not
-func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.IntegrationConfig) int {
+func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.IntegrationConfig) {
 	webhookRegistered := meta.FindStatusCondition(instance.Status.Conditions, cicdv1.IntegrationConfigConditionWebhookRegistered)
 	if webhookRegistered == nil {
 		meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
@@ -252,7 +241,7 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 	if instance.Spec.Git.Token == nil {
 		webhookRegistered.Reason = cicdv1.IntegrationConfigConditionReasonNoGitToken
 		webhookRegistered.Message = "Skipped to register webhook"
-		return 0
+		return
 	}
 
 	// Register only if the condition is false
@@ -283,7 +272,7 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 				}
 			}
 			if isUnique {
-				if err = gitCli.RegisterWebhook(addr); err != nil {
+				if err := gitCli.RegisterWebhook(addr); err != nil {
 					webhookRegistered.Reason = "webhookRegisterFailed"
 					webhookRegistered.Message = err.Error()
 				} else {
@@ -292,12 +281,8 @@ func (r *IntegrationConfigReconciler) setWebhookRegisteredCond(instance *cicdv1.
 					webhookRegistered.Message = "Webhook is registered"
 				}
 			}
-			if err != nil {
-				return git.CheckRateLimitGetResetTime(err)
-			}
 		}
 	}
-	return 0
 }
 
 // Set ready condition, return if it's changed or not

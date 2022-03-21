@@ -550,24 +550,7 @@ func (c *Client) GetBranch(branch string) (*git.Branch, error) {
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
 	tlsConfig := c.IntegrationConfig.GetTLSConfig()
 
-	body, header, err := git.RequestHTTP(method, apiURL, c.header, data, tlsConfig)
-
-	if err != nil {
-		if isRateLimit, unixTime := CheckRateLimit(string(body), header); isRateLimit {
-			rateLimitErr := fmt.Errorf("unixtime::%s. Rate limit exceeded, code %s. Please increase the limit or wait until reset",
-				unixTime, strings.Split(strings.Split(err.Error(), ", code ")[1], ",")[0])
-			return body, header, rateLimitErr
-		}
-	}
-	return body, header, err
-}
-
-// CheckRateLimit checks if the error is a rate limit exceeded error
-func CheckRateLimit(msg string, header http.Header) (bool, string) {
-	if strings.Contains(msg, "Rate limit exceeded") {
-		return true, header.Get("Ratelimit-Reset")
-	}
-	return false, ""
+	return git.RequestHTTP(method, apiURL, c.header, data, tlsConfig)
 }
 
 func convertState(original string) git.PullRequestState {
