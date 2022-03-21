@@ -15,26 +15,3 @@
 */
 
 package git
-
-import (
-	"fmt"
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/require"
-)
-
-func TestClient_CheckRateLimitGetResetTime(t *testing.T) {
-	msg := fmt.Errorf("unixtime::000000000. Rate limit exceeded, code 403. Please increase the limit or wait until reset")
-	tm := CheckRateLimitGetResetTime(msg)
-	require.Equal(t, tm, 000000000)
-
-	tm = CheckRateLimitGetResetTime(nil)
-	require.Equal(t, tm, 0)
-}
-
-func TestClient_GetGapTime(t *testing.T) {
-	require.Equal(t, time.Now().Unix()*-1, GetGapTime(0))
-	require.Equal(t, 10-time.Now().Unix(), GetGapTime(10))
-	require.Equal(t, 20-time.Now().Unix(), GetGapTime(20))
-}

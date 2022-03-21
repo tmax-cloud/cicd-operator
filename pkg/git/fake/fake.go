@@ -18,15 +18,11 @@ package fake
 
 import (
 	"fmt"
-	"math/rand"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
-
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"math/rand"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -82,9 +78,6 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 
 	var res []git.WebhookEntry
 	for _, w := range repo.Webhooks {
-		if strings.Contains(w.URL, "test-rate-limit") {
-			return nil, fmt.Errorf("unixtime::%s. Rate limit exceeded, code 403. Please increase the limit or wait until reset", strconv.FormatInt(time.Now().Unix()+100, 10))
-		}
 		res = append(res, *w)
 	}
 	return res, nil
@@ -102,10 +95,6 @@ func (c *Client) RegisterWebhook(url string) error {
 
 	if repo.Webhooks == nil {
 		return fmt.Errorf("webhooks not initialized")
-	}
-
-	if strings.Contains(url, "test-rate-limit") {
-		return fmt.Errorf("unixtime::%s. Rate limit exceeded, code 403. Please increase the limit or wait until reset", strconv.FormatInt(time.Now().Unix()+100, 10))
 	}
 
 	id := rand.Intn(100)

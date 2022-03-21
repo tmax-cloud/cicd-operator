@@ -164,7 +164,7 @@ func generateMeta(cfgName, cfgNamespace, sha, jobID string) metav1.ObjectMeta {
 }
 
 func generatePulls(prs []git.PullRequest) []cicdv1.IntegrationJobRefsPull {
-	pulls := []cicdv1.IntegrationJobRefsPull{}
+	var pulls []cicdv1.IntegrationJobRefsPull
 	for _, pr := range prs {
 		pull := generatePull(pr)
 		pulls = append(pulls, pull)
