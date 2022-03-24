@@ -543,11 +543,9 @@ func IsValidPayload(secret, headerHash string, payload []byte) bool {
 // HashPayload hashes the payload
 func HashPayload(secret string, payloadBody []byte) string {
 	hm := hmac.New(sha1.New, []byte(secret))
-	_, err := hm.Write(payloadBody)
+	_, _ = hm.Write(payloadBody)
 	sum := hm.Sum(nil)
-	if err != nil {
-		return ""
-	}
+
 	return fmt.Sprintf("%x", sum)
 }
 

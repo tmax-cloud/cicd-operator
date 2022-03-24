@@ -17,6 +17,7 @@
 package v1
 
 import (
+	"crypto/tls"
 	"testing"
 	"time"
 
@@ -284,6 +285,37 @@ func TestConvertToTektonParams(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			params := ConvertToTektonParams(c.params)
 			require.Equal(t, c.expectedParams, params)
+		})
+	}
+}
+
+func TestIntegrationConfig_GetTLSConfig(t *testing.T) {
+	tc := map[string]struct {
+		tlsConfig *TLSConfig
+
+		expectedTLSConfig *tls.Config
+	}{
+		"noTLSConfig": {
+			expectedTLSConfig: nil,
+		},
+		"existTLSConfig": {
+			tlsConfig: &TLSConfig{
+				InsecureSkipVerify: true,
+			},
+			expectedTLSConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			ic := &IntegrationConfig{
+				Spec: IntegrationConfigSpec{
+					TLSConfig: c.tlsConfig,
+				},
+			}
+			tlsConfig := ic.GetTLSConfig()
+			require.Equal(t, c.expectedTLSConfig, tlsConfig)
 		})
 	}
 }
