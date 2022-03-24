@@ -75,15 +75,27 @@ jobs:
 
           REPO_OPERATOR=tmaxcloudck/cicd-operator
           REPO_BLOCKER=tmaxcloudck/cicd-blocker
+          REPO_WEBHOOK=tmaxcloudck/cicd-webhook
+          REPO_APISERVER=tmaxcloudck/cicd-api-server
 
           IMG_OPERATOR=${REPO_OPERATOR}:${GITHUB_REF#refs/tags/}
           IMG_BLOCKER=${REPO_BLOCKER}:${GITHUB_REF#refs/tags/}
+          IMG_WEBHOOK=${REPO_WEBHOOK}:${GITHUB_REF#refs/tags/}
+          IMG_APISERVER=${REPO_APISERVER}:${GITHUB_REF#refs/tags/}
 
           docker build . -t ${IMG_OPERATOR} -f build/controller/Dockerfile
           docker build . -t ${IMG_BLOCKER} -f build/blocker/Dockerfile
+          docker build . -t ${IMG_WEBHOOK} -f build/webhook/Dockerfile
+          docker build . -t ${IMG_APISERVER} -f build/apiserver/Dockerfile
           docker tag ${IMG_OPERATOR} ${REPO_OPERATOR}:latest
           docker tag ${IMG_BLOCKER} ${REPO_BLOCKER}:latest
+          docker tag ${IMG_WEBHOOK} ${REPO_WEBHOOK}:latest
+          docker tag ${IMG_APISERVER} ${REPO_APISERVER}:latest
           docker push ${IMG_OPERATOR}
           docker push ${IMG_BLOCKER}
+          docker push ${IMG_WEBHOOK}
+          docker push ${IMG_APISERVER}
           docker push ${REPO_OPERATOR}:latest
           docker push ${REPO_BLOCKER}:latest
+          docker push ${REPO_WEBHOOK}:latest
+          docker push ${REPO_APISERVER}:latest

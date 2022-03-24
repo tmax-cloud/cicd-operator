@@ -18,6 +18,7 @@ package v1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -56,4 +57,31 @@ func TestIntegrationJob_GetReportServerAddress(t *testing.T) {
 		},
 	}
 	require.Equal(t, "http://test.host.com/report/test-ns/test-ij/test-job", ij.GetReportServerAddress("test-job"))
+}
+
+func TestIntegrationJob_IsCompleted(t *testing.T) {
+	tc := map[string]struct {
+		completionTime *metav1.Time
+		expectedResult bool
+	}{
+		"completed": {
+			completionTime: &metav1.Time{Time: time.Now()},
+			expectedResult: true,
+		},
+		"uncompleted": {
+			completionTime: nil,
+			expectedResult: false,
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			ij := &IntegrationJob{
+				Status: IntegrationJobStatus{
+					CompletionTime: c.completionTime,
+				},
+			}
+			completed := ij.IsCompleted()
+			require.Equal(t, c.expectedResult, completed)
+		})
+	}
 }
