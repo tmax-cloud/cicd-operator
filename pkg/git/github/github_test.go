@@ -17,6 +17,7 @@
 package github
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/bmizerany/assert"
 	"github.com/gorilla/mux"
@@ -43,6 +44,9 @@ const (
 	samplePRReviews                      = "[\n  {\n    \"id\": 834849190,\n    \"node_id\": \"PRR_kwDOEm6Tx84xwsmm\",\n    \"user\": {\n      \"login\": \"eddy-kor-92\",\n      \"id\": 33279734,\n      \"node_id\": \"MDQ6VXNlcjMzMjc5NzM0\",\n      \"avatar_url\": \"https://avatars.githubusercontent.com/u/33279734?u=bed3bf0df30f21a34b1d88dac4bdea053d2edafa&v=4\",\n      \"gravatar_id\": \"\",\n      \"url\": \"https://api.github.com/users/eddy-kor-92\",\n      \"html_url\": \"https://github.com/eddy-kor-92\",\n      \"followers_url\": \"https://api.github.com/users/eddy-kor-92/followers\",\n      \"following_url\": \"https://api.github.com/users/eddy-kor-92/following{/other_user}\",\n      \"gists_url\": \"https://api.github.com/users/eddy-kor-92/gists{/gist_id}\",\n      \"starred_url\": \"https://api.github.com/users/eddy-kor-92/starred{/owner}{/repo}\",\n      \"subscriptions_url\": \"https://api.github.com/users/eddy-kor-92/subscriptions\",\n      \"organizations_url\": \"https://api.github.com/users/eddy-kor-92/orgs\",\n      \"repos_url\": \"https://api.github.com/users/eddy-kor-92/repos\",\n      \"events_url\": \"https://api.github.com/users/eddy-kor-92/events{/privacy}\",\n      \"received_events_url\": \"https://api.github.com/users/eddy-kor-92/received_events\",\n      \"type\": \"User\",\n      \"site_admin\": false\n    },\n    \"body\": \"\",\n    \"state\": \"COMMENTED\",\n    \"html_url\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#pullrequestreview-834849190\",\n    \"pull_request_url\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/pulls/324\",\n    \"author_association\": \"NONE\",\n    \"_links\": {\n      \"html\": {\n        \"href\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#pullrequestreview-834849190\"\n      },\n      \"pull_request\": {\n        \"href\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/pulls/324\"\n      }\n    },\n    \"submitted_at\": \"2021-12-17T05:31:38Z\",\n    \"commit_id\": \"654761e79f45e62ef8ca4d94c47cf7adc1756122\"\n  },\n  {\n    \"id\": 834851875,\n    \"node_id\": \"PRR_kwDOEm6Tx84xwtQj\",\n    \"user\": {\n      \"login\": \"changjjjjjjj\",\n      \"id\": 56624551,\n      \"node_id\": \"MDQ6VXNlcjU2NjI0NTUx\",\n      \"avatar_url\": \"https://avatars.githubusercontent.com/u/56624551?v=4\",\n      \"gravatar_id\": \"\",\n      \"url\": \"https://api.github.com/users/changjjjjjjj\",\n      \"html_url\": \"https://github.com/changjjjjjjj\",\n      \"followers_url\": \"https://api.github.com/users/changjjjjjjj/followers\",\n      \"following_url\": \"https://api.github.com/users/changjjjjjjj/following{/other_user}\",\n      \"gists_url\": \"https://api.github.com/users/changjjjjjjj/gists{/gist_id}\",\n      \"starred_url\": \"https://api.github.com/users/changjjjjjjj/starred{/owner}{/repo}\",\n      \"subscriptions_url\": \"https://api.github.com/users/changjjjjjjj/subscriptions\",\n      \"organizations_url\": \"https://api.github.com/users/changjjjjjjj/orgs\",\n      \"repos_url\": \"https://api.github.com/users/changjjjjjjj/repos\",\n      \"events_url\": \"https://api.github.com/users/changjjjjjjj/events{/privacy}\",\n      \"received_events_url\": \"https://api.github.com/users/changjjjjjjj/received_events\",\n      \"type\": \"User\",\n      \"site_admin\": false\n    },\n    \"body\": \"\",\n    \"state\": \"COMMENTED\",\n    \"html_url\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#pullrequestreview-834851875\",\n    \"pull_request_url\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/pulls/324\",\n    \"author_association\": \"COLLABORATOR\",\n    \"_links\": {\n      \"html\": {\n        \"href\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#pullrequestreview-834851875\"\n      },\n      \"pull_request\": {\n        \"href\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/pulls/324\"\n      }\n    },\n    \"submitted_at\": \"2021-12-17T05:36:07Z\",\n    \"commit_id\": \"654761e79f45e62ef8ca4d94c47cf7adc1756122\"\n  },\n  {\n    \"id\": 834860063,\n    \"node_id\": \"PRR_kwDOEm6Tx84xwvQf\",\n    \"user\": {\n      \"login\": \"changjjjjjjj\",\n      \"id\": 56624551,\n      \"node_id\": \"MDQ6VXNlcjU2NjI0NTUx\",\n      \"avatar_url\": \"https://avatars.githubusercontent.com/u/56624551?v=4\",\n      \"gravatar_id\": \"\",\n      \"url\": \"https://api.github.com/users/changjjjjjjj\",\n      \"html_url\": \"https://github.com/changjjjjjjj\",\n      \"followers_url\": \"https://api.github.com/users/changjjjjjjj/followers\",\n      \"following_url\": \"https://api.github.com/users/changjjjjjjj/following{/other_user}\",\n      \"gists_url\": \"https://api.github.com/users/changjjjjjjj/gists{/gist_id}\",\n      \"starred_url\": \"https://api.github.com/users/changjjjjjjj/starred{/owner}{/repo}\",\n      \"subscriptions_url\": \"https://api.github.com/users/changjjjjjjj/subscriptions\",\n      \"organizations_url\": \"https://api.github.com/users/changjjjjjjj/orgs\",\n      \"repos_url\": \"https://api.github.com/users/changjjjjjjj/repos\",\n      \"events_url\": \"https://api.github.com/users/changjjjjjjj/events{/privacy}\",\n      \"received_events_url\": \"https://api.github.com/users/changjjjjjjj/received_events\",\n      \"type\": \"User\",\n      \"site_admin\": false\n    },\n    \"body\": \"\",\n    \"state\": \"COMMENTED\",\n    \"html_url\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#pullrequestreview-834860063\",\n    \"pull_request_url\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/pulls/324\",\n    \"author_association\": \"COLLABORATOR\",\n    \"_links\": {\n      \"html\": {\n        \"href\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#pullrequestreview-834860063\"\n      },\n      \"pull_request\": {\n        \"href\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/pulls/324\"\n      }\n    },\n    \"submitted_at\": \"2021-12-17T05:57:08Z\",\n    \"commit_id\": \"d3b2006b7a2ab28268b248429bc215854a497d24\"\n  },\n  {\n    \"id\": 834871251,\n    \"node_id\": \"PRR_kwDOEm6Tx84xwx_T\",\n    \"user\": {\n      \"login\": \"yxzzzxh\",\n      \"id\": 36444454,\n      \"node_id\": \"MDQ6VXNlcjM2NDQ0NDU0\",\n      \"avatar_url\": \"https://avatars.githubusercontent.com/u/36444454?u=bbc82e004d2e79434274c1fc4ac97c1d2b6f249e&v=4\",\n      \"gravatar_id\": \"\",\n      \"url\": \"https://api.github.com/users/yxzzzxh\",\n      \"html_url\": \"https://github.com/yxzzzxh\",\n      \"followers_url\": \"https://api.github.com/users/yxzzzxh/followers\",\n      \"following_url\": \"https://api.github.com/users/yxzzzxh/following{/other_user}\",\n      \"gists_url\": \"https://api.github.com/users/yxzzzxh/gists{/gist_id}\",\n      \"starred_url\": \"https://api.github.com/users/yxzzzxh/starred{/owner}{/repo}\",\n      \"subscriptions_url\": \"https://api.github.com/users/yxzzzxh/subscriptions\",\n      \"organizations_url\": \"https://api.github.com/users/yxzzzxh/orgs\",\n      \"repos_url\": \"https://api.github.com/users/yxzzzxh/repos\",\n      \"events_url\": \"https://api.github.com/users/yxzzzxh/events{/privacy}\",\n      \"received_events_url\": \"https://api.github.com/users/yxzzzxh/received_events\",\n      \"type\": \"User\",\n      \"site_admin\": false\n    },\n    \"body\": \"/approve\",\n    \"state\": \"COMMENTED\",\n    \"html_url\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#pullrequestreview-834871251\",\n    \"pull_request_url\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/pulls/324\",\n    \"author_association\": \"CONTRIBUTOR\",\n    \"_links\": {\n      \"html\": {\n        \"href\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#pullrequestreview-834871251\"\n      },\n      \"pull_request\": {\n        \"href\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/pulls/324\"\n      }\n    },\n    \"submitted_at\": \"2021-12-17T06:21:13Z\",\n    \"commit_id\": \"d3b2006b7a2ab28268b248429bc215854a497d24\"\n  }\n]"
 	sampleIssueComments                  = "[\n  {\n    \"url\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/issues/comments/996468306\",\n    \"html_url\": \"https://github.com/tmax-cloud/cicd-operator/pull/324#issuecomment-996468306\",\n    \"issue_url\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/issues/324\",\n    \"id\": 996468306,\n    \"node_id\": \"IC_kwDOEm6Tx847ZOZS\",\n    \"user\": {\n      \"login\": \"tmax-cloud-bot\",\n      \"id\": 76757421,\n      \"node_id\": \"MDQ6VXNlcjc2NzU3NDIx\",\n      \"avatar_url\": \"https://avatars.githubusercontent.com/u/76757421?v=4\",\n      \"gravatar_id\": \"\",\n      \"url\": \"https://api.github.com/users/tmax-cloud-bot\",\n      \"html_url\": \"https://github.com/tmax-cloud-bot\",\n      \"followers_url\": \"https://api.github.com/users/tmax-cloud-bot/followers\",\n      \"following_url\": \"https://api.github.com/users/tmax-cloud-bot/following{/other_user}\",\n      \"gists_url\": \"https://api.github.com/users/tmax-cloud-bot/gists{/gist_id}\",\n      \"starred_url\": \"https://api.github.com/users/tmax-cloud-bot/starred{/owner}{/repo}\",\n      \"subscriptions_url\": \"https://api.github.com/users/tmax-cloud-bot/subscriptions\",\n      \"organizations_url\": \"https://api.github.com/users/tmax-cloud-bot/orgs\",\n      \"repos_url\": \"https://api.github.com/users/tmax-cloud-bot/repos\",\n      \"events_url\": \"https://api.github.com/users/tmax-cloud-bot/events{/privacy}\",\n      \"received_events_url\": \"https://api.github.com/users/tmax-cloud-bot/received_events\",\n      \"type\": \"User\",\n      \"site_admin\": false\n    },\n    \"created_at\": \"2021-12-17T06:21:16Z\",\n    \"updated_at\": \"2021-12-17T06:21:16Z\",\n    \"author_association\": \"NONE\",\n    \"body\": \"[APPROVE ALERT]\\n\\nUser `yxzzzxh` approved this pull request!\",\n    \"reactions\": {\n      \"url\": \"https://api.github.com/repos/tmax-cloud/cicd-operator/issues/comments/996468306/reactions\",\n      \"total_count\": 0,\n      \"+1\": 0,\n      \"-1\": 0,\n      \"laugh\": 0,\n      \"hooray\": 0,\n      \"confused\": 0,\n      \"heart\": 0,\n      \"rocket\": 0,\n      \"eyes\": 0\n    },\n    \"performed_via_github_app\": null\n  }\n]"
 	sampleUserInfo                       = "{\"id\":123456,\"login\":\"changjjjjjjj\",\"email\":\"sample@email.com\"}"
+	samplePermissionTrue                 = "{\"permission\":\"admin\"}"
+	samplePermissionFalse                = "{\"permission\":\"dev\"}"
+	sampleBranch                         = "{\"name\":\"master\",\"commit\":{\"sha\":\"sha1=0000000000000000000000000000000000000000\"}}"
 	samplePR                             = "{\"title\":\"test\",\"number\":1234,\"state\":\"opened\",\"html_url\":\"https://test\",\"mergeable\":true,\"user\":{\"login\":\"changjjjjjjj\",\"id\":11111},\"draft\":false,\"head\":{\"ref\":\"master\",\"sha\":\"sha1=11111111111111\"},\"base\":{\"ref\":\"master\",\"sha\":\"sha1=11111111111111\"},\"labels\":[{\"name\":\"size\"}]}"
 	samplePRWebhook                      = "{\"action\":\"opened\",\"number\":350,\"sender\":{\"login\":\"changjjjjjjj\",\"id\":111111},\"pull_request\":{\"title\":\"test\",\"number\":1234,\"state\":\"opened\",\"html_url\":\"https://test\",\"mergeable\":true,\"user\":{\"login\":\"changjjjjjjj\",\"id\":11111},\"draft\":false,\"head\":{\"ref\":\"master\",\"sha\":\"sha1=11111111111111\"},\"base\":{\"ref\":\"master\",\"sha\":\"sha1=11111111111111\"},\"labels\":[{\"name\":\"size\"}]},\"repository\":{\"full_name\":\"name\",\"html_url\":\"https://test\",\"owner\":{\"login\":\"changjjjjjjj\"},\"private\":false},\"label\":{\"name\":\"label\"}}"
 	samplePRWebhookLabeled               = "{\"action\":\"labeled\",\"number\":350,\"sender\":{\"login\":\"changjjjjjjj\",\"id\":111111},\"pull_request\":{\"title\":\"test\",\"number\":1234,\"state\":\"opened\",\"html_url\":\"https://test\",\"mergeable\":true,\"user\":{\"login\":\"changjjjjjjj\",\"id\":11111},\"draft\":false,\"head\":{\"ref\":\"master\",\"sha\":\"sha1=11111111111111\"},\"base\":{\"ref\":\"master\",\"sha\":\"sha1=11111111111111\"},\"labels\":[{\"name\":\"size\"}]},\"repository\":{\"full_name\":\"name\",\"html_url\":\"https://test\",\"owner\":{\"login\":\"changjjjjjjj\"},\"private\":false},\"label\":{\"name\":\"label\"}}"
@@ -69,6 +73,31 @@ const (
 // "comment":{"body":"test","user":{"login":"changjjjjjjj","id":111111},"created_at": "2021-07-07T02:24:31Z","updated_at":"2021-07-07T02:24:31Z","commit_id":"123"}
 // "pull_request":{"title":"test","number":1234,"state":"opened","html_url":"https://test","mergeable":true,"user":{"login":"changjjjjjjj","id":11111},"draft":false,"head":{"ref":"master","sha":"sha1=11111111111111"},"base":{"ref":"master","sha":"sha1=11111111111111"},"labels":[{"name":"size"}]}
 var serverURL string
+
+func TestClient_Init(t *testing.T) {
+	tc := map[string]struct {
+		expectErr      bool
+		expectedErrMsg string
+	}{
+		"getTokenErr": {
+			expectErr:      true,
+			expectedErrMsg: "token is empty",
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			if c.expectErr {
+				_, err := wrongTestEnv()
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				cli, err := testEnv()
+				require.NoError(t, err)
+				err = cli.Init()
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestClient_ParseWebhook(t *testing.T) {
 	tc := map[string]struct {
@@ -255,6 +284,176 @@ func TestClient_ListWebhook(t *testing.T) {
 	assert.Equal(t, "http://asdasd/webhook/default/chatops-test", wh[1].URL)
 }
 
+func TestClient_RegisterWebhook(t *testing.T) {
+	c, err := testEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.RegisterWebhook("test")
+	require.NoError(t, err)
+}
+
+func TestClient_DeleteWebhook(t *testing.T) {
+	c, err := testEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.DeleteWebhook(1)
+	require.NoError(t, err)
+
+	err = c.DeleteWebhook(2)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "doesn't exists")
+}
+
+func TestClient_SetCommitStatus(t *testing.T) {
+	tc := map[string]struct {
+		sha    string
+		status git.CommitStatus
+
+		expectErr      bool
+		expectedErrMsg string
+	}{
+		"fakeSha": {
+			sha:       git.FakeSha,
+			status:    git.CommitStatus{},
+			expectErr: false,
+		},
+		"errSha": {
+			sha:            git.ErrSha,
+			status:         git.CommitStatus{},
+			expectErr:      true,
+			expectedErrMsg: "doesn't exists",
+		},
+		"noErr": {
+			sha:    "0000000000000000000000000000000000000002",
+			status: git.CommitStatus{},
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			cli, _ := testEnv()
+			err := cli.SetCommitStatus(c.sha, c.status)
+			if c.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestClient_GetUserInfo(t *testing.T) {
+	tc := map[string]struct {
+		userName string
+
+		expectedUser   *git.User
+		expectErr      bool
+		expectedErrMsg string
+	}{
+		"existUser": {
+			userName: "changjjjjjjj",
+
+			expectedUser: &git.User{ID: 123456, Name: "changjjjjjjj", Email: "sample@email.com"},
+			expectErr:    false,
+		},
+		"noUser": {
+			userName:       "noUser",
+			expectErr:      true,
+			expectedErrMsg: "doesn't exists",
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			cli, _ := testEnv()
+			user, err := cli.GetUserInfo(c.userName)
+			if c.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.expectedUser, user)
+			}
+		})
+	}
+}
+
+func TestClient_CanUserWriteToRepo(t *testing.T) {
+	tc := map[string]struct {
+		user git.User
+
+		expectedPermission bool
+		expectErr          bool
+		expectedErrMsg     string
+	}{
+		"adminUser": {
+			user: git.User{ID: 123456, Name: "changjjjjjjj", Email: "sample@email.com"},
+
+			expectedPermission: true,
+			expectErr:          false,
+		},
+		"devUser": {
+			user: git.User{ID: 123457, Name: "developer", Email: "sampledev@email.com"},
+
+			expectedPermission: false,
+			expectErr:          false,
+		},
+		"noUser": {
+			user:           git.User{ID: 123458, Name: "whoru", Email: "sample2@email.com"},
+			expectErr:      true,
+			expectedErrMsg: "doesn't exists",
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			cli, _ := testEnv()
+			permission, err := cli.CanUserWriteToRepo(c.user)
+			if c.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.expectedPermission, permission)
+			}
+		})
+	}
+}
+
+func TestClient_RegisterComment(t *testing.T) {
+	tc := map[string]struct {
+		issueType git.IssueType
+
+		expectErr      bool
+		expectedErrMsg string
+	}{
+		"prComment": {
+			issueType: git.IssueTypePullRequest,
+
+			expectErr: false,
+		},
+		"commitComment": {
+			issueType: git.IssueTypeCommit,
+
+			expectErr: false,
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			cli, _ := testEnv()
+			err := cli.RegisterComment(c.issueType, 1, git.FakeSha, "test body")
+			if c.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestClient_ListCommitStatuses(t *testing.T) {
 	c, err := testEnv()
 	if err != nil {
@@ -301,6 +500,37 @@ func TestClient_ListPullRequests(t *testing.T) {
 	assert.Equal(t, "newnew", prs[1].Title, "Title")
 }
 
+func TestClient_MergePullRequest(t *testing.T) {
+	tc := map[string]struct {
+		id int
+
+		expectErr      bool
+		expectedErrMsg string
+	}{
+		"success": {
+			id:        1,
+			expectErr: false,
+		},
+		"noPR": {
+			id:             2,
+			expectErr:      true,
+			expectedErrMsg: "doesn't exist",
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			cli, _ := testEnv()
+			err := cli.MergePullRequest(c.id, git.FakeSha, git.MergeMethodSquash, "test msg\n\n")
+			if c.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestClient_GetPullRequestDiff(t *testing.T) {
 	c, err := testEnv()
 	if err != nil {
@@ -344,6 +574,33 @@ func TestClient_ListPullRequestCommits(t *testing.T) {
 	require.Equal(t, "cqbqdd11519@gmail.com", commits[0].Committer.Email)
 }
 
+func TestClient_SetLabel(t *testing.T) {
+	tc := map[string]struct {
+		id int
+
+		expectErr      bool
+		expectedErrMsg string
+	}{
+		"success": {
+			id: 1,
+
+			expectErr: false,
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			cli, _ := testEnv()
+			err := cli.SetLabel(git.IssueTypePullRequest, c.id, "label")
+			if c.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestClient_ListLabels(t *testing.T) {
 	c, err := testEnv()
 	if err != nil {
@@ -357,8 +614,114 @@ func TestClient_ListLabels(t *testing.T) {
 	require.Equal(t, "size/L", labels[1].Name)
 }
 
+func TestClient_DeleteLabel(t *testing.T) {
+	tc := map[string]struct {
+		id int
+
+		expectErr      bool
+		expectedErrMsg string
+	}{
+		"success": {
+			id: 1,
+
+			expectErr: false,
+		},
+		"notExist": {
+			id: 2,
+
+			expectErr:      true,
+			expectedErrMsg: "doesn't exists",
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			cli, _ := testEnv()
+			err := cli.DeleteLabel(git.IssueTypePullRequest, c.id, "label")
+			if c.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestClient_GetBranch(t *testing.T) {
+	tc := map[string]struct {
+		branch string
+
+		expectedSha    string
+		expectErr      bool
+		expectedErrMsg string
+	}{
+		"success": {
+			branch:         "master",
+			expectErr:      false,
+			expectedSha:    "sha1=" + git.FakeSha,
+			expectedErrMsg: "",
+		},
+		"notExist": {
+			branch:         "fake",
+			expectErr:      true,
+			expectedErrMsg: "doesn't exists",
+		},
+	}
+	for name, c := range tc {
+		t.Run(name, func(t *testing.T) {
+			cli, _ := testEnv()
+			branch, err := cli.GetBranch(c.branch)
+			if c.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), c.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.expectedSha, branch.CommitID)
+			}
+		})
+	}
+}
+
 func testEnv() (*Client, error) {
 	r := mux.NewRouter()
+
+	setRouter(r)
+	setRouter2(r)
+	testSrv := httptest.NewServer(r)
+	serverURL = testSrv.URL
+
+	s := runtime.NewScheme()
+	utilruntime.Must(cicdv1.AddToScheme(s))
+
+	ic := &cicdv1.IntegrationConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-ic",
+			Namespace: "default",
+		},
+		Spec: cicdv1.IntegrationConfigSpec{
+			Git: cicdv1.GitConfig{
+				Type:       "github",
+				Repository: "tmax-cloud/cicd-test",
+				APIUrl:     serverURL,
+				Token:      &cicdv1.GitToken{Value: "dummy"},
+			},
+		},
+		Status: cicdv1.IntegrationConfigStatus{
+			Secrets: "1xkwb4yrcogvvv5vfdhg",
+		},
+	}
+	c := &Client{
+		IntegrationConfig: ic,
+		K8sClient:         fake.NewClientBuilder().WithScheme(s).WithObjects(ic).Build(),
+	}
+	if err := c.Init(); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func setRouter(r *mux.Router) {
 	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(req.URL.String()))
@@ -369,13 +732,93 @@ func testEnv() (*Client, error) {
 			w.Header().Set("Link", fmt.Sprintf("<%s/%s?state=all&per_page=100&page=2>; rel=\"next\", <%s/%s?state=all&per_page=100&page=3>; rel=\"last\"", serverURL, req.URL.Path, serverURL, req.URL.Path))
 		}
 		_, _ = w.Write([]byte(sampleWebhooksList))
-	})
+	}).Methods(http.MethodGet)
+	r.HandleFunc("/repos/{org}/{repo}/hooks", func(w http.ResponseWriter, req *http.Request) {
+		rb := &RegistrationWebhookBody{}
+		decoder := json.NewDecoder(req.Body)
+		if err := decoder.Decode(rb); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal(err.Error())
+			_, _ = w.Write(j)
+			return
+		}
+	}).Methods(http.MethodPost)
+	r.HandleFunc("/repos/{org}/{repo}/hooks/{id}", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		id := vars["id"]
+		switch id {
+		case "1":
+		case "2":
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal("webhook doesn't exists")
+			_, _ = w.Write(j)
+		}
+	}).Methods(http.MethodDelete)
 	r.HandleFunc("/repos/{org}/{repo}/commits/{sha}/statuses", func(w http.ResponseWriter, req *http.Request) {
 		page := req.URL.Query().Get("page")
 		if page == "" || page == "1" {
 			w.Header().Set("Link", fmt.Sprintf("<%s/%s?state=all&per_page=100&page=2>; rel=\"next\", <%s/%s?state=all&per_page=100&page=3>; rel=\"last\"", serverURL, req.URL.Path, serverURL, req.URL.Path))
 		}
 		_, _ = w.Write([]byte(sampleStatusesList))
+	})
+	r.HandleFunc("/repos/{org}/{repo}/statuses/{sha}", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		sha := vars["sha"]
+		switch sha {
+		case git.FakeSha:
+		case git.ErrSha:
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal("doesn't exists")
+			_, _ = w.Write(j)
+		default:
+		}
+	})
+	r.HandleFunc("/repos/{org}/{repo}/statuses/{sha}", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		sha := vars["sha"]
+		switch sha {
+		case git.FakeSha:
+		case git.ErrSha:
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal("doesn't exists")
+			_, _ = w.Write(j)
+		default:
+		}
+	})
+}
+
+func setRouter2(r *mux.Router) {
+	r.HandleFunc("/users/{username}", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		userName := vars["username"]
+		switch userName {
+		case "changjjjjjjj":
+			_, _ = w.Write([]byte(sampleUserInfo))
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal("doesn't exists")
+			_, _ = w.Write(j)
+		}
+	})
+	r.HandleFunc("/repos/{org}/{repo}/collaborators/{username}/permission", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		userName := vars["username"]
+		switch userName {
+		case "changjjjjjjj":
+			_, _ = w.Write([]byte(samplePermissionTrue))
+		case "developer":
+			_, _ = w.Write([]byte(samplePermissionFalse))
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal("doesn't exists")
+			_, _ = w.Write(j)
+		}
 	})
 	r.HandleFunc("/repos/{org}/{repo}/pulls", func(w http.ResponseWriter, req *http.Request) {
 		page := req.URL.Query().Get("page")
@@ -395,9 +838,35 @@ func testEnv() (*Client, error) {
 	})
 	r.HandleFunc("/repos/{org}/{repo}/issues/{id}/labels", func(w http.ResponseWriter, req *http.Request) {
 		_, _ = w.Write([]byte(sampleLabelLists))
-	})
+	}).Methods(http.MethodGet)
+	r.HandleFunc("/repos/{org}/{repo}/issues/{id}/labels", func(w http.ResponseWriter, req *http.Request) {
+	}).Methods(http.MethodPost)
+	r.HandleFunc("/repos/{org}/{repo}/issues/{id}/labels/{label}", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		id := vars["id"]
+		switch id {
+		case "1":
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal("doesn't exists")
+			_, _ = w.Write(j)
+		}
+	}).Methods(http.MethodDelete)
 	r.HandleFunc("/repos/{org}/{repo}/pulls/{id}/comments", func(w http.ResponseWriter, req *http.Request) {
 		_, _ = w.Write([]byte(samplePRComments))
+	})
+	r.HandleFunc("/repos/{org}/{repo}/pulls/{id}/merge", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		id := vars["id"]
+		switch id {
+		case "1":
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal("doesn't exists")
+			_, _ = w.Write(j)
+		}
 	})
 	r.HandleFunc("/repos/{org}/{repo}/pulls/{id}/reviews", func(w http.ResponseWriter, req *http.Request) {
 		_, _ = w.Write([]byte(samplePRReviews))
@@ -405,9 +874,26 @@ func testEnv() (*Client, error) {
 	r.HandleFunc("/repos/{org}/{repo}/issues/{id}/comments", func(w http.ResponseWriter, req *http.Request) {
 		_, _ = w.Write([]byte(sampleIssueComments))
 	})
-	r.HandleFunc("/users/{user}", func(w http.ResponseWriter, req *http.Request) {
-		_, _ = w.Write([]byte(sampleUserInfo))
+	r.HandleFunc("/repos/{org}/{repo}/commits/{id}/comments", func(w http.ResponseWriter, req *http.Request) {
+		_, _ = w.Write([]byte(sampleIssueComments))
 	})
+	r.HandleFunc("/repos/{org}/{repo}/branches/{branch}", func(w http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		branch := vars["branch"]
+		switch branch {
+		case "master":
+			_, _ = w.Write([]byte(sampleBranch))
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal("doesn't exists")
+			_, _ = w.Write(j)
+		}
+	})
+}
+
+func wrongTestEnv() (*Client, error) {
+	r := mux.NewRouter()
 
 	testSrv := httptest.NewServer(r)
 	serverURL = testSrv.URL
@@ -425,7 +911,7 @@ func testEnv() (*Client, error) {
 				Type:       "github",
 				Repository: "tmax-cloud/cicd-test",
 				APIUrl:     serverURL,
-				Token:      &cicdv1.GitToken{Value: "dummy"},
+				Token:      &cicdv1.GitToken{Value: ""},
 			},
 		},
 		Status: cicdv1.IntegrationConfigStatus{

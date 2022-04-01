@@ -89,6 +89,8 @@ const (
 // FakeSha is a fake SHA for a commit
 const (
 	FakeSha = "0000000000000000000000000000000000000000"
+	// ErrSha is a fake error SHA that doesn't exists
+	ErrSha = "0000000000000000000000000000000000000001"
 )
 
 // MergeMethod is method kind
