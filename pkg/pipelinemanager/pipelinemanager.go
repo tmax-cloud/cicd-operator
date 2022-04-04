@@ -367,7 +367,7 @@ func reflectFromTaskRuns(prStatus tektonv1beta1.PipelineRunStatus, j *cicdv1.Job
 			jobStatus.PodName = rStatus.PodName
 			jobStatus.StartTime = rStatus.StartTime.DeepCopy()
 			jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
-			if len(rStatus.Conditions) > 0 && rStatus.CompletionTime != nil {
+			if len(rStatus.Conditions) > 0 {
 				jobStatus.Message = rStatus.Conditions[0].Message
 				switch rStatus.Conditions[0].Status {
 				case corev1.ConditionTrue:
@@ -388,7 +388,7 @@ func reflectFromRuns(prStatus tektonv1beta1.PipelineRunStatus, j *cicdv1.Job, jo
 				rStatus := runStatus.Status
 				jobStatus.StartTime = rStatus.StartTime.DeepCopy()
 				jobStatus.CompletionTime = rStatus.CompletionTime.DeepCopy()
-				if len(rStatus.Conditions) > 0 && rStatus.CompletionTime != nil {
+				if len(rStatus.Conditions) > 0 {
 					jobStatus.Message = rStatus.Conditions[0].Message
 					switch rStatus.Conditions[0].Status {
 					case corev1.ConditionTrue:
