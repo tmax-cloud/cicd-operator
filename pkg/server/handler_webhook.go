@@ -80,6 +80,10 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if config.Spec.ReqeustBodyLogging == true {
+		log.Info(string(body))
+	}
+
 	if wh == nil {
 		return
 	}

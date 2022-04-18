@@ -98,7 +98,7 @@ spec:
       containers:
       - command:
         - /controller
-        image: docker.io/tmaxcloudck/cicd-operator:v0.4.3
+        image: docker.io/tmaxcloudck/cicd-operator:v0.4.5
         imagePullPolicy: Always
         name: manager
         resources:
@@ -170,7 +170,7 @@ spec:
       containers:
         - command:
             - /blocker
-          image: docker.io/tmaxcloudck/cicd-blocker:v0.4.3
+          image: docker.io/tmaxcloudck/cicd-blocker:v0.4.5
           imagePullPolicy: Always
           name: manager
           resources:
@@ -6402,6 +6402,10 @@ spec:
                       type: object
                     type: array
                 type: object
+              requestBodyLogging:
+                description: ReqeustBodyLogging is a boolean, which determines whether
+                  to enable logging reqeustBody coming toward webhook
+                type: boolean
               secrets:
                 description: Secrets are the list of secret names which are included
                   in service account
