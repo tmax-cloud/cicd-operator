@@ -109,6 +109,12 @@ spec:
                 - repository
                 - type
                 type: object
+              globalBranch:
+                description: GlobalBranch specifies on which branch IntegrationConfig
+                  is applied to in global scope
+                items:
+                  type: string
+                type: array
               jobs:
                 description: Jobs specify the tasks to be executed
                 properties:

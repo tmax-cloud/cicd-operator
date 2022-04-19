@@ -9,6 +9,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
   - [`token`](#token)
     - [Token value](#token-value)
     - [Token from Secret](#token-from-secret)
+- [Configuring `globalBranch`](#configuring-globalBranch)
 - [Configuring `jobs`](#configuring-jobs)
   - [Category of jobs](#category-of-jobs)
   - [Configuring normal jobs](#configuring-normal-jobs)
@@ -74,7 +75,20 @@ spec:
           name: my-git-secret
           key: my-token-key
 ```
-
+## Configuring `globalBranch`
+GlobalBranch specifies on which branch IntegrationConfig is applied to in global scope.
+if not specified, all jobs will perform on the every branch yet `job.When` can override globalBranch.
+> Optional  
+> data type: array 
+> Default value: nil
+For example,
+```yaml
+spec:
+  globalBranch:
+    - prod
+    - dev
+    - QA
+```
 ## Configuring `jobs`
 ### Category of jobs
 - **Pre-submit jobs**  
@@ -433,7 +447,7 @@ metadata:
   namespace: default
 spec:
   git:
-    type: github 
+    type: github
     repository: tmax-cloud/cicd-operator
     token:
       valueFrom:
