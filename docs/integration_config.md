@@ -3,22 +3,23 @@
 This guide shows how to configure `IntegrationConfig` in detail.
 
 - [Configuring `git`](#configuring-git)
-  - [`type`](#type)
-  - [`apiUrl`](#apiurl)
-  - [`repository`](#repository)
-  - [`token`](#token)
-    - [Token value](#token-value)
-    - [Token from Secret](#token-from-secret)
-- [Configuring `jobs`](#configuring-jobs)
-  - [Category of jobs](#category-of-jobs)
-  - [Configuring normal jobs](#configuring-normal-jobs)
-  - [`skipCheckout`](#skipcheckout)
-  - [`when`](#when)
-  - [`after`](#after)
-  - [`notification`](#notification)
-  - [Configuring `approval` jobs](#configuring-approval-jobs)
-  - [Configuring Notification jobs](#configuring-notification-jobs)
-  - [Using Tekton Tasks](#using-tekton-tasks)
+    - [`type`](#type)
+    - [`apiUrl`](#apiurl)
+    - [`repository`](#repository)
+    - [`token`](#token)
+        - [Token value](#token-value)
+        - [Token from Secret](#token-from-secret)
+- [Configuring `reqeustBodyLogging`](#configuring-reqeustBodyLogging)
+- - [Configuring `git`](#configuring-git)
+- [Category of jobs](#category-of-jobs)
+- [Configuring normal jobs](#configuring-normal-jobs)
+- [`skipCheckout`](#skipcheckout)
+- [`when`](#when)
+- [`after`](#after)
+- [`notification`](#notification)
+- [Configuring `approval` jobs](#configuring-approval-jobs)
+- [Configuring Notification jobs](#configuring-notification-jobs)
+- [Using Tekton Tasks](#using-tekton-tasks)
 - [Configuring `secrets`](#configuring-secrets)
 - [Configuring `workspaces`](#configuring-workspaces)
 - [Configuring `podTemplate`](#configuring-podtemplate)
@@ -27,8 +28,8 @@ This guide shows how to configure `IntegrationConfig` in detail.
     - [`commitTemplate`](#committemplate)
     - [`query`](#query)
 - [Triggering jobs](#triggering-jobs)
-  - [Option.1 Using `cicdctl`](#option1-using-cicdctl)
-  - [Option.2 Using `curl`](#option2-using-curl)
+    - [Option.1 Using `cicdctl`](#option1-using-cicdctl)
+    - [Option.2 Using `curl`](#option2-using-curl)
 
 ## Configuring `git`
 For example,
@@ -74,7 +75,16 @@ spec:
           name: my-git-secret
           key: my-token-key
 ```
+## Configuring `reqeustBodyLogging`
+specify whether to enable logging requestBody received by webhook-server
+> Optional  
+> Available values: true, false  
+> Default value: false
+```yaml
+spec:
+  requestBodyLogging: true
 
+```
 ## Configuring `jobs`
 ### Category of jobs
 - **Pre-submit jobs**  
@@ -134,7 +144,7 @@ spec:
 
 ### `after`
 If you want this job to be executed after specific jobs, you can specify here.
-> Optional  
+> Optional
 ```yaml
 spec:
   jobs:
@@ -150,7 +160,7 @@ spec:
 ### `notification`
 If you want to send notification when the job succeeded/failed, you can specify it in `notification` field.
 The field's spec is same as [Notification Jobs](./notification-jobs.md)
-> Optional  
+> Optional
 ```yaml
 spec:
   jobs:
@@ -324,7 +334,7 @@ cicdctl run -n <Namespace> post <IntegrationConfig Name>
    kubectl get secret $(kubectl get serviceaccount $SERVICE_ACCOUNT -o jsonpath='{.secrets[].name}') -o jsonpath='{.data.token}' | base64 -d
    ```
 2. Run API call to Kubernetes API server
-   1. Trigger PullRequest event
+    1. Trigger PullRequest event
    ```bash
    KUBERNETES_API_SERVER=<Kubernetes api server host:port>
    TOKEN=<Token got from 1.>
@@ -341,7 +351,7 @@ cicdctl run -n <Namespace> post <IntegrationConfig Name>
    "$KUBERNETES_API_SERVER/apis/cicdapi.tmax.io/v1/namespaces/$NAMESPACE/integrationconfigs/$INTEGRATION_CONFIG/runpre"
    ```
 
-   2. Trigger Push event
+    2. Trigger Push event
    ```bash
    KUBERNETES_API_SERVER=<Kubernetes api server host:port>
    TOKEN=<Token got from 1.>
@@ -433,7 +443,7 @@ metadata:
   namespace: default
 spec:
   git:
-    type: github 
+    type: github
     repository: tmax-cloud/cicd-operator
     token:
       valueFrom:
@@ -454,36 +464,36 @@ spec:
               storage: 1Gi
   jobs:
     preSubmit:
-    - name: test-unit
-      image: golang:1.14
-      command:
-      - go test -v ./pkg/...
-      when:
-        branch:
-        - master
-    - name: test-lint
-      image: golangci/golangci-lint:v1.32
-      command:
-      - golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
-      when:
-        branch:
-        - master
+      - name: test-unit
+        image: golang:1.14
+        command:
+          - go test -v ./pkg/...
+        when:
+          branch:
+            - master
+      - name: test-lint
+        image: golangci/golangci-lint:v1.32
+        command:
+          - golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
+        when:
+          branch:
+            - master
     postSubmit:
-    - name: build-push-image
-      image: quay.io/buildah/stable
-      command:
-      - buildah bud --format docker --storage-driver=vfs -f ./Dockerfile -t $IMAGE_URL .
-      - buildah push --storage-driver=vfs --creds=$CRED $IMAGE_URL docker://$IMAGE_URL
-      env:
-      - name: IMAGE_URL
-        value: tmaxcloudck/cicd-operator:recent
-      - name: CRED
-        valueFrom:
-          secretKeyRef:
-             name: tmaxcloudck-hub-credential
-             key: .dockerconfigjson
-      privileged: true
-      when:
-        tag:
-        - v.*
+      - name: build-push-image
+        image: quay.io/buildah/stable
+        command:
+          - buildah bud --format docker --storage-driver=vfs -f ./Dockerfile -t $IMAGE_URL .
+          - buildah push --storage-driver=vfs --creds=$CRED $IMAGE_URL docker://$IMAGE_URL
+        env:
+          - name: IMAGE_URL
+            value: tmaxcloudck/cicd-operator:recent
+          - name: CRED
+            valueFrom:
+              secretKeyRef:
+                name: tmaxcloudck-hub-credential
+                key: .dockerconfigjson
+        privileged: true
+        when:
+          tag:
+            - v.*
 ```

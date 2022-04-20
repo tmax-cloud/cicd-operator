@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: golangci/golangci-lint-action@v2.2.1
         with:
-          version: v1.29
+          version: v1.45
           args: -v -E gofmt -E golint -E gocyclo -E misspell --timeout 1h0m0s
   deploy-release:
     if: startsWith(github.ref, 'refs/tags/v0.4.3')

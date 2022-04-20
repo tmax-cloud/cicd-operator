@@ -83,6 +83,9 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if wh == nil {
 		return
 	}
+	if config.Spec.ReqeustBodyLogging {
+		log.Info(string(body))
+	}
 
 	// Call plugin functions
 	if err := HandleEvent(wh, config); err != nil {
