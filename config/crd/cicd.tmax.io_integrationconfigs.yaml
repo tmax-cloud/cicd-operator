@@ -49,6 +49,27 @@ spec:
           spec:
             description: IntegrationConfigSpec defines the desired state of IntegrationConfig
             properties:
+              GlobalBranch:
+                description: When is condition for on which branch IntegrationConfig
+                  is applied to in global scope
+                properties:
+                  branch:
+                    items:
+                      type: string
+                    type: array
+                  skipBranch:
+                    items:
+                      type: string
+                    type: array
+                  skipTag:
+                    items:
+                      type: string
+                    type: array
+                  tag:
+                    items:
+                      type: string
+                    type: array
+                type: object
               git:
                 description: Git config for target repository
                 properties:
