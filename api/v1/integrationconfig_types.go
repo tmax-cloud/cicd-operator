@@ -66,6 +66,9 @@ type IntegrationConfigSpec struct {
 
 	// PodTemplate for the TaskRun pods. Same as tekton's pod template. Refer to https://github.com/tektoncd/pipeline/blob/master/docs/podtemplates.md
 	PodTemplate *pod.Template `json:"podTemplate,omitempty"`
+
+	// ReqeustBodyLogging is a boolean, which determines whether to enable logging reqeustBody coming toward webhook
+	ReqeustBodyLogging bool `json:"requestBodyLogging,omitempty"`
 }
 
 // IntegrationConfigJobs categorizes jobs into two types (pre-submit and post-submit)
