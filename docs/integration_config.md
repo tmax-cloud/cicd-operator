@@ -10,6 +10,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
         - [Token value](#token-value)
         - [Token from Secret](#token-from-secret)
 - [Configuring `globalBranch`](#configuring-globalBranch)
+- [Configuring `reqeustBodyLogging`](#configuring-reqeustBodyLogging)
 - [Configuring `jobs`](#configuring-jobs)
     - [Category of jobs](#category-of-jobs)
     - [Configuring normal jobs](#configuring-normal-jobs)
@@ -92,7 +93,16 @@ spec:
       - prod
 
 ```
+## Configuring `reqeustBodyLogging`
+specify whether to enable logging requestBody received by webhook-server
+> Optional  
+> Available values: true, false  
+> Default value: false
+```yaml
+spec:
+  requestBodyLogging: true
 
+```
 ## Configuring `jobs`
 ```
 ## Configuring `jobs`
@@ -474,36 +484,36 @@ spec:
               storage: 1Gi
   jobs:
     preSubmit:
-    - name: test-unit
-      image: golang:1.14
-      command:
-      - go test -v ./pkg/...
-      when:
-        branch:
-        - master
-    - name: test-lint
-      image: golangci/golangci-lint:v1.32
-      command:
-      - golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
-      when:
-        branch:
-        - master
+      - name: test-unit
+        image: golang:1.14
+        command:
+          - go test -v ./pkg/...
+        when:
+          branch:
+            - master
+      - name: test-lint
+        image: golangci/golangci-lint:v1.32
+        command:
+          - golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
+        when:
+          branch:
+            - master
     postSubmit:
-    - name: build-push-image
-      image: quay.io/buildah/stable
-      command:
-      - buildah bud --format docker --storage-driver=vfs -f ./Dockerfile -t $IMAGE_URL .
-      - buildah push --storage-driver=vfs --creds=$CRED $IMAGE_URL docker://$IMAGE_URL
-      env:
-      - name: IMAGE_URL
-        value: tmaxcloudck/cicd-operator:recent
-      - name: CRED
-        valueFrom:
-          secretKeyRef:
-             name: tmaxcloudck-hub-credential
-             key: .dockerconfigjson
-      privileged: true
-      when:
-        tag:
-        - v.*
+      - name: build-push-image
+        image: quay.io/buildah/stable
+        command:
+          - buildah bud --format docker --storage-driver=vfs -f ./Dockerfile -t $IMAGE_URL .
+          - buildah push --storage-driver=vfs --creds=$CRED $IMAGE_URL docker://$IMAGE_URL
+        env:
+          - name: IMAGE_URL
+            value: tmaxcloudck/cicd-operator:recent
+          - name: CRED
+            valueFrom:
+              secretKeyRef:
+                name: tmaxcloudck-hub-credential
+                key: .dockerconfigjson
+        privileged: true
+        when:
+          tag:
+            - v.*
 ```

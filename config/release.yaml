@@ -6423,6 +6423,10 @@ spec:
                       type: object
                     type: array
                 type: object
+              requestBodyLogging:
+                description: ReqeustBodyLogging is a boolean, which determines whether
+                  to enable logging reqeustBody coming toward webhook
+                type: boolean
               secrets:
                 description: Secrets are the list of secret names which are included
                   in service account
