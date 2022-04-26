@@ -71,7 +71,9 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 
 // GeneratePreSubmit generates IntegrationJob for pull request event
 func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) *cicdv1.IntegrationJob {
-	jobs := FilterJobs(config.Spec.Jobs.PreSubmit, git.EventTypePullRequest, prs[0].Base.Ref, config.Spec.When)
+	tempJobs := applyWhen(config.Spec.Jobs.PreSubmit, config.Spec.When)
+	jobs := FilterJobs(tempJobs, git.EventTypePullRequest, prs[0].Base.Ref)
+
 	if len(jobs) < 1 {
 		return nil
 	}
@@ -115,7 +117,9 @@ func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.
 
 // GeneratePostSubmit generates IntegrationJob for push event
 func GeneratePostSubmit(push *git.Push, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) *cicdv1.IntegrationJob {
-	jobs := FilterJobs(config.Spec.Jobs.PostSubmit, git.EventTypePush, push.Ref, config.Spec.When)
+	tempJobs := applyWhen(config.Spec.Jobs.PostSubmit, config.Spec.When)
+	jobs := FilterJobs(tempJobs, git.EventTypePush, push.Ref)
+
 	if len(jobs) < 1 {
 		return nil
 	}
@@ -180,8 +184,23 @@ func generatePull(pr git.PullRequest) cicdv1.IntegrationJobRefsPull {
 	}
 }
 
+// applyWhen inserts ic.When into job.When if job.When is not specified
+func applyWhen(jobs []cicdv1.Job, when *cicdv1.JobWhen) []cicdv1.Job {
+	if when != nil {
+		var filteredJobs []cicdv1.Job
+		for _, job := range jobs {
+			if job.When == nil {
+				job.When = when
+				filteredJobs = append(filteredJobs, job)
+			}
+		}
+		return filteredJobs
+	}
+	return jobs
+}
+
 // FilterJobs filters job depending on the events, and ref
-func FilterJobs(cand []cicdv1.Job, evType git.EventType, ref string, jobWhen *cicdv1.JobWhen) []cicdv1.Job {
+func FilterJobs(cand []cicdv1.Job, evType git.EventType, ref string) []cicdv1.Job {
 	var filteredJobs []cicdv1.Job
 	var incomingBranch string
 	var incomingTag string
@@ -199,7 +218,7 @@ func FilterJobs(cand []cicdv1.Job, evType git.EventType, ref string, jobWhen *ci
 
 	//tag push events
 	filteredJobs = filterTags(cand, incomingTag)
-	filteredJobs = filterBranches(filteredJobs, incomingBranch, jobWhen)
+	filteredJobs = filterBranches(filteredJobs, incomingBranch)
 	return filteredJobs
 }
 
@@ -246,22 +265,42 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 	return filteredJobs
 }
 
-func filterBranches(jobs []cicdv1.Job, incomingBranch string, rootWhen *cicdv1.JobWhen) []cicdv1.Job {
-	/*
-		always run if no branch/skipBranch/globalBranch is specified
-		job.When takes priority over globalBranch
-	*/
-
+func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 	var filteredJobs []cicdv1.Job
+
 	for _, job := range jobs {
-		if job.When == nil && rootWhen == nil {
+		if job.When == nil {
 			filteredJobs = append(filteredJobs, job)
-		} else if job.When != nil {
-			if res := filterJobWhen(incomingBranch, job.When); res {
-				filteredJobs = append(filteredJobs, job)
+			continue
+		}
+		branches := job.When.Branch
+		skipBranches := job.When.SkipBranch
+
+		// Always run if no branch/skipBranch is specified
+		if branches == nil && skipBranches == nil {
+			filteredJobs = append(filteredJobs, job)
+		}
+
+		if incomingBranch == "" {
+			continue
+		}
+
+		if branches != nil && skipBranches == nil {
+			for _, branch := range branches {
+				if match := matchString(incomingBranch, branch); match {
+					filteredJobs = append(filteredJobs, job)
+					break
+				}
 			}
-		} else {
-			if res := filterJobWhen(incomingBranch, rootWhen); res {
+		} else if skipBranches != nil && branches == nil {
+			isInValidJob := false
+			for _, branch := range skipBranches {
+				if match := matchString(incomingBranch, branch); match {
+					isInValidJob = true
+					break
+				}
+			}
+			if !isInValidJob {
 				filteredJobs = append(filteredJobs, job)
 			}
 		}
@@ -269,29 +308,6 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string, rootWhen *cicdv1.J
 	return filteredJobs
 }
 
-func filterJobWhen(incomingBranch string, jobWhen *cicdv1.JobWhen) bool {
-	branches := jobWhen.Branch
-	skipBranches := jobWhen.SkipBranch
-	if branches != nil && skipBranches == nil {
-		for _, branch := range branches {
-			if match := matchString(incomingBranch, branch); match {
-				return true
-			}
-		}
-	} else if skipBranches != nil && branches == nil {
-		isInValidJob := false
-		for _, branch := range skipBranches {
-			if match := matchString(incomingBranch, branch); match {
-				return false
-			}
-		}
-		if !isInValidJob {
-			return true
-		}
-	}
-	return false
-
-}
 func matchString(incoming, target string) bool {
 	re, err := regexp.Compile(target)
 	if err != nil {

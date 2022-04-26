@@ -9,7 +9,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
     - [`token`](#token)
         - [Token value](#token-value)
         - [Token from Secret](#token-from-secret)
-- [Configuring `globalBranch`](#configuring-globalBranch)
+- [Configuring `when`](#configuring-when)
 - [Configuring `reqeustBodyLogging`](#configuring-reqeustBodyLogging)
 - [Configuring `jobs`](#configuring-jobs)
     - [Category of jobs](#category-of-jobs)
@@ -76,16 +76,16 @@ spec:
           name: my-git-secret
           key: my-token-key
 ```
-## Configuring `globalBranch`
-`globalBranch` specifies on which branch IntegrationConfig is applied to in global scope.
-if not specified, all jobs will perform on the every branch yet `job.When` can override `integrationConfig.globalBranch`.
+## Configuring `when`
+`when` specifies on which branch IntegrationConfig is applied to in global scope.
+if not specified, all jobs will perform on the every branch yet `job.When` can override `integrationConfig.when`.
 > Optional  
 > data type: array
 > Default value: nil
 > For example,
 ```yaml
 spec:
-  globalBranch:
+  when:
     branch:
       - dev
       - qa

@@ -298,7 +298,8 @@ func checkBaseSHA(baseBranch string, ic *cicdv1.IntegrationConfig, pr *PullReque
 	}
 	latest := branch.CommitID
 
-	jobs := dispatcher.FilterJobs(ic.Spec.Jobs.PreSubmit, git.EventTypePullRequest, pr.Base.Ref, ic.Spec.When)
+	jobs := dispatcher.FilterJobs(ic.Spec.Jobs.PreSubmit, git.EventTypePullRequest, pr.Base.Ref)
+
 	for _, j := range jobs {
 		status, exist := pr.Statuses[j.Name]
 		// The status will be there... but if not, it should've been filtered from sync_status
