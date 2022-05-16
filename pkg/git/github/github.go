@@ -19,6 +19,7 @@ package github
 import (
 	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,6 +35,7 @@ import (
 type Client struct {
 	IntegrationConfig *cicdv1.IntegrationConfig
 	K8sClient         client.Client
+	TLSConfig         *tls.Config
 
 	header map[string]string
 }
@@ -51,6 +53,8 @@ func (c *Client) Init() error {
 	if token != "" {
 		c.header["Authorization"] = "token " + token
 	}
+	c.TLSConfig = c.IntegrationConfig.GetTLSConfig()
+
 	return nil
 }
 
@@ -81,7 +85,8 @@ func (c *Client) ListWebhook() ([]git.WebhookEntry, error) {
 	var apiURL = c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/hooks"
 
 	var entries []WebhookEntry
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+
+	err := git.GetPaginatedRequest(apiURL, c.TLSConfig, c.header, func() interface{} {
 		return &[]WebhookEntry{}
 	}, func(i interface{}) {
 		entries = append(entries, *i.(*[]WebhookEntry)...)
@@ -135,7 +140,7 @@ func (c *Client) ListCommitStatuses(ref string) ([]git.CommitStatus, error) {
 	apiURL := c.IntegrationConfig.Spec.Git.GetAPIUrl() + "/repos/" + c.IntegrationConfig.Spec.Git.Repository + "/commits/" + ref + "/statuses"
 
 	var statuses []CommitStatusResponse
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+	err := git.GetPaginatedRequest(apiURL, c.TLSConfig, c.header, func() interface{} {
 		return &[]CommitStatusResponse{}
 	}, func(i interface{}) {
 		statuses = append(statuses, *i.(*[]CommitStatusResponse)...)
@@ -247,7 +252,7 @@ func (c *Client) ListPullRequests(onlyOpen bool) ([]git.PullRequest, error) {
 	}
 
 	var prs []PullRequest
-	err := git.GetPaginatedRequest(apiURL, c.header, func() interface{} {
+	err := git.GetPaginatedRequest(apiURL, c.TLSConfig, c.header, func() interface{} {
 		return &[]PullRequest{}
 	}, func(i interface{}) {
 		prs = append(prs, *i.(*[]PullRequest)...)
@@ -435,7 +440,7 @@ func convertPullRequestToShared(pr *PullRequest) *git.PullRequest {
 }
 
 func (c *Client) requestHTTP(method, apiURL string, data interface{}) ([]byte, http.Header, error) {
-	return git.RequestHTTP(method, apiURL, c.header, data)
+	return git.RequestHTTP(method, apiURL, c.header, data, c.TLSConfig)
 }
 
 // IsValidPayload validates the webhook payload
