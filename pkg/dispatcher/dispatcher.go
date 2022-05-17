@@ -71,7 +71,7 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 
 // GeneratePreSubmit generates IntegrationJob for pull request event
 func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) *cicdv1.IntegrationJob {
-	jobs := FilterJobs(config.Spec.Jobs.PreSubmit, git.EventTypePullRequest, prs[0].Base.Ref)
+	jobs := FilterJobs(config.Spec.Jobs.PreSubmit, git.EventTypePullRequest, prs[0].Base.Ref, config.Spec.When)
 	if len(jobs) < 1 {
 		return nil
 	}
@@ -115,7 +115,7 @@ func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.
 
 // GeneratePostSubmit generates IntegrationJob for push event
 func GeneratePostSubmit(push *git.Push, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) *cicdv1.IntegrationJob {
-	jobs := FilterJobs(config.Spec.Jobs.PostSubmit, git.EventTypePush, push.Ref)
+	jobs := FilterJobs(config.Spec.Jobs.PostSubmit, git.EventTypePush, push.Ref, config.Spec.When)
 	if len(jobs) < 1 {
 		return nil
 	}
@@ -181,7 +181,7 @@ func generatePull(pr git.PullRequest) cicdv1.IntegrationJobRefsPull {
 }
 
 // FilterJobs filters job depending on the events, and ref
-func FilterJobs(cand []cicdv1.Job, evType git.EventType, ref string) []cicdv1.Job {
+func FilterJobs(cand []cicdv1.Job, evType git.EventType, ref string, when *cicdv1.JobWhen) []cicdv1.Job {
 	var filteredJobs []cicdv1.Job
 	var incomingBranch string
 	var incomingTag string
@@ -196,7 +196,7 @@ func FilterJobs(cand []cicdv1.Job, evType git.EventType, ref string) []cicdv1.Jo
 			incomingBranch = strings.Replace(ref, "refs/heads/", "", -1)
 		}
 	}
-
+	cand = applyWhen(cand, when)
 	//tag push events
 	filteredJobs = filterTags(cand, incomingTag)
 	filteredJobs = filterBranches(filteredJobs, incomingBranch)
@@ -248,7 +248,6 @@ func filterTags(jobs []cicdv1.Job, incomingTag string) []cicdv1.Job {
 
 func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 	var filteredJobs []cicdv1.Job
-
 	for _, job := range jobs {
 		if job.When == nil {
 			filteredJobs = append(filteredJobs, job)
@@ -287,6 +286,21 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 		}
 	}
 	return filteredJobs
+}
+
+// applyWhen inserts ic.When into job.When if job.When is not specified
+func applyWhen(jobs []cicdv1.Job, when *cicdv1.JobWhen) []cicdv1.Job {
+	if when != nil {
+		var filteredJobs []cicdv1.Job
+		for _, job := range jobs {
+			if job.When == nil {
+				job.When = when
+				filteredJobs = append(filteredJobs, job)
+			}
+		}
+		return filteredJobs
+	}
+	return jobs
 }
 
 func matchString(incoming, target string) bool {
