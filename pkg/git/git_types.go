@@ -71,6 +71,7 @@ type Webhook struct {
 	Push         *Push
 	PullRequest  *PullRequest
 	IssueComment *IssueComment
+	RequestBody  string
 }
 
 // Push is a common structure for push events

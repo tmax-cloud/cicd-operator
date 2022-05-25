@@ -69,6 +69,9 @@ type IntegrationJobRefs struct {
 	// +kubebuilder:validation:Pattern=.+/.+
 	Repository string `json:"repository"`
 
+	// ReqeustBody is reqeustBody coming from git
+	ReqeustBody string `json:"reqeustBody,omitempty"`
+
 	// Link is a full url of the repository
 	Link string `json:"link"`
 

@@ -10691,6 +10691,9 @@ spec:
                       form, e.g., tmax-cloud/cicd-operator)
                     pattern: .+/.+
                     type: string
+                  reqeustBody:
+                    description: ReqeustBody is reqeustBody coming from git
+                    type: string
                   sender:
                     description: Sender is a git user who triggered the webhook
                     properties:

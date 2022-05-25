@@ -60,7 +60,11 @@ func generateDefaultEnvs(job *cicdv1.IntegrationJob) ([]corev1.EnvVar, error) {
 		{Name: "CI_WORKSPACE", Value: DefaultWorkingDir},
 		{Name: "CI_SERVER_URL", Value: fmt.Sprintf("%s://%s", u.Scheme, u.Host)},
 	}
-
+	if job.Spec.Refs.ReqeustBody != "" {
+		defaultEnvs = append(defaultEnvs, []corev1.EnvVar{
+			{Name: "REQUEST_BODY", Value: job.Spec.Refs.ReqeustBody},
+		}...)
+	}
 	// Sender
 	if jobSpec.Refs.Sender != nil {
 		defaultEnvs = append(defaultEnvs, []corev1.EnvVar{
