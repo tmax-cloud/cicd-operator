@@ -61,6 +61,12 @@ func generateDefaultEnvs(job *cicdv1.IntegrationJob) ([]corev1.EnvVar, error) {
 		{Name: "CI_SERVER_URL", Value: fmt.Sprintf("%s://%s", u.Scheme, u.Host)},
 	}
 
+	ann := job.ObjectMeta.Annotations
+	if reqbody, ok := ann["requestBody"]; ok {
+		defaultEnvs = append(defaultEnvs, []corev1.EnvVar{
+			{Name: "REQUEST_BODY", Value: reqbody},
+		}...)
+	}
 	// Sender
 	if jobSpec.Refs.Sender != nil {
 		defaultEnvs = append(defaultEnvs, []corev1.EnvVar{
