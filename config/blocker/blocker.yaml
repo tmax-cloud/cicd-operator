@@ -46,6 +46,8 @@ spec:
       containers:
         - command:
             - /blocker
+          args:
+          - --zap-log-level=info
           image: docker.io/tmaxcloudck/cicd-blocker:latest
           imagePullPolicy: Always
           name: manager

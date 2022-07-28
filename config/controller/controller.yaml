@@ -98,6 +98,9 @@ spec:
       containers:
       - command:
         - /controller
+        args:
+        - --zap-log-level=info
+
         image: docker.io/tmaxcloudck/cicd-operator:latest
         imagePullPolicy: Always
         name: manager

@@ -48,6 +48,13 @@ func init() {
 
 func main() {
 	var healthAddr string
+	//var logLevel string
+
+	opts := zap.Options{
+		Development: false,
+	}
+	opts.BindFlags(flag.CommandLine)
+
 	flag.StringVar(&healthAddr, "health-addr", ":8888", "The address the health endpoint binds to.")
 	flag.Parse()
 
@@ -61,7 +68,8 @@ func main() {
 		_ = logFile.Close()
 	}()
 	logWriter := io.MultiWriter(logFile, os.Stdout)
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(logWriter)))
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts), zap.WriteTo(logWriter)))
+
 	if err := logrotate.StartRotate(); err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
