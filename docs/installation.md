@@ -5,6 +5,7 @@ This guides to install CI/CD operator. The contents are as follows.
 * [Prerequisites](#prerequisites)
 * [Installing CI/CD Operator](#installing-cicd-operator)
 * [Enabling email feature](#enabling-email-feature)
+* [Setting log level](#Setting-log-level)
 
 ## Prerequisites
 - [Install Tekton Pipelines](https://github.com/tektoncd/pipeline/blob/master/docs/install.md) (at least v0.19.0)
@@ -58,3 +59,21 @@ This guides to install CI/CD operator. The contents are as follows.
    --type merge \
    -p "{\"data\":{\"enableMail\":\"true\",\"smtpHost\":\"$SMTP_HOST\",\"smtpUserSecret\":\"cicd-smtp\"}}"
    ```
+
+## Setting log level 
+
+set log level as an argument 
+
+- available verbosity : debug, info, error
+
+```yaml
+# example
+...
+containers:
+  - command:
+      - /blocker
+    args:
+    - --zap-log-level=info
+
+```
+
