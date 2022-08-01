@@ -57,9 +57,17 @@ if [ "$CI_BASE_REF" != "" ]; then
 fi
 git -c http.sslVerify=false submodule update --init --recursive
 `
+	cpuReq, err := resource.ParseQuantity(configs.GitCheckoutStepCPURequest)
+	if err != nil {
+		cpuReq = resource.MustParse(gitCheckoutCPUReq)
+	}
+	memReq, err := resource.ParseQuantity(configs.GitCheckoutStepMemRequest)
+	if err != nil {
+		memReq = resource.MustParse(gitCheckoutMemReq)
+	}
 	resources := corev1.ResourceList{
-		"cpu":    resource.MustParse(gitCheckoutCPUReq),
-		"memory": resource.MustParse(gitCheckoutMemReq),
+		"cpu":    cpuReq,
+		"memory": memReq,
 	}
 	step.Resources = corev1.ResourceRequirements{
 		Limits:   resources,
