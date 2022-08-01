@@ -28,9 +28,11 @@ const (
 const (
 	CustomTaskKindApproval = "ApprovalTask"
 
-	CustomTaskApprovalParamKeyApprovers         = "approvers"
-	CustomTaskApprovalParamKeyApproversCM       = "approvers-config-map"
-	CustomTaskApprovalParamKeyMessage           = "message"
+	CustomTaskApprovalParamKeyApprovers   = "approvers"
+	CustomTaskApprovalParamKeyApproversCM = "approvers-config-map"
+	CustomTaskApprovalParamKeyMessage     = "message"
+	CustomTaskApprovalParamKeyBody        = "body"
+
 	CustomTaskApprovalParamKeyIntegrationJob    = "integration-job"
 	CustomTaskApprovalParamKeyIntegrationJobJob = "integration-job-job"
 	CustomTaskApprovalParamKeySenderName        = "senderName"
@@ -60,6 +62,15 @@ const (
 	CustomTaskSlackParamKeyMessage           = CustomTaskApprovalParamKeyMessage
 	CustomTaskSlackParamKeyIntegrationJob    = CustomTaskApprovalParamKeyIntegrationJob
 	CustomTaskSlackParamKeyIntegrationJobJob = CustomTaskApprovalParamKeyIntegrationJobJob
+)
+
+// WebHook custom tasks
+const (
+	CustomTaskKindWebHook                      = "WebhookTask"
+	CustomTaskWebhookParamKeyURL               = "webhook-url"
+	CustomTaskWebhookParamKeyBody              = CustomTaskApprovalParamKeyBody
+	CustomTaskWebHookParamKeyIntegrationJobJob = CustomTaskApprovalParamKeyIntegrationJobJob
+	CustomTaskWebHookParamKeyIntegrationJob    = CustomTaskApprovalParamKeyIntegrationJob
 )
 
 // CustomTaskAPIVersion is

@@ -59,6 +59,34 @@ func (p *pipelineManager) handleNotification(jobStatus *cicdv1.JobStatus, ij *ci
 		}
 	}
 
+	if noti.Webhook != nil {
+		if err := p.handleWebhookNotification(ij, jobSpec, noti.Webhook); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *pipelineManager) handleWebhookNotification(ij *cicdv1.IntegrationJob, job *cicdv1.Job, webhook *cicdv1.NotiWebhook) error {
+	runSpec := commonNotiRun(cicdv1.CustomTaskKindWebHook, ij.Name, job.Name, ij.Namespace)
+	runSpec.Spec.Params = generateWebhookRunParams(ij, job, webhook)
+
+	if err := controllerutil.SetOwnerReference(ij, runSpec, p.Scheme); err != nil {
+		return err
+	}
+
+	// Check if it exists
+	run := &tektonv1alpha1.Run{}
+	if err := p.Client.Get(context.Background(), types.NamespacedName{Name: runSpec.Name, Namespace: runSpec.Namespace}, run); err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+
+		// Create if not exist
+		if err := p.Client.Create(context.Background(), runSpec); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -117,6 +145,8 @@ func commonNotiRun(kind, ijName, jobName, ns string) *tektonv1alpha1.Run {
 		t = "email"
 	case cicdv1.CustomTaskKindSlack:
 		t = "slack"
+	case cicdv1.CustomTaskKindWebHook:
+		t = "webhook"
 	}
 	return &tektonv1alpha1.Run{
 		ObjectMeta: metav1.ObjectMeta{
