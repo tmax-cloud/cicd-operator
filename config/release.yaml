@@ -315,7 +315,6 @@ spec:
             path: /var/log/cicd-operator/logs
       terminationGracePeriodSeconds: 10
 ---
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -533,7 +532,6 @@ rules:
   - get
   - patch
   - update
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -553,7 +551,6 @@ rules:
   - patch
   - update
   - watch
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
