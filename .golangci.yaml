@@ -6,6 +6,8 @@ linters:
   - golint
   - gocyclo
   - misspell
+  disable:
+  - staticcheck
 issues:
   exclude-use-default: false
 linters-settings:

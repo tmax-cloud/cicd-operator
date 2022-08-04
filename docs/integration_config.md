@@ -9,6 +9,8 @@ This guide shows how to configure `IntegrationConfig` in detail.
   - [`token`](#token)
     - [Token value](#token-value)
     - [Token from Secret](#token-from-secret)
+- [Configuring `git`](#configuring-git)
+- [Configuring `requestBodyLogging`](#configuring-requestBodyLogging)
 - [Configuring `jobs`](#configuring-jobs)
   - [Category of jobs](#category-of-jobs)
   - [Configuring normal jobs](#configuring-normal-jobs)
@@ -81,7 +83,15 @@ spec:
           name: my-git-secret
           key: my-token-key
 ```
-
+## Configuring `reqeustBodyLogging`
+specify whether to enable logging requestBody received by webhook-server
+> Optional  
+> Available values: true, false  
+> Default value: false
+```yaml
+spec:
+  requestBodyLogging: true
+```
 ## Configuring `jobs`
 ### Category of jobs
 - **Pre-submit jobs**  
@@ -561,7 +571,7 @@ metadata:
   namespace: default
 spec:
   git:
-    type: github 
+    type: github
     repository: tmax-cloud/cicd-operator
     token:
       valueFrom:
