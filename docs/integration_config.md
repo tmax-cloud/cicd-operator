@@ -9,6 +9,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
   - [`token`](#token)
     - [Token value](#token-value)
     - [Token from Secret](#token-from-secret)
+- [Configuring `reqeustBodyLogging`](#configuring-reqeustBodyLogging)
 - [Configuring `jobs`](#configuring-jobs)
   - [Category of jobs](#category-of-jobs)
   - [Configuring normal jobs](#configuring-normal-jobs)
@@ -81,7 +82,15 @@ spec:
           name: my-git-secret
           key: my-token-key
 ```
-
+## Configuring `reqeustBodyLogging`
+specify whether to enable logging requestBody received by webhook-server
+> Optional  
+> Available values: true, false  
+> Default value: false
+```yaml
+spec:
+  requestBodyLogging: true
+```
 ## Configuring `jobs`
 ### Category of jobs
 - **Pre-submit jobs**  
@@ -143,7 +152,7 @@ spec:
 
 ### `after`
 If you want this job to be executed after specific jobs, you can specify here.
-> Optional  
+> Optional
 ```yaml
 spec:
   jobs:
@@ -159,7 +168,7 @@ spec:
 ### `notification`
 If you want to send notification when the job succeeded/failed, you can specify it in `notification` field.
 The field's spec is same as [Notification Jobs](./notification-jobs.md)
-> Optional  
+> Optional
 ```yaml
 spec:
   jobs:
@@ -561,7 +570,7 @@ metadata:
   namespace: default
 spec:
   git:
-    type: github 
+    type: github
     repository: tmax-cloud/cicd-operator
     token:
       valueFrom:
