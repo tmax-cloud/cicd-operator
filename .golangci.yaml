@@ -3,13 +3,20 @@ run:
 linters:
   enable:
   - gofmt
-  - golint
+  - revive
   - gocyclo
   - misspell
+
 issues:
-  exclude-use-default: false
+  exclude:
+    - Error return value of
+    - File is not `gofmt`-ed with `-s`
+    - File is not `goimports`-ed
 linters-settings:
+  revive:
+    severity: error
+
   gocyclo:
     min-complexity: 15
-  golint:
-    min-confidence: 1.0
+  gofmt:
+    simplify: True
