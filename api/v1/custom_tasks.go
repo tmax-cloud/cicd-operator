@@ -62,5 +62,14 @@ const (
 	CustomTaskSlackParamKeyIntegrationJobJob = CustomTaskApprovalParamKeyIntegrationJobJob
 )
 
+// WebHook custom tasks
+const (
+	CustomTaskKindWebHook                      = "WebhookTask"
+	CustomTaskWebhookParamKeyURL               = "webhook-url"
+	CustomTaskWebhookParamKeyMessage           = CustomTaskApprovalParamKeyMessage
+	CustomTaskWebHookParamKeyIntegrationJobJob = CustomTaskApprovalParamKeyIntegrationJobJob
+	CustomTaskWebHookParamKeyIntegrationJob    = CustomTaskApprovalParamKeyIntegrationJob
+)
+
 // CustomTaskAPIVersion is
 var CustomTaskAPIVersion = fmt.Sprintf("%s/%s", CustomTaskGroup, CustomTaskVersion)

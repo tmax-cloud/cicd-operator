@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
   name: integrationconfigs.cicd.tmax.io
 spec:
@@ -773,7 +773,19 @@ spec:
                                         app. Refer to https://api.slack.com/messaging/webhooks
                                       type: string
                                   required:
-                                  - message
+                                  - url
+                                  type: object
+                                webhook:
+                                  description: Webhook sends HTTP reqeust
+                                  properties:
+                                    body:
+                                      description: Body of the ReqeustBody
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url.
+                                      type: string
+                                  required:
+                                  - body
                                   - url
                                   type: object
                               type: object
@@ -817,7 +829,19 @@ spec:
                                         app. Refer to https://api.slack.com/messaging/webhooks
                                       type: string
                                   required:
-                                  - message
+                                  - url
+                                  type: object
+                                webhook:
+                                  description: Webhook sends HTTP reqeust
+                                  properties:
+                                    body:
+                                      description: Body of the ReqeustBody
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url.
+                                      type: string
+                                  required:
+                                  - body
                                   - url
                                   type: object
                               type: object
@@ -1241,7 +1265,6 @@ spec:
                                 to https://api.slack.com/messaging/webhooks
                               type: string
                           required:
-                          - message
                           - url
                           type: object
                         startupProbe:
@@ -1786,6 +1809,19 @@ spec:
                             - name
                             type: object
                           type: array
+                        webhook:
+                          description: Webhook sends HTTP reqeust
+                          properties:
+                            body:
+                              description: Body of the ReqeustBody
+                              type: string
+                            url:
+                              description: URL is a webhook url.
+                              type: string
+                          required:
+                          - body
+                          - url
+                          type: object
                         when:
                           description: When is condition for running the job
                           properties:
@@ -2466,7 +2502,19 @@ spec:
                                         app. Refer to https://api.slack.com/messaging/webhooks
                                       type: string
                                   required:
-                                  - message
+                                  - url
+                                  type: object
+                                webhook:
+                                  description: Webhook sends HTTP reqeust
+                                  properties:
+                                    body:
+                                      description: Body of the ReqeustBody
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url.
+                                      type: string
+                                  required:
+                                  - body
                                   - url
                                   type: object
                               type: object
@@ -2510,7 +2558,19 @@ spec:
                                         app. Refer to https://api.slack.com/messaging/webhooks
                                       type: string
                                   required:
-                                  - message
+                                  - url
+                                  type: object
+                                webhook:
+                                  description: Webhook sends HTTP reqeust
+                                  properties:
+                                    body:
+                                      description: Body of the ReqeustBody
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url.
+                                      type: string
+                                  required:
+                                  - body
                                   - url
                                   type: object
                               type: object
@@ -2934,7 +2994,6 @@ spec:
                                 to https://api.slack.com/messaging/webhooks
                               type: string
                           required:
-                          - message
                           - url
                           type: object
                         startupProbe:
@@ -3479,6 +3538,19 @@ spec:
                             - name
                             type: object
                           type: array
+                        webhook:
+                          description: Webhook sends HTTP reqeust
+                          properties:
+                            body:
+                              description: Body of the ReqeustBody
+                              type: string
+                            url:
+                              description: URL is a webhook url.
+                              type: string
+                          required:
+                          - body
+                          - url
+                          type: object
                         when:
                           description: When is condition for running the job
                           properties:
@@ -4158,7 +4230,19 @@ spec:
                                         app. Refer to https://api.slack.com/messaging/webhooks
                                       type: string
                                   required:
-                                  - message
+                                  - url
+                                  type: object
+                                webhook:
+                                  description: Webhook sends HTTP reqeust
+                                  properties:
+                                    body:
+                                      description: Body of the ReqeustBody
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url.
+                                      type: string
+                                  required:
+                                  - body
                                   - url
                                   type: object
                               type: object
@@ -4202,7 +4286,19 @@ spec:
                                         app. Refer to https://api.slack.com/messaging/webhooks
                                       type: string
                                   required:
-                                  - message
+                                  - url
+                                  type: object
+                                webhook:
+                                  description: Webhook sends HTTP reqeust
+                                  properties:
+                                    body:
+                                      description: Body of the ReqeustBody
+                                      type: string
+                                    url:
+                                      description: URL is a webhook url.
+                                      type: string
+                                  required:
+                                  - body
                                   - url
                                   type: object
                               type: object
@@ -4626,7 +4722,6 @@ spec:
                                 to https://api.slack.com/messaging/webhooks
                               type: string
                           required:
-                          - message
                           - url
                           type: object
                         startupProbe:
@@ -5171,6 +5266,19 @@ spec:
                             - name
                             type: object
                           type: array
+                        webhook:
+                          description: Webhook sends HTTP reqeust
+                          properties:
+                            body:
+                              description: Body of the ReqeustBody
+                              type: string
+                            url:
+                              description: URL is a webhook url.
+                              type: string
+                          required:
+                          - body
+                          - url
+                          type: object
                         when:
                           description: When is condition for running the job
                           properties:
