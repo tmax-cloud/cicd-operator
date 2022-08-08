@@ -1,9 +1,13 @@
 run:
   timeout: 1h0m0s
+
+linters-settings:
+  gofmt:
+    simplify: true
 linters:
   enable:
   - gofmt
-  - golint
+  - revive
   - gocyclo
   - misspell
 issues:
