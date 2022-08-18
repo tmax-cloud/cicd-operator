@@ -79,6 +79,9 @@ type IntegrationConfigSpec struct {
 
 	// TLSConfig set tls configurations
 	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
+
+	// GolbalNotification sends notification when success/fail
+	GolbalNotification *Notification `json:"globalNotification,omitempty"`
 }
 
 // TLSConfig is parameters for tls connection

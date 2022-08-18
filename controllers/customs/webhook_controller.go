@@ -86,7 +86,7 @@ func (a *WebhookRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error)
 		return ctrl.Result{}, nil
 	}
 
-	message, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskWebhookParamKeyMessage, tektonv1beta1.ParamTypeString)
+	message, _, err := searchParam(run.Spec.Params, cicdv1.CustomTaskWebhookParamKeyBody, tektonv1beta1.ParamTypeString)
 	if err != nil {
 		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse

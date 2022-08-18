@@ -185,7 +185,7 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("SlackRun"),
 		Scheme: mgr.GetScheme(),
 	})
-	customRunController.AddKindHandler(cicdv1.CustomTaskKindSlack, &customs.WebhookRunHandler{
+	customRunController.AddKindHandler(cicdv1.CustomTaskKindWebHook, &customs.WebhookRunHandler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("WebhookRun"),
 		Scheme: mgr.GetScheme(),

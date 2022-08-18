@@ -71,7 +71,8 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 
 // GeneratePreSubmit generates IntegrationJob for pull request event
 func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) *cicdv1.IntegrationJob {
-	jobs := FilterJobs(config.Spec.Jobs.PreSubmit, git.EventTypePullRequest, prs[0].Base.Ref)
+	filteredJobs := FilterJobs(config.Spec.Jobs.PreSubmit, git.EventTypePullRequest, prs[0].Base.Ref)
+	jobs := applyNotification(filteredJobs, config.Spec.GolbalNotification)
 	if len(jobs) < 1 {
 		return nil
 	}
@@ -117,7 +118,8 @@ func GeneratePreSubmit(prs []git.PullRequest, repo *git.Repository, sender *git.
 
 // GeneratePostSubmit generates IntegrationJob for push event
 func GeneratePostSubmit(push *git.Push, repo *git.Repository, sender *git.User, config *cicdv1.IntegrationConfig) *cicdv1.IntegrationJob {
-	jobs := FilterJobs(config.Spec.Jobs.PostSubmit, git.EventTypePush, push.Ref)
+	filteredJobs := FilterJobs(config.Spec.Jobs.PostSubmit, git.EventTypePush, push.Ref)
+	jobs := applyNotification(filteredJobs, config.Spec.GolbalNotification)
 	if len(jobs) < 1 {
 		return nil
 	}
@@ -316,6 +318,21 @@ func filterBranches(jobs []cicdv1.Job, incomingBranch string) []cicdv1.Job {
 		}
 	}
 	return filteredJobs
+}
+
+// applyNotification inserts ic.Notification into job.Notification if job.Notification is not specified
+func applyNotification(jobs []cicdv1.Job, noti *cicdv1.Notification) []cicdv1.Job {
+	if noti != nil {
+		var appliedJobs []cicdv1.Job
+		for _, job := range jobs {
+			if job.Notification == nil {
+				job.Notification = noti
+				appliedJobs = append(appliedJobs, job)
+			}
+		}
+		return appliedJobs
+	}
+	return jobs
 }
 
 func matchString(incoming, target string) bool {

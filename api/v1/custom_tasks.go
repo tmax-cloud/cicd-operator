@@ -28,9 +28,11 @@ const (
 const (
 	CustomTaskKindApproval = "ApprovalTask"
 
-	CustomTaskApprovalParamKeyApprovers         = "approvers"
-	CustomTaskApprovalParamKeyApproversCM       = "approvers-config-map"
-	CustomTaskApprovalParamKeyMessage           = "message"
+	CustomTaskApprovalParamKeyApprovers   = "approvers"
+	CustomTaskApprovalParamKeyApproversCM = "approvers-config-map"
+	CustomTaskApprovalParamKeyMessage     = "message"
+	CustomTaskApprovalParamKeyBody        = "body"
+
 	CustomTaskApprovalParamKeyIntegrationJob    = "integration-job"
 	CustomTaskApprovalParamKeyIntegrationJobJob = "integration-job-job"
 	CustomTaskApprovalParamKeySenderName        = "senderName"
@@ -66,7 +68,7 @@ const (
 const (
 	CustomTaskKindWebHook                      = "WebhookTask"
 	CustomTaskWebhookParamKeyURL               = "webhook-url"
-	CustomTaskWebhookParamKeyMessage           = CustomTaskApprovalParamKeyMessage
+	CustomTaskWebhookParamKeyBody              = CustomTaskApprovalParamKeyBody
 	CustomTaskWebHookParamKeyIntegrationJobJob = CustomTaskApprovalParamKeyIntegrationJobJob
 	CustomTaskWebHookParamKeyIntegrationJob    = CustomTaskApprovalParamKeyIntegrationJob
 )
