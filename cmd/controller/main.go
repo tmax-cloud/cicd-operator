@@ -185,6 +185,11 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("SlackRun"),
 		Scheme: mgr.GetScheme(),
 	})
+	customRunController.AddKindHandler(cicdv1.CustomTaskKindSlack, &customs.WebhookRunHandler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("WebhookRun"),
+		Scheme: mgr.GetScheme(),
+	})
 	if err = customRunController.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CustomRun")
 	}
