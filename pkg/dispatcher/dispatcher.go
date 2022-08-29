@@ -326,8 +326,8 @@ func applyWhen(jobs []cicdv1.Job, when *cicdv1.JobWhen) []cicdv1.Job {
 		for _, job := range jobs {
 			if job.When == nil {
 				job.When = when
-				filteredJobs = append(filteredJobs, job)
 			}
+			filteredJobs = append(filteredJobs, job)
 		}
 		return filteredJobs
 	}
