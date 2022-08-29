@@ -111,6 +111,21 @@ func generateSlackRunParams(job *cicdv1.IntegrationJob, j *cicdv1.Job, slack *ci
 	}
 }
 
+// Webhook custom tasks
+func generateWebhookRunTask(job *cicdv1.IntegrationJob, j *cicdv1.Job, task *tektonv1beta1.PipelineTask) {
+	task.TaskRef = generateCustomTaskRef(cicdv1.CustomTaskKindWebHook)
+	task.Params = append(task.Params, generateWebhookRunParams(job, j, j.Webhook)...)
+}
+
+func generateWebhookRunParams(job *cicdv1.IntegrationJob, j *cicdv1.Job, webhook *cicdv1.NotiWebhook) []tektonv1beta1.Param {
+	return []tektonv1beta1.Param{
+		{Name: cicdv1.CustomTaskSlackParamKeyWebhook, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: webhook.URL}},
+		{Name: cicdv1.CustomTaskSlackParamKeyMessage, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: webhook.Body}},
+		{Name: cicdv1.CustomTaskSlackParamKeyIntegrationJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: job.Name}},
+		{Name: cicdv1.CustomTaskSlackParamKeyIntegrationJobJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: j.Name}},
+	}
+}
+
 func generateCustomTaskRef(kind string) *tektonv1beta1.TaskRef {
 	return &tektonv1beta1.TaskRef{
 		APIVersion: cicdv1.CustomTaskAPIVersion,

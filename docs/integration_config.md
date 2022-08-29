@@ -10,6 +10,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
     - [Token value](#token-value)
     - [Token from Secret](#token-from-secret)
 - [Configuring `reqeustBodyLogging`](#configuring-reqeustBodyLogging)
+- [Configuring `globalNotification`](#configuring-globalNotification)
 - [Configuring `jobs`](#configuring-jobs)
   - [Category of jobs](#category-of-jobs)
   - [Configuring normal jobs](#configuring-normal-jobs)
@@ -26,13 +27,13 @@ This guide shows how to configure `IntegrationConfig` in detail.
 - [Configuring `workspaces`](#configuring-workspaces)
 - [Configuring `podTemplate`](#configuring-podtemplate)
 - [Configuring `mergeConfig`](#configuring-mergeconfig)
-    - [`method`](#method)
-    - [`commitTemplate`](#committemplate)
-    - [`query`](#query)
+  - [`method`](#method)
+  - [`commitTemplate`](#committemplate)
+  - [`query`](#query)
 - [Configuring `ijManageSpec`](#configuring-ijmanagespec)
 - [Configuring `paramConfig`](#configuring-paramconfig)
-    - [`paramDefine`](#paramdefine)
-    - [`paramValue`](#paramvalue)
+  - [`paramDefine`](#paramdefine)
+  - [`paramValue`](#paramvalue)
 - [Configuring `TLSConfig`](#configuring-tlsconfig)
 - [Triggering jobs](#triggering-jobs)
   - [Option.1 Using `cicdctl`](#option1-using-cicdctl)
@@ -84,6 +85,10 @@ spec:
 ```
 ## Configuring `reqeustBodyLogging`
 specify whether to enable logging requestBody received by webhook-server
+The field's spec is same as [Notification Jobs](./notification-jobs.md)
+
+## Configuring `globalNotifiation`
+specify whether to apply notification job throughout the tasks as an intergrationConfig scope
 > Optional  
 > Available values: true, false  
 > Default value: false
@@ -91,6 +96,8 @@ specify whether to enable logging requestBody received by webhook-server
 spec:
   requestBodyLogging: true
 ```
+
+
 ## Configuring `jobs`
 ### Category of jobs
 - **Pre-submit jobs**  
@@ -201,7 +208,7 @@ The components of `when` expressions are `input`, `operator` and `values`:
 - `operator` represents an `input`'s relationship to a set of `values`. A valid `operator` must be provided, which can be either `in` or `notin`.
 - `values` is an array of string values. The `values` array must be provided and be non-empty. It can contain static values or variables ([`Parameters`](#configuring-paramconfig), [`Results`](#results) ).
 
-> Optional  
+> Optional
 ```yaml
 # Conditional execution using task results
 spec:
@@ -210,9 +217,9 @@ spec:
       - name: test
         ...
         tektonWhen:
-        - input: "$(tasks.<task-name>.results.<result-name>)"
-          operator: in
-          values: ["true"]
+          - input: "$(tasks.<task-name>.results.<result-name>)"
+            operator: in
+            values: ["true"]
 
 # Conditional execution using parameters
 spec:
@@ -221,16 +228,16 @@ spec:
       - name: test
         ...
         tektonWhen:
-        - input: "$(params.<param-name>)"
-          operator: in
-          values: ["true"]
+          - input: "$(params.<param-name>)"
+            operator: in
+            values: ["true"]
 ```
 
 ### `results`
 You can use results to pass task's results to [`Parameters`](#configuring-paramconfig) or [`TektonWhen`](#tektonWhen)
 Define results and use `$(results.<task-name>.path)` form to emit task's results.
 To get emitted results, use `$(tasks.<task-name>.results.<result-name>)` form.
-> Optional  
+> Optional
 ```yaml
 spec:
   jobs:
@@ -241,8 +248,8 @@ spec:
           #!/usr/bin/env bash
           echo -n "true"  | tee -a $(results.test-result.path)
         results:
-        - name: test-result
-          description: test result
+          - name: test-result
+            description: test result
 ```
 
 
@@ -261,28 +268,28 @@ You can use (or reuse) tekton tasks, rather than writing scripts in `Integration
 spec:
   jobs:
     preSubmit:
-    - name: test-1
-      tektonTask:
-        taskRef:
-          local:
-            name: curl
-            kind: Task
-        params:
-          - name: BUILDER_IMAGE
-            stringVal: tmaxcloudck/s2i-tomcat:latest
-        resources:
-          outputs:
-            - name: image
-              resourceSpec:
-                type: image
-                params:
-                  - name: url
-                    value: 172.22.11.2:30500/test:test
-        workspaces:
-          - name: source
-            workspace: s2i
+      - name: test-1
+        tektonTask:
+          taskRef:
+            local:
+              name: curl
+              kind: Task
+          params:
+            - name: BUILDER_IMAGE
+              stringVal: tmaxcloudck/s2i-tomcat:latest
+          resources:
+            outputs:
+              - name: image
+                resourceSpec:
+                  type: image
+                  params:
+                    - name: url
+                      value: 172.22.11.2:30500/test:test
+          workspaces:
+            - name: source
+              workspace: s2i
 ```
-For users' convenience, we provide catalog reference. Three different types are allowed. 
+For users' convenience, we provide catalog reference. Three different types are allowed.
 
 Specify catalog name as following in accordance with your use-case.
 
@@ -396,7 +403,7 @@ PRs are searched using the query and merged if all the CI checks are completed.
 There are 9 kinds of queries. `labels`, `blockLabels`, `authors`, `skipAuthors`, `branches`, `skipBranches`, `checks`, `optionalChecks`, and `approveRequired`.
 
 ## Configuring `ijManageSpec`
-IJManageSpec is used to define parameters to manage integration jobs. 
+IJManageSpec is used to define parameters to manage integration jobs.
 Currently provide timeout spec for garbage collection.
 Timeout should be formed as [duration string](https://golang.org/pkg/time/#ParseDuration).
 
@@ -410,7 +417,7 @@ spec:
 ```
 
 ## Configuring `paramConfig`
-Parameters can be configured by `paramConfig`. 
+Parameters can be configured by `paramConfig`.
 Defined parameters are converted to tekton param when PipelineRun is created.
 You can use parameter values in form of `$(params.<param-name>)`
 ### `paramDefine`
@@ -423,16 +430,16 @@ spec:
   jobs:
     - name: test
       ...
-  paramConfig: 
+  paramConfig:
     paramDefine:
-    - name: "test-param"
+      - name: "test-param"
     paramValue:
-    - name: "test-param"
-      stringVal: "true"
+      - name: "test-param"
+        stringVal: "true"
 ```
 
 ## Configuring `tlsConfig`
-TLSConfig is used to define parameters for TLS. 
+TLSConfig is used to define parameters for TLS.
 Currently provide InsecureSkipVerify flag.
 Set true if you want to accept any certificate.
 
@@ -460,7 +467,7 @@ cicdctl run -n <Namespace> post <IntegrationConfig Name>
    kubectl get secret $(kubectl get serviceaccount $SERVICE_ACCOUNT -o jsonpath='{.secrets[].name}') -o jsonpath='{.data.token}' | base64 -d
    ```
 2. Run API call to Kubernetes API server
-   1. Trigger PullRequest event
+  1. Trigger PullRequest event
    ```bash
    KUBERNETES_API_SERVER=<Kubernetes api server host:port>
    TOKEN=<Token got from 1.>
@@ -477,7 +484,7 @@ cicdctl run -n <Namespace> post <IntegrationConfig Name>
    "$KUBERNETES_API_SERVER/apis/cicdapi.tmax.io/v1/namespaces/$NAMESPACE/integrationconfigs/$INTEGRATION_CONFIG/runpre"
    ```
 
-   2. Trigger Push event
+  2. Trigger Push event
    ```bash
    KUBERNETES_API_SERVER=<Kubernetes api server host:port>
    TOKEN=<Token got from 1.>
@@ -518,47 +525,47 @@ spec:
       ...
   jobs:
     preSubmit:
-    - name: <Job name>
-      image: <Job image>
-      command:
-      - <Command>
-      script: <Script>
-      resources:
-        requests:
-          memory: "64Mi"
-          cpu: "250m"
-        limits:
-          memory: "128Mi"
-          cpu: "500m"
-      env:
-      - name: TEST
-        value: val
-      when:
-        branch:
-        - <RegExp>
-        skipBranch:
-        - <RegExp>
-        tag:
-        - <RegExp>
-        skipTag:
-        - <RegExp>
-      after:
-      - <Job Name>
-      approval:
-        approvers:
-        - name: <User name>
-          email: <User email>
-        approversConfigMap:
-          name: <ConfigMap name>
+      - name: <Job name>
+        image: <Job image>
+        command:
+          - <Command>
+        script: <Script>
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        env:
+          - name: TEST
+            value: val
+        when:
+          branch:
+            - <RegExp>
+          skipBranch:
+            - <RegExp>
+          tag:
+            - <RegExp>
+          skipTag:
+            - <RegExp>
+        after:
+          - <Job Name>
+        approval:
+          approvers:
+            - name: <User name>
+              email: <User email>
+          approversConfigMap:
+            name: <ConfigMap name>
     postSubmit:
-    - <Same as preSubmit>
+      - <Same as preSubmit>
 status:
   secrets: <Webhook secret>
   conditions:
-  - type: WebhookRegistered
-    status: [True|False]
-    reason: <Reason of the condition status>
-    message: <Message for the condition status>
+    - type: WebhookRegistered
+      status: [True|False]
+      reason: <Reason of the condition status>
+      message: <Message for the condition status>
 ```
 
 ## Sample YAML
@@ -591,36 +598,36 @@ spec:
               storage: 1Gi
   jobs:
     preSubmit:
-    - name: test-unit
-      image: golang:1.14
-      command:
-      - go test -v ./pkg/...
-      when:
-        branch:
-        - master
-    - name: test-lint
-      image: golangci/golangci-lint:v1.32
-      command:
-      - golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
-      when:
-        branch:
-        - master
+      - name: test-unit
+        image: golang:1.14
+        command:
+          - go test -v ./pkg/...
+        when:
+          branch:
+            - master
+      - name: test-lint
+        image: golangci/golangci-lint:v1.32
+        command:
+          - golangci-lint run ./... -v -E gofmt --timeout 1h0m0s
+        when:
+          branch:
+            - master
     postSubmit:
-    - name: build-push-image
-      image: quay.io/buildah/stable
-      command:
-      - buildah bud --format docker --storage-driver=vfs -f ./Dockerfile -t $IMAGE_URL .
-      - buildah push --storage-driver=vfs --creds=$CRED $IMAGE_URL docker://$IMAGE_URL
-      env:
-      - name: IMAGE_URL
-        value: tmaxcloudck/cicd-operator:recent
-      - name: CRED
-        valueFrom:
-          secretKeyRef:
-             name: tmaxcloudck-hub-credential
-             key: .dockerconfigjson
-      privileged: true
-      when:
-        tag:
-        - v.*
+      - name: build-push-image
+        image: quay.io/buildah/stable
+        command:
+          - buildah bud --format docker --storage-driver=vfs -f ./Dockerfile -t $IMAGE_URL .
+          - buildah push --storage-driver=vfs --creds=$CRED $IMAGE_URL docker://$IMAGE_URL
+        env:
+          - name: IMAGE_URL
+            value: tmaxcloudck/cicd-operator:recent
+          - name: CRED
+            valueFrom:
+              secretKeyRef:
+                name: tmaxcloudck-hub-credential
+                key: .dockerconfigjson
+        privileged: true
+        when:
+          tag:
+            - v.*
 ```

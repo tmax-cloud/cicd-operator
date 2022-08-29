@@ -709,6 +709,19 @@ spec:
                               - message
                               - url
                               type: object
+                            webhook:
+                              description: Webhook sends HTTP reqeust
+                              properties:
+                                body:
+                                  description: Body of the ReqeustBody
+                                  type: string
+                                url:
+                                  description: URL is a webhook url.
+                                  type: string
+                              required:
+                              - body
+                              - url
+                              type: object
                           type: object
                         onSuccess:
                           description: OnSuccess notifies when the job is succeeded
@@ -750,6 +763,19 @@ spec:
                                   type: string
                               required:
                               - message
+                              - url
+                              type: object
+                            webhook:
+                              description: Webhook sends HTTP reqeust
+                              properties:
+                                body:
+                                  description: Body of the ReqeustBody
+                                  type: string
+                                url:
+                                  description: URL is a webhook url.
+                                  type: string
+                              required:
+                              - body
                               - url
                               type: object
                           type: object
@@ -1697,6 +1723,19 @@ spec:
                         - name
                         type: object
                       type: array
+                    webhook:
+                      description: Webhook sends HTTP reqeust
+                      properties:
+                        body:
+                          description: Body of the ReqeustBody
+                          type: string
+                        url:
+                          description: URL is a webhook url.
+                          type: string
+                      required:
+                      - body
+                      - url
+                      type: object
                     when:
                       description: When is condition for running the job
                       properties:
