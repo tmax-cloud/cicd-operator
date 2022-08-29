@@ -10,6 +10,7 @@ This guide shows how to configure `IntegrationConfig` in detail.
     - [Token value](#token-value)
     - [Token from Secret](#token-from-secret)
 - [Configuring `reqeustBodyLogging`](#configuring-reqeustBodyLogging)
+- [Configuring `when`](#configuring-when)
 - [Configuring `jobs`](#configuring-jobs)
   - [Category of jobs](#category-of-jobs)
   - [Configuring normal jobs](#configuring-normal-jobs)
@@ -90,6 +91,21 @@ specify whether to enable logging requestBody received by webhook-server
 ```yaml
 spec:
   requestBodyLogging: true
+```
+## Configuring `when`
+`when` specifies on which branch IntegrationConfig is applied to in global scope.
+if not specified, all jobs will perform on the every branch yet `job.When` can override `integrationConfig.when`.
+> Optional  
+> Data Type: array  
+> Default value: nil
+```yaml
+spec:
+  when:
+    branch:
+      - dev
+      - qa
+    skipBranch:
+      - prod
 ```
 ## Configuring `jobs`
 ### Category of jobs
