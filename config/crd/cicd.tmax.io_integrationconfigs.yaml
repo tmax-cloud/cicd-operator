@@ -8297,6 +8297,26 @@ spec:
                       presented by the server and any host name in that certificate.
                     type: boolean
                 type: object
+              when:
+                description: When is condition for running the job in global scope
+                properties:
+                  branch:
+                    items:
+                      type: string
+                    type: array
+                  skipBranch:
+                    items:
+                      type: string
+                    type: array
+                  skipTag:
+                    items:
+                      type: string
+                    type: array
+                  tag:
+                    items:
+                      type: string
+                    type: array
+                type: object
               workspaces:
                 description: Workspaces list
                 items:
