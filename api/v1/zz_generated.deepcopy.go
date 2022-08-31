@@ -343,6 +343,11 @@ func (in *IntegrationConfigSpec) DeepCopyInto(out *IntegrationConfigSpec) {
 		*out = new(TLSConfig)
 		**out = **in
 	}
+	if in.When != nil {
+		in, out := &in.When, &out.When
+		*out = new(JobWhen)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.GolbalNotification != nil {
 		in, out := &in.GolbalNotification, &out.GolbalNotification
 		*out = new(Notification)
