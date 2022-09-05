@@ -50,18 +50,18 @@ else
   CHECKOUT_REF="$CI_BASE_REF"
 fi
 
-git fetch "$CHECKOUT_URL" "$CHECKOUT_REF"
-git checkout FETCH_HEAD
+git -c http.sslVerify=false fetch "$CHECKOUT_URL" "$CHECKOUT_REF"
+git -c http.sslVerify=false checkout FETCH_HEAD
 
 if [ "$CI_BASE_REF" != "" ]; then
   # Pull request event
   for ci_head_ref in $CI_HEAD_REF_ARRAY; do 
-    git fetch "$CHECKOUT_URL" "$ci_head_ref"
-    git merge --no-ff FETCH_HEAD
+    git -c http.sslVerify=false fetch "$CHECKOUT_URL" "$ci_head_ref"
+    git -c http.sslVerify=false merge --no-ff FETCH_HEAD
   done
 fi
 
-git submodule update --init --recursive
+git -c http.sslVerify=false submodule update --init --recursive
 `
 
 func gitCheckout() tektonv1beta1.Step {
