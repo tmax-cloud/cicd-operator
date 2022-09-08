@@ -76,6 +76,9 @@ type IntegrationConfigSpec struct {
 
 	// When is condition for running the job in global scope
 	When *JobWhen `json:"when,omitempty"`
+
+	// GolbalNotification sends notification when success/fail
+	GolbalNotification *Notification `json:"globalNotification,omitempty"`
 }
 
 // TLSConfig is parameters for tls connection

@@ -175,6 +175,8 @@ func generateTask(job *cicdv1.IntegrationJob, j *cicdv1.Job) (*tektonv1beta1.Pip
 		generateEmailRunTask(job, j, task)
 	} else if j.Slack != nil {
 		generateSlackRunTask(job, j, task)
+	} else if j.Webhook != nil {
+		generateWebhookRunTask(job, j, task)
 	} else {
 		// Steps
 		steps, err := generateSteps(j)

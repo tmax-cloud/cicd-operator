@@ -32,6 +32,9 @@ type NotificationMethods struct {
 
 	// Slack sends slack
 	Slack *NotiSlack `json:"slack,omitempty"`
+
+	// Webhook sends HTTP reqeust
+	Webhook *NotiWebhook `json:"webhook,omitempty"`
 }
 
 // NotiEmail sends email to receivers
@@ -57,4 +60,13 @@ type NotiSlack struct {
 	// Message is a message sent to the webhook. It should be a Markdown format.
 	// You can use $INTEGRATION_JOB_NAME and $JOB_NAME variable for IntegrationJob's name and the job's name respectively.
 	Message string `json:"message"`
+}
+
+// NotiWebhook sends slack to the webhook
+type NotiWebhook struct {
+	// URL is a webhook url.
+	URL string `json:"url"`
+
+	// Body of the ReqeustBody
+	Body string `json:"body"`
 }
