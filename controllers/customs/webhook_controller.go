@@ -110,7 +110,6 @@ func (a *WebhookRunHandler) Handle(run *tektonv1alpha1.Run) (ctrl.Result, error)
 
 	// Send!
 	if err := webhook.SendReqeust(url, compiledMessage); err != nil {
-		log.Error(err, "")
 		cond.Status = corev1.ConditionFalse
 		cond.Reason = "HttpReqqeustError"
 		cond.Message = err.Error()

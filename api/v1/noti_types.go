@@ -62,11 +62,10 @@ type NotiSlack struct {
 	Message string `json:"message"`
 }
 
-// NotiWebhook sends slack to the webhook
+// NotiWebhook sends reqeust to the webhook
 type NotiWebhook struct {
 	// URL is a webhook url.
 	URL string `json:"url"`
-
 	// Body of the ReqeustBody
 	Body string `json:"body"`
 }
