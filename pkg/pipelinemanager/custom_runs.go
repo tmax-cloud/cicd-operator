@@ -119,9 +119,9 @@ func generateWebhookRunTask(job *cicdv1.IntegrationJob, j *cicdv1.Job, task *tek
 
 func generateWebhookRunParams(job *cicdv1.IntegrationJob, j *cicdv1.Job, webhook *cicdv1.NotiWebhook) []tektonv1beta1.Param {
 	return []tektonv1beta1.Param{
-		{Name: cicdv1.CustomTaskSlackParamKeyWebhook, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: webhook.URL}},
-		{Name: cicdv1.CustomTaskSlackParamKeyMessage, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: webhook.Body}},
-		{Name: cicdv1.CustomTaskSlackParamKeyIntegrationJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: job.Name}},
-		{Name: cicdv1.CustomTaskSlackParamKeyIntegrationJobJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: j.Name}},
+		{Name: cicdv1.CustomTaskWebhookParamKeyURL, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: webhook.URL}},
+		{Name: cicdv1.CustomTaskWebhookParamKeyBody, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: webhook.Body}},
+		{Name: cicdv1.CustomTaskWebHookParamKeyIntegrationJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: job.Name}},
+		{Name: cicdv1.CustomTaskWebHookParamKeyIntegrationJobJob, Value: tektonv1beta1.ArrayOrString{Type: tektonv1beta1.ParamTypeString, StringVal: j.Name}},
 	}
 }
