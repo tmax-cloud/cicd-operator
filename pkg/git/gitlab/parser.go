@@ -18,10 +18,11 @@ package gitlab
 
 import (
 	"encoding/json"
-	"github.com/tmax-cloud/cicd-operator/pkg/git"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strconv"
 	"strings"
+
+	"github.com/tmax-cloud/cicd-operator/pkg/git"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error) {
@@ -60,7 +61,7 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 			}
 		}
 	case "approved", "unapproved":
-		return c.parsePullRequestReviewWebhook(data)
+		return c.parsePullRequestReviewWebhook(data, jsonString)
 	}
 
 	// Get Target branch
@@ -82,7 +83,7 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 		pullRequest.Labels = append(pullRequest.Labels, git.IssueLabel{Name: l.Title})
 	}
 
-	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest, Sender: *sender}, nil
+	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest, Sender: *sender, RequestBody: string(jsonString)}, nil
 }
 
 func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
@@ -104,7 +105,7 @@ func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
 		sender.Email = userInfo.Email
 	}
 
-	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Sender: sender, Push: &push}, nil
+	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Sender: sender, Push: &push, RequestBody: string(jsonString)}, nil
 }
 
 func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
@@ -170,7 +171,8 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 		Name: data.Project.Name,
 		URL:  data.Project.WebURL,
 	},
-		Sender: *sender,
+		Sender:      *sender,
+		RequestBody: string(jsonString),
 		IssueComment: &git.IssueComment{
 			Comment: git.Comment{
 				Body:      data.ObjectAttributes.Note,
@@ -184,7 +186,7 @@ func (c *Client) parseIssueComment(jsonString []byte) (*git.Webhook, error) {
 		}}, nil
 }
 
-func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.Webhook, error) {
+func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook, jsonString []byte) (*git.Webhook, error) {
 	state := git.PullRequestState(data.ObjectAttribute.State)
 	switch string(state) {
 	case "opened":
@@ -225,7 +227,8 @@ func (c *Client) parsePullRequestReviewWebhook(data MergeRequestWebhook) (*git.W
 			Name: data.Project.Name,
 			URL:  data.Project.WebURL,
 		},
-		Sender: sender,
+		Sender:      sender,
+		RequestBody: string(jsonString),
 		IssueComment: &git.IssueComment{
 			Author:      commentAuthor,
 			ReviewState: reviewState,
