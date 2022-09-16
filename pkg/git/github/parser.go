@@ -48,7 +48,7 @@ func (c *Client) parsePullRequestWebhook(jsonString []byte) (*git.Webhook, error
 	pullRequest.Base = git.Base{Ref: data.PullRequest.Base.Ref, Sha: data.PullRequest.Base.Sha}
 	pullRequest.Head = git.Head{Ref: data.PullRequest.Head.Ref, Sha: data.PullRequest.Head.Sha}
 	repo := git.Repository{Name: data.Repo.Name, URL: data.Repo.URL}
-	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest, Sender: *sender}, nil
+	return &git.Webhook{EventType: git.EventTypePullRequest, Repo: repo, PullRequest: &pullRequest, Sender: *sender, RequestBody: string(jsonString)}, nil
 }
 
 func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
@@ -70,7 +70,7 @@ func (c *Client) parsePushWebhook(jsonString []byte) (*git.Webhook, error) {
 		sender.Email = userInfo.Email
 	}
 
-	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Sender: sender, Push: &push}, nil
+	return &git.Webhook{EventType: git.EventTypePush, Repo: repo, Sender: sender, Push: &push, RequestBody: string(jsonString)}, nil
 }
 
 func (c *Client) parseIssueCommentWebhook(jsonString []byte) (*git.Webhook, error) {
@@ -105,7 +105,8 @@ func (c *Client) parseIssueCommentWebhook(jsonString []byte) (*git.Webhook, erro
 		Name: issueComment.Repo.Name,
 		URL:  issueComment.Repo.URL,
 	},
-		Sender: *sender,
+		Sender:      *sender,
+		RequestBody: string(jsonString),
 		IssueComment: &git.IssueComment{
 			Comment: git.Comment{
 				Body:      issueComment.Comment.Body,
@@ -136,7 +137,8 @@ func (c *Client) parsePullRequestReviewWebhook(jsonString []byte) (*git.Webhook,
 		Name: review.Repo.Name,
 		URL:  review.Repo.URL,
 	},
-		Sender: *sender,
+		Sender:      *sender,
+		RequestBody: string(jsonString),
 		IssueComment: &git.IssueComment{
 			Comment: git.Comment{
 				Body:      review.Review.Body,
@@ -168,7 +170,8 @@ func (c *Client) parsePullRequestReviewCommentWebhook(jsonString []byte) (*git.W
 		Name: reviewComment.Repo.Name,
 		URL:  reviewComment.Repo.URL,
 	},
-		Sender: *sender,
+		Sender:      *sender,
+		RequestBody: string(jsonString),
 		IssueComment: &git.IssueComment{
 			Author: *author,
 			Comment: git.Comment{

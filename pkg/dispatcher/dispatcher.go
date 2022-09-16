@@ -62,6 +62,17 @@ func (d Dispatcher) Handle(webhook *git.Webhook, config *cicdv1.IntegrationConfi
 		return nil
 	}
 
+	requestBody := webhook.RequestBody
+
+	if config.Spec.RequestBodyLogging {
+		ann := job.ObjectMeta.Annotations
+		if ann == nil {
+			ann = make(map[string]string)
+		}
+		ann["requestBody"] = requestBody
+		job.ObjectMeta.Annotations = ann
+	}
+
 	if err := d.Client.Create(context.Background(), job); err != nil {
 		return err
 	}
