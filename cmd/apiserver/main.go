@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"os"
+
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/controllers"
 	"github.com/tmax-cloud/cicd-operator/internal/configs"
@@ -11,13 +14,11 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/dispatcher"
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
-	"io"
 	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	apiregv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -38,6 +39,11 @@ func init() {
 
 func main() {
 	var healthAddr string
+	opts := zap.Options{
+		Development: false,
+	}
+	opts.BindFlags(flag.CommandLine)
+
 	flag.StringVar(&healthAddr, "health-addr", ":8888", "The address the health endpoint binds to.")
 	flag.Parse()
 
@@ -51,7 +57,7 @@ func main() {
 		_ = logFile.Close()
 	}()
 	logWriter := io.MultiWriter(logFile, os.Stdout)
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(logWriter)))
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts), zap.WriteTo(logWriter)))
 	if err := logrotate.StartRotate("0 0 1 * * ?"); err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
