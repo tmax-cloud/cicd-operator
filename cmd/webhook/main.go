@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"os"
+
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
 	"github.com/tmax-cloud/cicd-operator/controllers"
@@ -16,11 +19,9 @@ import (
 	"github.com/tmax-cloud/cicd-operator/pkg/git"
 	"github.com/tmax-cloud/cicd-operator/pkg/plugins/size"
 	"github.com/tmax-cloud/cicd-operator/pkg/server"
-	"io"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
