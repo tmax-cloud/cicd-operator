@@ -71,6 +71,7 @@ func main() {
 		Development: false,
 	}
 	opts.BindFlags(flag.CommandLine)
+
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&healthAddr, "health-addr", ":8888", "The address the health endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
