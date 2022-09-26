@@ -277,8 +277,8 @@ func TestIntegrationJobReconciler_Reconcile(t *testing.T) {
 
 type fakePipelineManager struct{}
 
-func (f *fakePipelineManager) Generate(_ *cicdv1.IntegrationJob) (*tektonv1beta1.PipelineRun, error) {
-	return nil, nil
+func (f *fakePipelineManager) Generate(_ *cicdv1.IntegrationJob) (*tektonv1beta1.Pipeline, *tektonv1beta1.PipelineRun, error) {
+	return nil, nil, nil
 }
 
 func (f *fakePipelineManager) ReflectStatus(_ *tektonv1beta1.PipelineRun, job *cicdv1.IntegrationJob, _ *cicdv1.IntegrationConfig) error {

@@ -23,17 +23,6 @@ require (
 )
 
 require (
-	github.com/fatih/color v1.12.0 // indirect
-	github.com/gobuffalo/flect v0.2.3 // indirect
-	github.com/mattn/go-colorable v0.1.8 // indirect
-	github.com/mattn/go-isatty v0.0.12 // indirect
-	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/tools v0.1.5 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	sigs.k8s.io/controller-tools v0.7.0 // indirect
-)
-
-require (
 	cloud.google.com/go v0.83.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
