@@ -182,7 +182,6 @@ rules:
   - tekton.dev
   resources:
   - pipelineruns
-  - pipelines
   verbs:
   - create
   - delete
@@ -197,6 +196,18 @@ rules:
   - pipelineruns/status
   verbs:
   - get
+- apiGroups:
+  - tekton.dev
+  resources:
+  - pipelines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - tekton.dev
   resources:
