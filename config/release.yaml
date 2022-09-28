@@ -516,6 +516,18 @@ rules:
 - apiGroups:
   - tekton.dev
   resources:
+  - pipelines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - tekton.dev
+  resources:
   - runs
   verbs:
   - create
