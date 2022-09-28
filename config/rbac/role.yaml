@@ -182,6 +182,7 @@ rules:
   - tekton.dev
   resources:
   - pipelineruns
+  - pipelines
   verbs:
   - create
   - delete
