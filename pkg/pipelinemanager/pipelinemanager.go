@@ -85,11 +85,13 @@ func (p *pipelineManager) Generate(job *cicdv1.IntegrationJob) (*tektonv1beta1.P
 	var workspaceDefs []tektonv1beta1.PipelineWorkspaceDeclaration
 	for _, w := range job.Spec.Workspaces {
 		workspaceDefs = append(workspaceDefs, tektonv1beta1.PipelineWorkspaceDeclaration{Name: w.Name})
-		if strings.HasPrefix(w.Secret.SecretName, "private-access-token-") {
-			token = p.getToken(w.Secret.SecretName, job.Namespace)
+		if w.Secret != nil {
+			if strings.HasPrefix(w.Secret.SecretName, "private-access-token-") {
+				token = p.getToken(w.Secret.SecretName, job.Namespace)
+			}
 		}
 	}
-
+	
 	// Params
 	paramDefine, paramValue := getParams(job)
 
