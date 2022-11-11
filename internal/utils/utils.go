@@ -18,6 +18,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/tmax-cloud/cicd-operator/pkg/git/gitea"
 	"regexp"
 	"strings"
 
@@ -40,6 +41,8 @@ func GetGitCli(cfg *cicdv1.IntegrationConfig, cli client.Client) (git.Client, er
 		c = &gitlab.Client{IntegrationConfig: cfg, K8sClient: cli}
 	case cicdv1.GitTypeFake:
 		c = &fake.Client{IntegrationConfig: cfg, K8sClient: cli}
+	case cicdv1.GitTypeGitea:
+		c = &gitea.Client{IntegrationConfig: cfg, K8sClient: cli}
 	default:
 		return nil, fmt.Errorf("git type %s is not supported", cfg.Spec.Git.Type)
 	}

@@ -31,12 +31,15 @@ const (
 
 	GitlabDefaultAPIUrl = "https://gitlab.com"
 	GitlabDefaultHost   = "https://gitlab.com"
+
+	GiteaDefaultAPIUrl = "https://gitea.com"
+	GiteaDefaultHost   = "https://gitea.com/"
 )
 
 // GitConfig is a git repository where the IntegrationConfig to be configured
 type GitConfig struct {
 	// Type for git remote server
-	// +kubebuilder:validation:Enum=github;gitlab
+	// +kubebuilder:validation:Enum=github;gitlab;gitea
 	Type GitType `json:"type"`
 
 	// Repository name of git repository (in <org>/<repo> form, e.g., tmax-cloud/cicd-operator)
@@ -60,6 +63,8 @@ func (config *GitConfig) GetGitHost() (string, error) {
 		gitURL = GithubDefaultHost
 	} else if gitURL == GitlabDefaultAPIUrl {
 		gitURL = GitlabDefaultHost
+	} else if gitURL == GiteaDefaultAPIUrl {
+		gitURL = GiteaDefaultHost
 	}
 	gitU, err := url.Parse(gitURL)
 	if err != nil {
@@ -75,6 +80,8 @@ func (config *GitConfig) GetAPIUrl() string {
 		return GithubDefaultAPIUrl
 	} else if config.Type == GitTypeGitLab && config.APIUrl == "" {
 		return GitlabDefaultAPIUrl
+	} else if config.Type == GitTypeGitea && config.APIUrl == "" {
+		return GiteaDefaultAPIUrl
 	}
 	return config.APIUrl
 }
@@ -100,6 +107,7 @@ type GitType string
 const (
 	GitTypeGitHub = GitType("github")
 	GitTypeGitLab = GitType("gitlab")
+	GitTypeGitea  = GitType("gitea")
 	GitTypeFake   = GitType("fake")
 )
 

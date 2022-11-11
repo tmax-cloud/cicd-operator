@@ -104,6 +104,7 @@ spec:
                     enum:
                     - github
                     - gitlab
+                    - gitea
                     type: string
                 required:
                 - repository
