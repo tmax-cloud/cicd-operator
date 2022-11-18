@@ -33,7 +33,7 @@ const (
 	GitlabDefaultHost   = "https://gitlab.com"
 
 	GiteaDefaultAPIUrl = "https://gitea.com"
-	GiteaDefaultHost   = "https://gitea.com/"
+	GiteaDefaultHost   = "https://gitea.com"
 )
 
 // GitConfig is a git repository where the IntegrationConfig to be configured
