@@ -19,7 +19,6 @@ package dispatcher
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
@@ -363,9 +362,5 @@ func applyNotification(jobs []cicdv1.Job, noti *cicdv1.Notification) []cicdv1.Jo
 }
 
 func matchString(incoming, target string) bool {
-	re, err := regexp.Compile(target)
-	if err != nil {
-		return false
-	}
-	return re.MatchString(incoming)
+	return incoming == target
 }
