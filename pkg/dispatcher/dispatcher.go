@@ -19,7 +19,6 @@ package dispatcher
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	cicdv1 "github.com/tmax-cloud/cicd-operator/api/v1"
