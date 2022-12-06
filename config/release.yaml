@@ -84,7 +84,7 @@ spec:
       containers:
       - command:
         - /controller
-        image: docker.io/tmaxcloudck/cicd-operator:v0.6.0
+        image: docker.io/tmaxcloudck/cicd-operator:v0.6.1
         imagePullPolicy: Always
         name: manager
         env:
@@ -171,7 +171,7 @@ spec:
       containers:
         - command:
             - /blocker
-          image: docker.io/tmaxcloudck/cicd-blocker:v0.6.0
+          image: docker.io/tmaxcloudck/cicd-blocker:v0.6.1
           imagePullPolicy: Always
           name: manager
           resources:
@@ -231,7 +231,7 @@ spec:
       containers:
         - command:
             - /webhook
-          image: docker.io/tmaxcloudck/cicd-webhook:v0.6.0
+          image: docker.io/tmaxcloudck/cicd-webhook:v0.6.1
           imagePullPolicy: Always
           name: manager
           resources:
@@ -291,7 +291,7 @@ spec:
       containers:
         - command:
             - /apiserver
-          image: docker.io/tmaxcloudck/cicd-api-server:v0.6.0
+          image: docker.io/tmaxcloudck/cicd-api-server:v0.6.1
           imagePullPolicy: Always
           name: manager
           resources:
