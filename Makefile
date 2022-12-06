@@ -1,5 +1,5 @@
 # Current Operator version
-VERSION ?= v0.4.13
+VERSION ?= v0.4.14
 REGISTRY ?= tmaxcloudck
 
 # Image URL to use all building/pushing image targets
