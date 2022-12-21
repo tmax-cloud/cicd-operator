@@ -24,7 +24,6 @@ require (
 	k8s.io/kubernetes v1.13.0
 	knative.dev/pkg v0.0.0-20200922164940-4bf40ad82aab
 	sigs.k8s.io/controller-runtime v0.6.4
-	sigs.k8s.io/controller-tools v0.4.1 // indirect
 )
 
 replace (
