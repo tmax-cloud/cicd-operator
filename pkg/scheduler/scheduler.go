@@ -170,19 +170,6 @@ func (s *scheduler) schedulePending(availableCnt *int) func(structs.Item) {
 		// Generate PipeLine and PipeLineRun
 		pl, pr, err := s.pm.Generate(jobNode.IntegrationJob)
 
-		// Check whether PipeLine exists
-		testPl := &tektonv1beta1.Pipeline{}
-		if err := s.k8sClient.Get(context.Background(), types.NamespacedName{Name: pipelinemanager.Name(jobNode.IntegrationJob), Namespace: jobNode.Namespace}, testPl); err != nil {
-			//
-			if err := s.k8sClient.Create(context.Background(), pl); err != nil {
-				if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
-					log.Error(err, "")
-				}
-				log.Error(err, "")
-				return
-			}
-		}
-
 		if err != nil {
 			if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
 				log.Error(err, "")
@@ -198,6 +185,14 @@ func (s *scheduler) schedulePending(availableCnt *int) func(structs.Item) {
 			return
 		}
 
+		if err := controllerutil.SetControllerReference(jobNode.IntegrationJob, pl, s.scheme); err != nil {
+			if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
+				log.Error(err, "")
+			}
+			log.Error(err, "")
+			return
+		}
+
 		log.Info(fmt.Sprintf("Scheduled %s / %s / %s", jobNode.Name, jobNode.Namespace, jobNode.CreationTimestamp))
 		// Create PipelineRun only when there is no Pipeline exists
 		if err := s.k8sClient.Create(context.Background(), pr); err != nil {
@@ -206,6 +201,19 @@ func (s *scheduler) schedulePending(availableCnt *int) func(structs.Item) {
 			}
 			log.Error(err, "")
 			return
+		}
+
+		// Check whether PipeLine exists
+		testPl := &tektonv1beta1.Pipeline{}
+		if err := s.k8sClient.Get(context.Background(), types.NamespacedName{Name: pipelinemanager.Name(jobNode.IntegrationJob), Namespace: jobNode.Namespace}, testPl); err != nil {
+			// If not, create PipeLine
+			if err := s.k8sClient.Create(context.Background(), pl); err != nil {
+				if err := s.patchJobScheduleFailed(jobNode.IntegrationJob, err.Error()); err != nil {
+					log.Error(err, "")
+				}
+				log.Error(err, "")
+				return
+			}
 		}
 
 		*availableCnt = *availableCnt - 1
