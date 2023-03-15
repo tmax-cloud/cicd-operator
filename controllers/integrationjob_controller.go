@@ -199,5 +199,6 @@ func (r *integrationJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cicdv1.IntegrationJob{}).
 		Owns(&tektonv1beta1.PipelineRun{}).
+		Owns(&tektonv1beta1.Pipeline{}).
 		Complete(r)
 }
