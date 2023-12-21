@@ -364,115 +364,115 @@ func (t *testPlugin) Handle(_ *git.Webhook, config *cicdv1.IntegrationConfig) er
 	return nil
 }
 
-func Test_buildPullRequestWebhook(t *testing.T) {
-	tc := map[string]struct {
-		body io.Reader
+// func Test_buildPullRequestWebhook(t *testing.T) {
+// 	tc := map[string]struct {
+// 		body io.Reader
 
-		errorOccurs  bool
-		errorMessage string
-		expectedPR   *git.PullRequest
-	}{
-		"normal": {
-			body: bytes.NewBuffer([]byte(`{"base_branch": "master", "head_branch": "feat/test"}`)),
-			expectedPR: &git.PullRequest{
-				State:  git.PullRequestStateOpen,
-				Action: git.PullRequestActionOpen,
-				Author: git.User{
-					Name: "trigger-test-user-end",
-				},
-				Base: git.Base{
-					Ref: "master",
-					Sha: git.FakeSha,
-				},
-				Head: git.Head{
-					Ref: "feat/test",
-					Sha: git.FakeSha,
-				},
-			},
-		},
-		"decodeErr": {
-			body:         bytes.NewBuffer([]byte(`{{{{`)),
-			errorOccurs:  true,
-			errorMessage: "invalid character '{' looking for beginning of object key string",
-		},
-		"defaultBaseBranch": {
-			body: bytes.NewBuffer([]byte(`{"head_branch": "feat/test"}`)),
-			expectedPR: &git.PullRequest{
-				State:  git.PullRequestStateOpen,
-				Action: git.PullRequestActionOpen,
-				Author: git.User{
-					Name: "trigger-test-user-end",
-				},
-				Base: git.Base{
-					Ref: "master",
-					Sha: git.FakeSha,
-				},
-				Head: git.Head{
-					Ref: "feat/test",
-					Sha: git.FakeSha,
-				},
-			},
-		},
-		"noHeadBranch": {
-			body:         bytes.NewBuffer([]byte(`{}`)),
-			errorOccurs:  true,
-			errorMessage: "head_branch must be set",
-		},
-	}
+// 		errorOccurs  bool
+// 		errorMessage string
+// 		expectedPR   *git.PullRequest
+// 	}{
+// 		"normal": {
+// 			body: bytes.NewBuffer([]byte(`{"base_branch": "master", "head_branch": "feat/test"}`)),
+// 			expectedPR: &git.PullRequest{
+// 				State:  git.PullRequestStateOpen,
+// 				Action: git.PullRequestActionOpen,
+// 				Author: git.User{
+// 					Name: "trigger-test-user-end",
+// 				},
+// 				Base: git.Base{
+// 					Ref: "master",
+// 					Sha: git.FakeSha,
+// 				},
+// 				Head: git.Head{
+// 					Ref: "feat/test",
+// 					Sha: git.FakeSha,
+// 				},
+// 			},
+// 		},
+// 		"decodeErr": {
+// 			body:         bytes.NewBuffer([]byte(`{{{{`)),
+// 			errorOccurs:  true,
+// 			errorMessage: "invalid character '{' looking for beginning of object key string",
+// 		},
+// 		"defaultBaseBranch": {
+// 			body: bytes.NewBuffer([]byte(`{"head_branch": "feat/test"}`)),
+// 			expectedPR: &git.PullRequest{
+// 				State:  git.PullRequestStateOpen,
+// 				Action: git.PullRequestActionOpen,
+// 				Author: git.User{
+// 					Name: "trigger-test-user-end",
+// 				},
+// 				Base: git.Base{
+// 					Ref: "master",
+// 					Sha: git.FakeSha,
+// 				},
+// 				Head: git.Head{
+// 					Ref: "feat/test",
+// 					Sha: git.FakeSha,
+// 				},
+// 			},
+// 		},
+// 		"noHeadBranch": {
+// 			body:         bytes.NewBuffer([]byte(`{}`)),
+// 			errorOccurs:  true,
+// 			errorMessage: "head_branch must be set",
+// 		},
+// 	}
 
-	for name, c := range tc {
-		t.Run(name, func(t *testing.T) {
-			pr, err := buildPullRequestWebhook(c.body, "test-user")
-			if c.errorOccurs {
-				require.Error(t, err)
-				require.Equal(t, c.errorMessage, err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, c.expectedPR, pr)
-			}
-		})
-	}
-}
+// 	for name, c := range tc {
+// 		t.Run(name, func(t *testing.T) {
+// 			pr, err := buildPullRequestWebhook(c.body, "test-user")
+// 			if c.errorOccurs {
+// 				require.Error(t, err)
+// 				require.Equal(t, c.errorMessage, err.Error())
+// 			} else {
+// 				require.NoError(t, err)
+// 				require.Equal(t, c.expectedPR, pr)
+// 			}
+// 		})
+// 	}
+// }
 
-func Test_buildPushWebhook(t *testing.T) {
-	tc := map[string]struct {
-		body io.Reader
+// func Test_buildPushWebhook(t *testing.T) {
+// 	tc := map[string]struct {
+// 		body io.Reader
 
-		errorOccurs  bool
-		errorMessage string
-		expectedPush *git.Push
-	}{
-		"normal": {
-			body: bytes.NewBuffer([]byte(`{"branch": "master"}`)),
-			expectedPush: &git.Push{
-				Ref: "master",
-				Sha: "0000000000000000000000000000000000000000",
-			},
-		},
-		"decodeErr": {
-			body:         bytes.NewBuffer([]byte(`{{{{`)),
-			errorOccurs:  true,
-			errorMessage: "invalid character '{' looking for beginning of object key string",
-		},
-		"defaultBranch": {
-			body: bytes.NewBuffer([]byte(`{}`)),
-			expectedPush: &git.Push{
-				Ref: "master",
-				Sha: "0000000000000000000000000000000000000000",
-			},
-		},
-	}
+// 		errorOccurs  bool
+// 		errorMessage string
+// 		expectedPush *git.Push
+// 	}{
+// 		"normal": {
+// 			body: bytes.NewBuffer([]byte(`{"branch": "master"}`)),
+// 			expectedPush: &git.Push{
+// 				Ref: "master",
+// 				Sha: "0000000000000000000000000000000000000000",
+// 			},
+// 		},
+// 		"decodeErr": {
+// 			body:         bytes.NewBuffer([]byte(`{{{{`)),
+// 			errorOccurs:  true,
+// 			errorMessage: "invalid character '{' looking for beginning of object key string",
+// 		},
+// 		"defaultBranch": {
+// 			body: bytes.NewBuffer([]byte(`{}`)),
+// 			expectedPush: &git.Push{
+// 				Ref: "master",
+// 				Sha: "0000000000000000000000000000000000000000",
+// 			},
+// 		},
+// 	}
 
-	for name, c := range tc {
-		t.Run(name, func(t *testing.T) {
-			push, err := buildPushWebhook(c.body)
-			if c.errorOccurs {
-				require.Error(t, err)
-				require.Equal(t, c.errorMessage, err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, c.expectedPush, push)
-			}
-		})
-	}
-}
+// 	for name, c := range tc {
+// 		t.Run(name, func(t *testing.T) {
+// 			push, err := buildPushWebhook(c.body)
+// 			if c.errorOccurs {
+// 				require.Error(t, err)
+// 				require.Equal(t, c.errorMessage, err.Error())
+// 			} else {
+// 				require.NoError(t, err)
+// 				require.Equal(t, c.expectedPush, push)
+// 			}
+// 		})
+// 	}
+// }

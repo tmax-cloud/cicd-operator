@@ -19,8 +19,8 @@ package integrationconfigs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 
@@ -93,9 +93,18 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 		},
 	}
 
+	userReqPre := &cicdv1.IntegrationConfigAPIReqRunPreBody{}
+	userReqPost := &cicdv1.IntegrationConfigAPIReqRunPostBody{}
+
 	switch et {
 	case git.EventTypePullRequest:
-		pr, err := buildPullRequestWebhook(req.Body, userEscaped)
+		decoder := json.NewDecoder(req.Body)
+		if err := decoder.Decode(userReqPre); err != nil {
+			log.Info(err.Error())
+			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot build pull_request webhook", reqID))
+			return
+		}
+		pr, err := buildPullRequestWebhook(userReqPre, userEscaped)
 		if err != nil {
 			log.Info(err.Error())
 			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot build pull_request webhook", reqID))
@@ -103,7 +112,13 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 		}
 		wh.PullRequest = pr
 	case git.EventTypePush:
-		push, err := buildPushWebhook(req.Body)
+		decoder := json.NewDecoder(req.Body)
+		if err := decoder.Decode(userReqPost); err != nil {
+			log.Info(err.Error())
+			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot build pull_request webhook", reqID))
+			return
+		}
+		push, err := buildPushWebhook(userReqPost)
 		if err != nil {
 			log.Info(err.Error())
 			_ = utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("req: %s, cannot build push webhook", reqID))
@@ -113,6 +128,26 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 	}
 	wh.Sender = git.User{
 		Name: fmt.Sprintf("trigger-%s-end", userEscaped),
+	}
+
+	// Update IntegrationConfig based on the request
+	switch et {
+	case git.EventTypePullRequest:
+		updatedIC, err := updateIntegrationConfigPre(ic, userReqPre, et)
+		if err != nil {
+			log.Info(err.Error())
+			_ = utils.RespondError(w, http.StatusBadRequest, "cannot update pull_request integrationconfig. please check jobName is valid")
+			return
+		}
+		ic = updatedIC
+	case git.EventTypePush:
+		updatedIC, err := updateIntegrationConfigPost(ic, userReqPost, et)
+		if err != nil {
+			log.Info(err.Error())
+			_ = utils.RespondError(w, http.StatusBadRequest, "cannot update push integrationconfig. please check jobName is valid")
+			return
+		}
+		ic = updatedIC
 	}
 
 	// Trigger Run!
@@ -125,13 +160,89 @@ func (h *handler) runHandler(w http.ResponseWriter, req *http.Request, et git.Ev
 	_ = utils.RespondJSON(w, struct{}{})
 }
 
-func buildPullRequestWebhook(body io.Reader, user string) (*git.PullRequest, error) {
-	userReq := &cicdv1.IntegrationConfigAPIReqRunPreBody{}
-	decoder := json.NewDecoder(body)
-	if err := decoder.Decode(userReq); err != nil {
-		return nil, err
+func updateIntegrationConfigPost(ic *cicdv1.IntegrationConfig, userReqBody *cicdv1.IntegrationConfigAPIReqRunPostBody, et git.EventType) (*cicdv1.IntegrationConfig, error) {
+	targetJob := &ic.Spec.Jobs.PostSubmit
+	var existingJob *cicdv1.Job
+
+	for _, addParams := range userReqBody.AddTektonTaskParams {
+		jobName := addParams.JobName
+		if jobName == "" {
+			return nil, errors.New("JobName must be set")
+		}
+
+		existingJob = nil
+		for i, job := range *targetJob {
+			if job.Name == jobName {
+				existingJob = &(*targetJob)[i]
+				break
+			}
+		}
+
+		if existingJob == nil {
+			return nil, fmt.Errorf("job with name '%s' not found", jobName)
+		}
+
+		for _, taskDef := range addParams.TektonTask {
+			// Check if a parameter with the same name already exists
+			for i, existingParam := range existingJob.TektonTask.Params {
+				if existingParam.Name == taskDef.Name {
+					existingJob.TektonTask.Params = append(existingJob.TektonTask.Params[:i], existingJob.TektonTask.Params[i+1:]...)
+					break
+				}
+			}
+
+			existingJob.TektonTask.Params = append(existingJob.TektonTask.Params, cicdv1.ParameterValue{
+				Name:      taskDef.Name,
+				StringVal: taskDef.StringVal,
+			})
+		}
 	}
 
+	return ic, nil
+}
+
+func updateIntegrationConfigPre(ic *cicdv1.IntegrationConfig, userReqBody *cicdv1.IntegrationConfigAPIReqRunPreBody, et git.EventType) (*cicdv1.IntegrationConfig, error) {
+	targetJob := &ic.Spec.Jobs.PreSubmit
+	var existingJob *cicdv1.Job
+
+	for _, addParams := range userReqBody.AddTektonTaskParams {
+		jobName := addParams.JobName
+		if jobName == "" {
+			return nil, errors.New("JobName must be set")
+		}
+
+		existingJob = nil
+		for i, job := range *targetJob {
+			if job.Name == jobName {
+				existingJob = &(*targetJob)[i]
+				break
+			}
+		}
+
+		if existingJob == nil {
+			return nil, fmt.Errorf("job with name '%s' not found", jobName)
+		}
+
+		for _, taskDef := range addParams.TektonTask {
+			// Check if a parameter with the same name already exists
+			for i, existingParam := range existingJob.TektonTask.Params {
+				if existingParam.Name == taskDef.Name {
+					existingJob.TektonTask.Params = append(existingJob.TektonTask.Params[:i], existingJob.TektonTask.Params[i+1:]...)
+					break
+				}
+			}
+
+			existingJob.TektonTask.Params = append(existingJob.TektonTask.Params, cicdv1.ParameterValue{
+				Name:      taskDef.Name,
+				StringVal: taskDef.StringVal,
+			})
+		}
+	}
+
+	return ic, nil
+}
+
+func buildPullRequestWebhook(userReq *cicdv1.IntegrationConfigAPIReqRunPreBody, user string) (*git.PullRequest, error) {
 	baseBranch := userReq.BaseBranch
 	headBranch := userReq.HeadBranch
 	if baseBranch == "" {
@@ -158,13 +269,7 @@ func buildPullRequestWebhook(body io.Reader, user string) (*git.PullRequest, err
 	}, nil
 }
 
-func buildPushWebhook(body io.Reader) (*git.Push, error) {
-	userReq := &cicdv1.IntegrationConfigAPIReqRunPostBody{}
-	decoder := json.NewDecoder(body)
-	if err := decoder.Decode(userReq); err != nil {
-		return nil, err
-	}
-
+func buildPushWebhook(userReq *cicdv1.IntegrationConfigAPIReqRunPostBody) (*git.Push, error) {
 	branch := userReq.Branch
 	if branch == "" {
 		branch = defaultBranch
