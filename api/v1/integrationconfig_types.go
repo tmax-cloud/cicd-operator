@@ -292,14 +292,28 @@ const (
 // IntegrationConfigAPIReqRunPreBody is a body struct for IntegrationConfig's api request
 // +kubebuilder:object:generate=false
 type IntegrationConfigAPIReqRunPreBody struct {
-	BaseBranch string `json:"base_branch"`
-	HeadBranch string `json:"head_branch"`
+	BaseBranch          string               `json:"base_branch"`
+	HeadBranch          string               `json:"head_branch"`
+	AddTektonTaskParams []AddTektonTaskParam `json:"addTektonTaskParams,omitempty"`
 }
 
 // IntegrationConfigAPIReqRunPostBody is a body struct for IntegrationConfig's api request
 // +kubebuilder:object:generate=false
 type IntegrationConfigAPIReqRunPostBody struct {
-	Branch string `json:"branch"`
+	Branch              string               `json:"branch"`
+	AddTektonTaskParams []AddTektonTaskParam `json:"addTektonTaskParams,omitempty"`
+}
+
+// AddTektonTaskParam represents additional Tekton task parameters
+type AddTektonTaskParam struct {
+	JobName    string          `json:"jobName"`
+	TektonTask []TektonTaskDef `json:"tektonTask"`
+}
+
+// TektonTaskDef represents a definition for a Tekton task
+type TektonTaskDef struct {
+	Name      string `json:"name"`
+	StringVal string `json:"stringVal"`
 }
 
 // IntegrationConfigAPIReqWebhookURL is a body struct for IntegrationConfig's api request

@@ -52,7 +52,7 @@ for target in "${TARGETS[@]}"; do
   append_target "$target"
 done
 
-sed -i "s/tmaxcloudck\/cicd-operator:latest/$REGISTRY\/cicd-operator:$VERSION/g" "$RELEASE_MANIFEST"
-sed -i "s/tmaxcloudck\/cicd-blocker:latest/$REGISTRY\/cicd-blocker:$VERSION/g" "$RELEASE_MANIFEST"
-sed -i "s/tmaxcloudck\/cicd-webhook:latest/$REGISTRY\/cicd-webhook:$VERSION/g" "$RELEASE_MANIFEST"
-sed -i "s/tmaxcloudck\/cicd-api-server:latest/$REGISTRY\/cicd-api-server:$VERSION/g" "$RELEASE_MANIFEST"
+sed -i "s|tmaxcloudck/cicd-operator:latest|$REGISTRY/cicd-operator:$VERSION|g" "$RELEASE_MANIFEST"
+sed -i "s|tmaxcloudck/cicd-blocker:latest|$REGISTRY/cicd-blocker:$VERSION|g" "$RELEASE_MANIFEST"
+sed -i "s|tmaxcloudck/cicd-webhook:latest|$REGISTRY/cicd-webhook:$VERSION|g" "$RELEASE_MANIFEST"
+sed -i "s|tmaxcloudck/cicd-api-server:latest|$REGISTRY/cicd-api-server:$VERSION|g" "$RELEASE_MANIFEST"
