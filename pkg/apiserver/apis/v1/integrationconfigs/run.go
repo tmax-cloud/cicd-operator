@@ -170,6 +170,7 @@ func updateIntegrationConfigPost(ic *cicdv1.IntegrationConfig, userReqBody *cicd
 			return nil, errors.New("JobName must be set")
 		}
 
+		existingJob = nil
 		for i, job := range *targetJob {
 			if job.Name == jobName {
 				existingJob = &(*targetJob)[i]
@@ -210,6 +211,7 @@ func updateIntegrationConfigPre(ic *cicdv1.IntegrationConfig, userReqBody *cicdv
 			return nil, errors.New("JobName must be set")
 		}
 
+		existingJob = nil
 		for i, job := range *targetJob {
 			if job.Name == jobName {
 				existingJob = &(*targetJob)[i]
